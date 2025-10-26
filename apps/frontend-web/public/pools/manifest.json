@@ -1,0 +1,16 @@
+{
+  "short_name": "Cradle",
+  "name": "Cradle",
+  "description": "Cradle is the ultimate platform for tokenized NSE securities.",
+  "icons": [
+    {
+      "src": "/cradle.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "start_url": "/pools",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}

@@ -1,0 +1,102 @@
+'use client'
+
+// eslint-disable-next-line no-restricted-imports
+import { useAccount, useAccountEffect, useDisconnect } from 'wagmi'
+import { PropsWithChildren, createContext, useEffect, useState } from 'react'
+import { useMandatoryContext } from '@repo/lib/shared/utils/contexts'
+import { Address, isAddress } from 'viem'
+import { setTag, setUser } from '@sentry/nextjs'
+import { config, isProd } from '@repo/lib/config/app.config'
+import { captureError, ensureError } from '@repo/lib/shared/utils/errors'
+import { useIsMounted } from '@repo/lib/shared/hooks/useIsMounted'
+
+async function isAuthorizedAddress(address: Address): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/wallet-check/${address}`, { cache: 'no-store' })
+    const data = await res.json()
+
+    return data?.isAuthorized
+  } catch (err) {
+    const error = ensureError(err)
+    if (isProd) captureError(error)
+    return true
+  }
+}
+
+export type UseUserAccountResponse = ReturnType<typeof useUserAccountLogic>
+export const UserAccountContext = createContext<UseUserAccountResponse | null>(null)
+
+export function useUserAccountLogic() {
+  const isMounted = useIsMounted()
+  const query = useAccount()
+  const { disconnect } = useDisconnect()
+  const [checkingAuth, setCheckingAuth] = useState(true)
+  const [isBlocked, setIsBlocked] = useState(false)
+
+  const { address, ...queryWithoutAddress } = query
+
+  async function blockUnauthorizedAddress(address: Address | undefined) {
+    if (!address || config.appEnv === 'test') {
+      setCheckingAuth(false)
+      return
+    }
+
+    let isAuthorized = true
+    if (isAddress(address)) {
+      isAuthorized = await isAuthorizedAddress(address)
+      if (!isAuthorized) disconnect()
+    }
+
+    setIsBlocked(!isAuthorized)
+    setCheckingAuth(false)
+  }
+
+  useEffect(() => {
+    blockUnauthorizedAddress(address)
+  }, [address])
+
+  // The usage of mounted helps to overcome nextjs hydration mismatch
+  // errors where the state of the user account on the server pass is different
+  // than the state on the client side rehydration.
+  const result = {
+    ...queryWithoutAddress,
+    isLoading: !isMounted || query.isConnecting || checkingAuth,
+    isConnecting: !isMounted || query.isConnecting || checkingAuth,
+    // We use an emptyAddress when the user is not connected to avoid undefined value and satisfy the TS compiler
+    userAddress: isMounted && query.address,
+    isConnected: isMounted && !!query.address && !checkingAuth,
+    connector: isMounted ? query.connector : undefined,
+    isBlocked,
+    isWCConnector: isMounted ? query.connector?.id === 'walletConnect' : false,
+  }
+
+
+  useAccountEffect({
+    onDisconnect: () => {
+      // Cleanup on disconnect
+    },
+  })
+
+  // Unused for now - keeping for future use
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  function onEmptyUserAddress() {
+    // Clear Sentry user
+    setUser(null)
+
+   
+  }
+
+  useEffect(() => {
+    setTag('wallet', result.connector?.id)
+  }, [result.connector?.id])
+
+  return result
+}
+
+export function UserAccountProvider({ children }: PropsWithChildren) {
+  const hook = useUserAccountLogic()
+  return <UserAccountContext.Provider value={hook}>{children}</UserAccountContext.Provider>
+}
+
+export const useUserAccount = (): UseUserAccountResponse =>
+  useMandatoryContext(UserAccountContext, 'UserAccount')

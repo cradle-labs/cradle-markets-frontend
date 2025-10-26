@@ -11,7 +11,7 @@ export function NavLogo() {
   return (
     <Box as={motion.div} variants={fadeIn}>
       <Link as={NextLink} href="/" prefetch variant="nav">
-        <Box color={{ base: 'black', _dark: 'white' }}>
+        <Box  _dark={{ color: 'white' }} color="black">
           <Box display={{ base: 'block', md: 'none' }}>
             <CradleLogo width="26px" />
           </Box>

@@ -6,8 +6,7 @@ import { NavLogo } from './NavLogo'
 import { MobileNav } from '@repo/lib/shared/components/navs/MobileNav'
 import { useNav } from '@repo/lib/shared/components/navs/useNav'
 import { CradleLogoType } from '../imgs/CradleLogoType'
-import { BuildNavLink } from './BuildNavLink'
-import { PROJECT_CONFIG, isCradle } from '@repo/lib/config/getProjectConfig'
+import { PROJECT_CONFIG } from '@repo/lib/config/getProjectConfig'
 
 export function NavBarContainer() {
   const { defaultAppLinks } = useNav()
@@ -31,7 +30,6 @@ export function NavBarContainer() {
         <NavBar
           allowCreateWallet={allowCreateWallet}
           appLinks={allAppLinks}
-          customLinks={isCradle ? <BuildNavLink key="build-nav-link" /> : undefined}
           mobileNav={
             <MobileNav
               appLinks={allAppLinks}

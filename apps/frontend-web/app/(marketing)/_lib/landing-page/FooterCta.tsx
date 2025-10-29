@@ -105,7 +105,9 @@ export function FooterCta() {
           />
           <Box>
             <Text color="font.secondary" textAlign="center" w="38ch">
-              Launch faster with the most comprehensive RWA platform built for African securities. Get day-1 access to tokenized NSE stocks via Cradle's integrated trading, lending, and stable asset infrastructure.
+              Launch faster with the most comprehensive RWA platform built for African securities.
+              Get day-1 access to tokenized NSE stocks via Cradle's integrated trading, lending, and
+              stable asset infrastructure.
             </Text>
           </Box>
           <HStack justifyContent="center" ref={ref} spacing="md">

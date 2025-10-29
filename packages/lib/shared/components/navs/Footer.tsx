@@ -30,7 +30,15 @@ function CardContent({ linkSections, logoType, title, subTitle }: CardContentPro
       w="full"
     >
       <VStack align="start" color="font.primary" spacing="lg" width={{ base: 'auto', md: '70%' }}>
-        <Box color={{ base: 'black', _dark: 'white' }} w="120px">
+        <Box
+          sx={{
+            color: 'black',
+            _dark: {
+              color: 'white',
+            },
+          }}
+          w="120px"
+        >
           {logoType}
         </Box>
         <VStack align="start" spacing="sm">

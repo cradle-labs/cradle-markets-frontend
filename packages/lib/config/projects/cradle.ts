@@ -29,7 +29,7 @@ export const ProjectConfigCradle: ProjectConfig = {
         href: 'https://youtube.com/CradleProtocol',
       },
       {
-        iconType: 'telegram',
+        iconType: 'tg',
         href: 'https://t.me/CradleProtocol',
       },
       {
@@ -58,7 +58,11 @@ export const ProjectConfigCradle: ProjectConfig = {
           { label: 'Documentation', href: 'https://docs.cradleprotocol.com', isExternal: true },
           { label: 'API Reference', href: 'https://api.cradleprotocol.com', isExternal: true },
           { label: 'GitHub Repos', href: 'https://github.com/cradle-protocol', isExternal: true },
-          { label: 'Developer Guide', href: 'https://docs.cradleprotocol.com/developers', isExternal: true },
+          {
+            label: 'Developer Guide',
+            href: 'https://docs.cradleprotocol.com/developers',
+            isExternal: true,
+          },
         ],
       },
       {
@@ -76,12 +80,23 @@ export const ProjectConfigCradle: ProjectConfig = {
         links: [
           { label: 'Community', href: 'https://discord.cradleprotocol.com', isExternal: true },
           { label: 'Governance', href: 'https://governance.cradleprotocol.com', isExternal: true },
-          { label: 'Security audits', href: 'https://docs.cradleprotocol.com/security', isExternal: true },
-          { label: 'Brand assets', href: 'https://github.com/cradle-protocol/brand-assets', isExternal: true },
-          { label: 'Partner network', href: 'https://partners.cradleprotocol.com', isExternal: true },
+          {
+            label: 'Security audits',
+            href: 'https://docs.cradleprotocol.com/security',
+            isExternal: true,
+          },
+          {
+            label: 'Brand assets',
+            href: 'https://github.com/cradle-protocol/brand-assets',
+            isExternal: true,
+          },
+          {
+            label: 'Partner network',
+            href: 'https://partners.cradleprotocol.com',
+            isExternal: true,
+          },
         ],
       },
     ],
   },
-  
 }

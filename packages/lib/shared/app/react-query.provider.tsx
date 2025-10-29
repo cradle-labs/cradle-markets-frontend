@@ -1,7 +1,7 @@
 'use client'
 
 import { isDev } from '../../config/app.config'
-import { captureError, getTenderlyUrlFromErrorMessage } from '../utils/errors'
+import { captureError } from '../utils/errors'
 import {
   SentryMetadata,
   captureSentryError,
@@ -40,7 +40,7 @@ export const queryClient = new QueryClient({
 
       const sentryContext = sentryMeta?.context as ScopeContext
       if (sentryContext?.extra && !getTenderlyUrl(sentryMeta)) {
-        sentryContext.extra.tenderlyUrl = getTenderlyUrlFromErrorMessage(error, sentryMeta)
+        sentryContext.extra.tenderlyUrl = getTenderlyUrl()
       }
 
       if (sentryMeta) {

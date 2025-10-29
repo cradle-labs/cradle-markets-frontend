@@ -9,38 +9,51 @@ export type AppLink = {
   isExternal?: boolean
   iconType?: IconType
   onClick?: () => void
+  roles?: ('institution' | 'retail')[]
 }
 
 export function useNav() {
   const pathname = usePathname()
 
-  const defaultAppLinks: AppLink[] = [
+  const allAppLinks: AppLink[] = [
     {
       href: '/trade',
       label: 'Trade',
+      roles: ['institution', 'retail'],
     },
     {
       href: '/perps',
       label: 'Perps',
+      roles: ['institution'],
     },
     {
       href: '/lend',
       label: 'Lend',
+      roles: ['institution', 'retail'],
     },
     {
       href: '/portfolio',
       label: 'Portfolio',
+      roles: ['institution', 'retail'],
     },
     {
       href: '/cash',
       label: 'Cash',
+      roles: ['institution', 'retail'],
     },
     {
       href: '/docs',
       label: 'Docs',
     },
-  
   ]
+
+  function getFilteredLinks(userRole?: 'institution' | 'retail') {
+    return allAppLinks.filter(link => {
+      if (!link.roles) return true
+      if (!userRole) return false
+      return link.roles.includes(userRole)
+    })
+  }
 
   function linkColorFor(path: string) {
     return pathname === path ? 'font.highlight' : 'font.primary'
@@ -50,5 +63,5 @@ export function useNav() {
     return pathname === path
   }
 
-  return { defaultAppLinks, linkColorFor, isLinkActive }
+  return { allAppLinks, getFilteredLinks, linkColorFor, isLinkActive }
 }

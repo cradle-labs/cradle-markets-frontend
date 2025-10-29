@@ -2,13 +2,22 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Box, HStack, VStack, Text, useColorMode } from '@chakra-ui/react'
-import { createChart, IChartApi, ISeriesApi, CandlestickData, Time, CandlestickSeries } from 'lightweight-charts'
+import {
+  createChart,
+  IChartApi,
+  ISeriesApi,
+  CandlestickData,
+  Time,
+  CandlestickSeries,
+} from 'lightweight-charts'
 import { NoisyCard } from '@repo/lib/shared/components/containers/NoisyCard'
 import ButtonGroup from '@repo/lib/shared/components/btns/button-group/ButtonGroup'
 
 export interface TradingChartProps {
   symbol?: string
   data?: CandlestickData[]
+  selectedPrice?: number | null
+  selectedTime?: Time | null
   onCrosshairMove?: (price: number | null, time: Time | null) => void
 }
 
@@ -28,72 +37,79 @@ const generateSimulatedData = (days: number): ChartData[] => {
   const data: ChartData[] = []
   const now = new Date()
   let currentPrice = 100 // Starting price for tokenized share
-  
+
   for (let i = days - 1; i >= 0; i--) {
     const time = new Date(now.getTime() - i * 24 * 60 * 60 * 1000)
-    
+
     // Random price movement
     const volatility = 0.02 // 2% daily volatility
     const change = (Math.random() - 0.5) * 2 * volatility
-    
+
     const open = currentPrice
     const close = open * (1 + change)
     const high = Math.max(open, close) * (1 + Math.random() * 0.01)
     const low = Math.min(open, close) * (1 - Math.random() * 0.01)
     const volume = Math.random() * 1000000 + 100000
-    
+
     data.push({
       time: time.toISOString().split('T')[0],
       open: Number(open.toFixed(4)),
       high: Number(high.toFixed(4)),
       low: Number(low.toFixed(4)),
       close: Number(close.toFixed(4)),
-      volume: Number(volume.toFixed(0))
+      volume: Number(volume.toFixed(0)),
     })
-    
+
     currentPrice = close
   }
-  
+
   return data
 }
 
-export function TradingChart({ 
-  symbol = 'SHARES/USDC', 
-  data,
-  onCrosshairMove 
-}: TradingChartProps) {
+export function TradingChart({ symbol = 'SHARES/USDC', data, onCrosshairMove }: TradingChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
   const { colorMode } = useColorMode()
-  
+
   const [activeTimeFrame, setActiveTimeFrame] = useState<TimeFrame>('1D')
   const [currentPrice, setCurrentPrice] = useState<number | null>(null)
   const [currentTime, setCurrentTime] = useState<string | null>(null)
   const [chartData, setChartData] = useState<ChartData[]>([])
 
   // Memoize the crosshair move handler to prevent unnecessary re-renders
-  const handleCrosshairMove = useCallback((price: number | null, time: Time | null) => {
-    onCrosshairMove?.(price, time)
-  }, [onCrosshairMove])
+  const handleCrosshairMove = useCallback(
+    (price: number | null, time: Time | null) => {
+      onCrosshairMove?.(price, time)
+    },
+    [onCrosshairMove]
+  )
 
   // Generate or use provided data
   useEffect(() => {
     if (data) {
-      setChartData(data.map(d => ({
-        time: d.time as string,
-        open: d.open,
-        high: d.high,
-        low: d.low,
-        close: d.close,
-        volume: 0 // Volume not provided in CandlestickData
-      })))
+      setChartData(
+        data.map(d => ({
+          time: d.time as string,
+          open: d.open,
+          high: d.high,
+          low: d.low,
+          close: d.close,
+          volume: 0, // Volume not provided in CandlestickData
+        }))
+      )
     } else {
       // Generate simulated data based on timeframe
-      const days = activeTimeFrame === '1H' ? 7 : 
-                   activeTimeFrame === '4H' ? 30 :
-                   activeTimeFrame === '1D' ? 90 :
-                   activeTimeFrame === '1W' ? 365 : 730
+      const days =
+        activeTimeFrame === '1H'
+          ? 7
+          : activeTimeFrame === '4H'
+            ? 30
+            : activeTimeFrame === '1D'
+              ? 90
+              : activeTimeFrame === '1W'
+                ? 365
+                : 730
       setChartData(generateSimulatedData(days))
     }
   }, [data, activeTimeFrame])
@@ -110,11 +126,11 @@ export function TradingChart({
         textColor: colorMode === 'dark' ? '#ffffff' : '#000000',
       },
       grid: {
-        vertLines: { 
-          color: colorMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' 
+        vertLines: {
+          color: colorMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
         },
-        horzLines: { 
-          color: colorMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' 
+        horzLines: {
+          color: colorMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
         },
       },
       crosshair: {
@@ -158,7 +174,7 @@ export function TradingChart({
     candlestickSeriesRef.current = candlestickSeries
 
     // Handle crosshair movement with improved error handling
-    chart.subscribeCrosshairMove((param) => {
+    chart.subscribeCrosshairMove(param => {
       try {
         if (param.time && param.seriesData) {
           const seriesData = param.seriesData.get(candlestickSeries)
@@ -210,9 +226,9 @@ export function TradingChart({
         low: d.low,
         close: d.close,
       }))
-      
+
       candlestickSeriesRef.current.setData(formattedData)
-      
+
       // Set current price to latest close
       if (formattedData.length > 0) {
         setCurrentPrice(formattedData[formattedData.length - 1].close)
@@ -230,12 +246,14 @@ export function TradingChart({
   }
 
   const latestData = chartData[chartData.length - 1]
-  const priceChange = latestData && chartData.length > 1 
-    ? latestData.close - chartData[chartData.length - 2].close 
-    : 0
-  const priceChangePercent = latestData && chartData.length > 1 
-    ? (priceChange / chartData[chartData.length - 2].close) * 100 
-    : 0
+  const priceChange =
+    latestData && chartData.length > 1
+      ? latestData.close - chartData[chartData.length - 2].close
+      : 0
+  const priceChangePercent =
+    latestData && chartData.length > 1
+      ? (priceChange / chartData[chartData.length - 2].close) * 100
+      : 0
 
   return (
     <NoisyCard>
@@ -250,10 +268,7 @@ export function TradingChart({
               <Text fontSize="2xl" fontWeight="bold">
                 ${(currentPrice || latestData?.close || 0).toFixed(4)}
               </Text>
-              <Text 
-                color={priceChange >= 0 ? 'green.400' : 'red.400'}
-                fontSize="sm"
-              >
+              <Text color={priceChange >= 0 ? 'green.400' : 'red.400'} fontSize="sm">
                 {priceChange >= 0 ? '+' : ''}
                 {priceChange.toFixed(4)} ({priceChangePercent >= 0 ? '+' : ''}
                 {priceChangePercent.toFixed(2)}%)
@@ -265,7 +280,7 @@ export function TradingChart({
               </Text>
             )}
           </VStack>
-          
+
           <ButtonGroup
             currentOption={{ label: activeTimeFrame, value: activeTimeFrame }}
             groupId="timeframe"
@@ -282,7 +297,7 @@ export function TradingChart({
         </HStack>
 
         {/* Chart container with isolation */}
-        <Box 
+        <Box
           h="400px"
           position="relative"
           ref={chartContainerRef}
@@ -296,12 +311,12 @@ export function TradingChart({
             '& canvas': {
               position: 'relative',
               zIndex: 2,
-            }
+            },
           }}
           w="full"
           zIndex={1}
         />
-        
+
         {/* Chart info */}
         <HStack color="gray.500" fontSize="sm" justify="space-between" w="full">
           <Text>Volume: {latestData?.volume.toLocaleString() || 'N/A'}</Text>

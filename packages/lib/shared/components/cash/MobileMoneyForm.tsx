@@ -97,11 +97,11 @@ export function MobileMoneyForm({ mode, onModeChange }: MobileMoneyFormProps) {
   const title = isFundWallet ? 'Fund wallet' : 'Pay'
 
   return (
-    <Card rounded="xl" maxW="md" mx="auto">
+    <Card maxW="md" mx="auto" rounded="xl">
       <CardHeader>
         <VStack align="stretch" spacing={4}>
           {/* Mode Tabs */}
-          <HStack justify="space-between" align="center">
+          <HStack align="center" justify="space-between">
             <ButtonGroup
               currentOption={modeOptions.find(opt => opt.value === mode)}
               groupId="cash-mode-tabs"
@@ -109,33 +109,27 @@ export function MobileMoneyForm({ mode, onModeChange }: MobileMoneyFormProps) {
               options={modeOptions}
               size="sm"
             />
-            
+
             {/* Token Selector */}
             <Box minW="120px">
               <SelectInput
                 id="token-selector"
-                value="apt"
+                isSearchable={false}
                 onChange={() => {}}
                 options={tokenOptions}
-                isSearchable={false}
+                value="apt"
               />
             </Box>
           </HStack>
 
           {/* Title */}
-          <Text fontSize="2xl" fontWeight="bold" color="font.primary">
+          <Text color="font.primary" fontSize="2xl" fontWeight="bold">
             {title}
           </Text>
 
           {/* Wallet Connection Banner */}
           {isFundWallet && (
-            <Box
-              bg="yellow.500"
-              color="white"
-              p={3}
-              rounded="md"
-              textAlign="center"
-            >
+            <Box bg="yellow.500" color="white" p={3} rounded="md" textAlign="center">
               <Text fontSize="sm" fontWeight="medium">
                 Please connect your wallet to proceed
               </Text>
@@ -153,10 +147,10 @@ export function MobileMoneyForm({ mode, onModeChange }: MobileMoneyFormProps) {
             </FormLabel>
             <SelectInput
               id="country-selector"
-              value={selectedCountry}
+              isSearchable={false}
               onChange={setSelectedCountry}
               options={countryOptions}
-              isSearchable={false}
+              value={selectedCountry}
             />
           </FormControl>
 
@@ -183,10 +177,10 @@ export function MobileMoneyForm({ mode, onModeChange }: MobileMoneyFormProps) {
             </FormLabel>
             <SelectInput
               id="network-selector"
-              value={mobileNetwork}
+              isSearchable={false}
               onChange={setMobileNetwork}
               options={networkOptions}
-              isSearchable={false}
+              value={mobileNetwork}
             />
           </FormControl>
 
@@ -196,29 +190,24 @@ export function MobileMoneyForm({ mode, onModeChange }: MobileMoneyFormProps) {
               {isFundWallet ? 'M-Pesa Phone Number' : 'Phone Number'}
             </FormLabel>
             <HStack spacing={2}>
-              <Button
-                leftIcon={<CreditCard size={16} />}
-                size="sm"
-                variant="tertiary"
-                minW="80px"
-              >
+              <Button leftIcon={<CreditCard size={16} />} minW="80px" size="sm" variant="tertiary">
                 Select
               </Button>
               <Input
-                placeholder={isFundWallet ? "0799770833" : "0712345678"}
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                bg="input.bgDefault"
-                border="1px solid"
-                borderColor="input.borderDefault"
-                _hover={{
-                  bg: 'input.bgHover',
-                  borderColor: 'input.borderHover',
-                }}
                 _focus={{
                   bg: 'input.bgFocus',
                   borderColor: 'input.borderFocus',
                 }}
+                _hover={{
+                  bg: 'input.bgHover',
+                  borderColor: 'input.borderHover',
+                }}
+                bg="input.bgDefault"
+                border="1px solid"
+                borderColor="input.borderDefault"
+                onChange={e => setPhoneNumber(e.target.value)}
+                placeholder={isFundWallet ? '0799770833' : '0712345678'}
+                value={phoneNumber}
               />
             </HStack>
           </FormControl>
@@ -230,44 +219,38 @@ export function MobileMoneyForm({ mode, onModeChange }: MobileMoneyFormProps) {
             </FormLabel>
             <InputGroup>
               <InputLeftElement>
-                <Text fontSize="lg" fontWeight="bold" color="font.primary">
+                <Text color="font.primary" fontSize="lg" fontWeight="bold">
                   KES
                 </Text>
               </InputLeftElement>
               <Input
-                placeholder="0"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                pl="60px"
-                fontSize="lg"
-                bg="input.bgDefault"
-                border="1px solid"
-                borderColor="input.borderDefault"
-                _hover={{
-                  bg: 'input.bgHover',
-                  borderColor: 'input.borderHover',
-                }}
                 _focus={{
                   bg: 'input.bgFocus',
                   borderColor: 'input.borderFocus',
                 }}
+                _hover={{
+                  bg: 'input.bgHover',
+                  borderColor: 'input.borderHover',
+                }}
+                bg="input.bgDefault"
+                border="1px solid"
+                borderColor="input.borderDefault"
+                fontSize="lg"
+                onChange={e => setAmount(e.target.value)}
+                pl="60px"
+                placeholder="0"
+                value={amount}
               />
             </InputGroup>
           </FormControl>
 
           {/* Submit Button */}
-          <Button
-            onClick={handleSubmit}
-            size="lg"
-            variant="primary"
-            w="full"
-            mt={4}
-          >
+          <Button mt={4} onClick={handleSubmit} size="lg" variant="primary" w="full">
             {buttonText}
           </Button>
 
           {/* Limits */}
-          <Text fontSize="xs" color="font.secondary" textAlign="center">
+          <Text color="font.secondary" fontSize="xs" textAlign="center">
             Minimum: 20 KES • Maximum: 250,000 KES
           </Text>
         </VStack>

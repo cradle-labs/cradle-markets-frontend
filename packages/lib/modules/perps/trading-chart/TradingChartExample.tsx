@@ -19,12 +19,12 @@ export function TradingChartExample() {
       {/* Main trading chart */}
       <Box w="full">
         <TradingChart
-          symbol="SHARES/USDC"
           onCrosshairMove={handleCrosshairMove}
+          selectedPrice={selectedPrice}
+          selectedTime={selectedTime}
+          symbol="SHARES/USDC"
         />
       </Box>
-
-
     </VStack>
   )
 }

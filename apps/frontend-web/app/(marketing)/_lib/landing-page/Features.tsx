@@ -21,7 +21,6 @@ import { PieIcon } from '@repo/lib/shared/components/icons/PieIcon'
 import { StarsIconPlain } from '@repo/lib/shared/components/icons/StarsIconPlain'
 import { FeatureCard } from './shared/FeatureCard'
 import { RadialPattern } from './shared/RadialPattern'
-import { CradleLogoAnimated } from '@repo/lib/shared/components/icons/CradleIconAnimated'
 import { useBreakpoints } from '@repo/lib/shared/hooks/useBreakpoints'
 import { FadeIn } from '@repo/lib/shared/components/animations/FadeIn'
 import { WordsPullUp } from '@repo/lib/shared/components/animations/WordsPullUp'
@@ -42,15 +41,13 @@ const keyFeatures = [
   {
     title: 'Multi-Product Ecosystem',
     subTitle: 'Flexible Framework',
-    description:
-      'Limitless asset customization and utility',
+    description: 'Limitless asset customization and utility',
     icon: <HookIcon size={70} />,
   },
   {
     title: 'Real-World Collateral',
     subTitle: 'Enhanced Yield',
-    description:
-      'Stable assets, amplified utility.',
+    description: 'Stable assets, amplified utility.',
     icon: <StarsIconPlain size={32} />,
   },
 ]
@@ -65,7 +62,7 @@ const features = [
   {
     title: 'Instant Settlement',
     shortDescription:
-      'Leverage Hedera Hashgraph\'s enterprise-grade infrastructure to settle trades in seconds instead of T+2 days, unlocking capital efficiency and reducing counterparty risk.',
+      "Leverage Hedera Hashgraph's enterprise-grade infrastructure to settle trades in seconds instead of T+2 days, unlocking capital efficiency and reducing counterparty risk.",
     imageSrc: '/images/graphics/stone-2.png',
   },
   {
@@ -229,8 +226,8 @@ export function Features() {
             <chakra.span color="font.primary">Tokenized securities solutions.</chakra.span>
             <chakra.span color="font.primary" style={{ opacity: 0.6 }}>
               {' '}
-              With Cradle, investors harness a platform that bridges traditional finance with blockchain,
-              enabling them to focus exclusively on opportunity.
+              With Cradle, investors harness a platform that bridges traditional finance with
+              blockchain, enabling them to focus exclusively on opportunity.
             </chakra.span>
           </Heading>
         </FadeIn>
@@ -271,7 +268,9 @@ export function Features() {
               />
               <FadeIn delay={0.2} direction="up" duration={0.6}>
                 <Text color="font.secondary" fontSize="lg" sx={{ textWrap: 'pretty' }}>
-                  Cradle introduces a series of features that streamline the tokenization and utilization of NSE securities, while maintaining the compliance and transparency that have made traditional markets trusted by millions.
+                  Cradle introduces a series of features that streamline the tokenization and
+                  utilization of NSE securities, while maintaining the compliance and transparency
+                  that have made traditional markets trusted by millions.
                 </Text>
               </FadeIn>
             </VStack>
@@ -286,8 +285,7 @@ export function Features() {
                   progress={scrollPercentage}
                   top={-10}
                   width={600}
-                >
-                </RadialPattern>
+                ></RadialPattern>
               </Center>
             )}
           </Box>

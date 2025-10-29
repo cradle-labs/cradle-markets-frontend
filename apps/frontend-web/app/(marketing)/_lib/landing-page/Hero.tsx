@@ -132,7 +132,8 @@ export function Hero() {
               transition={{ duration: 1, delay: 0.9, ease: 'easeInOut' }}
               w="full"
             >
-              The ultimate platform for tokenized NSE securities. Cradle perfectly balances simplicity and flexibility to reshape the future of African capital markets.
+              The ultimate platform for tokenized NSE securities. Cradle perfectly balances
+              simplicity and flexibility to reshape the future of African capital markets.
             </MotionHeading>
             <Stack alignItems={{ base: 'start', md: 'center' }} direction="row" mt="0" spacing="ms">
               <MotionButton

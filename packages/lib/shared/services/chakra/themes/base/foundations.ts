@@ -26,9 +26,6 @@ export const styles = {
       background: 'background.base',
     },
     '::-webkit-scrollbar': {
-      width: '10px',
-    },
-    '.chakra-ui-light ::-webkit-scrollbar, .chakra-ui-dark ::-webkit-scrollbar': {
       width: '6px',
     },
     '::-webkit-scrollbar-track': {
@@ -39,19 +36,17 @@ export const styles = {
       transition: 'all 0.3s ease-in-out',
       backgroundColor: 'rgba(0, 0, 0, 0.2)',
       borderRadius: '16px',
+      _dark: {
+        backgroundColor: 'rgba(255, 255, 255, 0.4)',
+      },
     },
     '::-webkit-scrollbar-thumb:hover': {
       transition: 'all 0.3s ease',
       backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    },
-    '.chakra-ui-light ::-webkit-scrollbar-thumb, .chakra-ui-dark ::-webkit-scrollbar-thumb': {},
-    '.chakra-ui-dark::-webkit-scrollbar-thumb, .chakra-ui-dark ::-webkit-scrollbar-thumb': {
-      backgroundColor: 'rgba(255, 255, 255, 0.4)',
-    },
-    '.chakra-ui-dark::-webkit-scrollbar-thumb:hover, .chakra-ui-dark ::-webkit-scrollbar-thumb:hover':
-      {
+      _dark: {
         backgroundColor: 'rgba(255, 255, 255, 0.6)',
       },
+    },
     'p + ul': {
       mt: '1',
     },

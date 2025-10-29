@@ -8,6 +8,7 @@ import Noise from '@repo/lib/shared/components/layout/Noise'
 import { RadialPattern } from '@repo/lib/shared/components/zen/RadialPattern'
 import { TradingChartExample } from '@repo/lib/modules/perps/trading-chart'
 import Orderbook from '@repo/lib/modules/perps/orderbook/Orderbook'
+import { PerpsTradingPanel } from '@repo/lib/modules/perps/trading-panel'
 
 type PerpsPageProps = PropsWithChildren
 
@@ -88,37 +89,47 @@ export function PerpsPage({ children }: PerpsPageProps) {
               </VStack>
             </FadeInOnView>
             <FadeInOnView animateOnce={false}>
-              <Box pb={{ base: '0', md: '3' }}>
-                {children}
-              </Box>
+              <Box pb={{ base: '0', md: '3' }}>{children}</Box>
             </FadeInOnView>
           </DefaultPageContainer>
         </Noise>
       </Box>
-      <DefaultPageContainer
-        noVerticalPadding
-        pb="xl"
-        pr={{ base: '0 !important', xl: 'md !important' }}
-        pt={['lg', '54px']}
-      >
+
+      <Box bg="background.level0" py={{ base: 4, lg: 6 }}>
         <FadeInOnView animateOnce={false}>
           <Grid
-            gap={6}
+            maxW="1920px"
+            mx="auto"
+            px={{ base: 4, lg: 6 }}
             templateColumns={{ base: '1fr', lg: 'repeat(12, 1fr)' }}
           >
-            <GridItem colSpan={{ base: 1, lg: 8 }}>
-              <Box>
-                <TradingChartExample/>
+            {/* Trading Chart - Left Column */}
+            <GridItem colSpan={{ base: 12, lg: 7 }}>
+              <Box
+                bg="background.level1"
+                h="full"
+                minH={{ base: 'auto', lg: '600px' }}
+                overflow="hidden"
+                shadow="innerBase"
+              >
+                <TradingChartExample />
               </Box>
             </GridItem>
-            <GridItem colSpan={{ base: 1, lg: 4 }}>
+
+            {/* Order Book - Center Column */}
+            <GridItem colSpan={{ base: 12, lg: 2 }}>
               <Box>
-                <Orderbook/>
+                <Orderbook />
               </Box>
+            </GridItem>
+
+            {/* Trading Form - Right Column */}
+            <GridItem colSpan={{ base: 12, lg: 3 }}>
+              <PerpsTradingPanel />
             </GridItem>
           </Grid>
         </FadeInOnView>
-      </DefaultPageContainer>
+      </Box>
     </>
   )
 }

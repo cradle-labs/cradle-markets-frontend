@@ -13,6 +13,7 @@ import { ThemeProvider as ColorThemeProvider } from 'next-themes'
 import { ThemeProvider } from '@bal/lib/services/chakra/ThemeProvider'
 import { CradleLogoType } from '@bal/lib/components/imgs/CradleLogoType'
 import { Footer } from '@repo/lib/shared/components/navs/Footer'
+import { ClerkProvider } from '@clerk/nextjs'
 
 export const metadata: Metadata = {
   title: `Cradle—Tokenized NSE Securities`,
@@ -42,30 +43,32 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: PropsWithChildren) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body
-        className={satoshiFont.className}
-        style={{ marginRight: '0px !important' }} // Required to prevent layout shift introduced by Rainbowkit
-        suppressHydrationWarning
-      >
-        <Fathom />
-        <NextTopLoader color="#7f6ae8" showSpinner={false} />
-        <ColorThemeProvider defaultTheme={DEFAULT_THEME_COLOR_MODE}>
-          <ThemeProvider>
-            <Providers>
-              <NavBarContainer />
-              {children}
-              <Footer
-                logoType={<CradleLogoType />}
-                subTitle="Cradle is the ultimate platform for tokenized NSE securities."
-                title="Securities made accessible"
-              />
-              <SpeedInsights />
-              <Script async src="https://w.appzi.io/w.js?token=8TY8k" />
-            </Providers>
-          </ThemeProvider>
-        </ColorThemeProvider>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" suppressHydrationWarning>
+        <body
+          className={satoshiFont.className}
+          style={{ marginRight: '0px !important' }} // Required to prevent layout shift introduced by Rainbowkit
+          suppressHydrationWarning
+        >
+          <Fathom />
+          <NextTopLoader color="#7f6ae8" showSpinner={false} />
+          <ColorThemeProvider defaultTheme={DEFAULT_THEME_COLOR_MODE}>
+            <ThemeProvider>
+              <Providers>
+                <NavBarContainer />
+                {children}
+                <Footer
+                  logoType={<CradleLogoType />}
+                  subTitle="Cradle is the ultimate platform for tokenized NSE securities."
+                  title="Securities made accessible"
+                />
+                <SpeedInsights />
+                <Script async src="https://w.appzi.io/w.js?token=8TY8k" />
+              </Providers>
+            </ThemeProvider>
+          </ColorThemeProvider>
+        </body>
+      </html>
+    </ClerkProvider>
   )
 }

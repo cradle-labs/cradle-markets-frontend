@@ -6,7 +6,7 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import { isProd } from '@repo/lib/config/app.config'
 
 export enum AnalyticsEvent {
-  ClickAddLiquidity = 'click: Add liquidity',
+  CreateUserAccount = 'click: Create user account',
   TransactionSubmitted = 'transaction: Submitted',
   TransactionConfirmed = 'transaction: Confirmed',
   TransactionReverted = 'transaction: Reverted',

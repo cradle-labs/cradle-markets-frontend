@@ -42,7 +42,7 @@ function TrackPageView() {
     load('MKFEFCXC', {
       auto: false,
       // Optional but I like to explicitly choose the domains to track:
-      includedDomains: ['cradleprotocol.com', 'zen.cradleprotocol.com'],
+      includedDomains: ['cradleprotocol.com'],
     })
   }, [])
 

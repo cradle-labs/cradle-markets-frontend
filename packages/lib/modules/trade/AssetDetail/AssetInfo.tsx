@@ -2,6 +2,7 @@
 
 import { Box, Card, Text, VStack } from '@chakra-ui/react'
 import { TokenizedAssetData } from '../TokenizedAssets/TokenizedAssetCard'
+import { useAssetDetail } from './AssetDetailProvider'
 
 interface AssetInfoProps {
   asset: TokenizedAssetData
@@ -50,100 +51,151 @@ The token is backed by the underlying asset and maintains a 1:1 ratio with the o
 }
 
 export function AssetInfo({ asset }: AssetInfoProps) {
+  const { market, timeSeriesData } = useAssetDetail()
   const info = getAssetInfo(asset)
+
+  // Calculate volume from time series data
+  const totalVolume = timeSeriesData.reduce((sum, ts) => sum + parseFloat(ts.volume), 0)
+
+  // Calculate high and low from time series
+  const allHighs = timeSeriesData.map(ts => parseFloat(ts.high))
+  const allLows = timeSeriesData.map(ts => parseFloat(ts.low))
+  const allTimeHigh = allHighs.length > 0 ? Math.max(...allHighs) : null
+  const allTimeLow = allLows.length > 0 ? Math.min(...allLows) : null
 
   return (
     <Card>
       <Box p={6}>
         <VStack align="start" spacing={4}>
-          <Text fontSize="lg" fontWeight="semibold">
-            {info.title}
-          </Text>
-          
-          <Text 
-            color="font.secondary" 
-            fontSize="sm" 
-            lineHeight="1.6"
-            whiteSpace="pre-line"
-          >
+          <VStack align="start" spacing={2}>
+            <Text fontSize="lg" fontWeight="semibold">
+              About {asset.name}
+            </Text>
+            {market && (
+              <Text color="font.secondary" fontSize="sm">
+                Market: {market.name} • Type: {market.market_type} • Status: {market.market_status}
+              </Text>
+            )}
+          </VStack>
+
+          <Text color="font.secondary" fontSize="sm" lineHeight="1.6" whiteSpace="pre-line">
             {info.description}
           </Text>
+
+          {/* Market Information */}
+          {market && (
+            <VStack align="start" pt={2} spacing={2} w="full">
+              <Text fontSize="sm" fontWeight="semibold">
+                Market Information
+              </Text>
+              <Box bg="background.level1" borderRadius="md" p={3} w="full">
+                <VStack align="start" spacing={2}>
+                  <Text color="font.secondary" fontSize="xs">
+                    <Text as="span" fontWeight="semibold">
+                      Description:
+                    </Text>{' '}
+                    {market.description}
+                  </Text>
+                  <Text color="font.secondary" fontSize="xs">
+                    <Text as="span" fontWeight="semibold">
+                      Regulation:
+                    </Text>{' '}
+                    {market.market_regulation}
+                  </Text>
+                  <Text color="font.secondary" fontSize="xs">
+                    <Text as="span" fontWeight="semibold">
+                      Created:
+                    </Text>{' '}
+                    {new Date(market.created_at).toLocaleDateString()}
+                  </Text>
+                </VStack>
+              </Box>
+            </VStack>
+          )}
 
           {/* Key Statistics */}
           <VStack align="start" pt={4} spacing={3} w="full">
             <Text fontSize="md" fontWeight="semibold">
               Key Statistics
             </Text>
-            
-            <Box 
-              display="grid" 
-              gap={4} 
-              gridTemplateColumns="repeat(auto-fit, minmax(200px, 1fr))" 
+
+            <Box
+              display="grid"
+              gap={4}
+              gridTemplateColumns="repeat(auto-fit, minmax(200px, 1fr))"
               w="full"
             >
               <VStack align="start" spacing={1}>
                 <Text color="font.secondary" fontSize="xs" textTransform="uppercase">
-                  Market Cap
+                  Current Price
                 </Text>
                 <Text fontSize="sm" fontWeight="medium">
-                  {info.marketCap}
+                  ${asset.currentPrice.toFixed(2)}
                 </Text>
               </VStack>
-              
+
               <VStack align="start" spacing={1}>
                 <Text color="font.secondary" fontSize="xs" textTransform="uppercase">
-                  24h Volume
+                  24h Change
                 </Text>
-                <Text fontSize="sm" fontWeight="medium">
-                  {info.volume24h}
+                <Text
+                  color={asset.dailyChange >= 0 ? 'green.500' : 'red.500'}
+                  fontSize="sm"
+                  fontWeight="medium"
+                >
+                  {asset.dailyChange >= 0 ? '+' : ''}
+                  {asset.dailyChangePercent.toFixed(2)}%
                 </Text>
               </VStack>
-              
+
               <VStack align="start" spacing={1}>
                 <Text color="font.secondary" fontSize="xs" textTransform="uppercase">
-                  Circulating Supply
+                  Total Volume
                 </Text>
                 <Text fontSize="sm" fontWeight="medium">
-                  {info.circulatingSupply}
+                  {totalVolume > 0 ? totalVolume.toLocaleString() : 'N/A'}
                 </Text>
               </VStack>
-              
+
               <VStack align="start" spacing={1}>
                 <Text color="font.secondary" fontSize="xs" textTransform="uppercase">
                   All Time High
                 </Text>
                 <Text fontSize="sm" fontWeight="medium">
-                  {info.allTimeHigh}
+                  {allTimeHigh ? `$${allTimeHigh.toFixed(2)}` : info.allTimeHigh}
                 </Text>
               </VStack>
-              
+
               <VStack align="start" spacing={1}>
                 <Text color="font.secondary" fontSize="xs" textTransform="uppercase">
                   All Time Low
                 </Text>
                 <Text fontSize="sm" fontWeight="medium">
-                  {info.allTimeLow}
+                  {allTimeLow ? `$${allTimeLow.toFixed(2)}` : info.allTimeLow}
+                </Text>
+              </VStack>
+
+              <VStack align="start" spacing={1}>
+                <Text color="font.secondary" fontSize="xs" textTransform="uppercase">
+                  Data Points
+                </Text>
+                <Text fontSize="sm" fontWeight="medium">
+                  {timeSeriesData.length} records
                 </Text>
               </VStack>
             </Box>
           </VStack>
 
           {/* Legal Disclaimer */}
-          <Box 
-            bg="background.level1" 
-            borderRadius="md" 
-            mt={4}
-            p={4} 
-            w="full"
-          >
+          <Box bg="background.level1" borderRadius="md" mt={4} p={4} w="full">
             <Text color="font.secondary" fontSize="xs" lineHeight="1.5">
               <Text as="span" fontWeight="semibold">
                 Legal Disclaimer:
               </Text>{' '}
-              Global Markets tokens are not registered under the U.S. Securities Act of 1933, as amended (the 
-              &quot;Securities Act&quot;), and may not be offered, sold or delivered within the United States or to, 
-              or for the account or benefit of, U.S. persons, except pursuant to an exemption from, or in a transaction 
-              not subject to, the registration requirements of the Securities Act.
+              Tokenized assets on Cradle are subject to regulatory oversight. These tokens represent
+              real-world assets and are subject to the regulations of the Nairobi Securities
+              Exchange and the Capital Markets Authority of Kenya. Trading is restricted to verified
+              institutional and retail investors.
             </Text>
           </Box>
         </VStack>

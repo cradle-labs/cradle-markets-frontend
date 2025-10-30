@@ -19,6 +19,9 @@ const isRetailRoute = createRouteMatcher(['/retail(.*)'])
 // Institution-only pages: only perps
 const isInstitutionOnlyRoute = createRouteMatcher(['/perps(.*)'])
 
+// Shared routes accessible by both institution and retail users
+const isSharedRoute = createRouteMatcher(['/trade(.*)', '/lend(.*)', '/portfolio(.*)', '/cash(.*)'])
+
 export default clerkMiddleware(async (auth, req) => {
   // Protect all non-public routes
   if (!isPublicRoute(req)) {
@@ -55,6 +58,17 @@ export default clerkMiddleware(async (auth, req) => {
         const url = new URL('/access-denied', req.url)
         return Response.redirect(url)
       }
+    }
+
+    // Check shared routes (trade, lend, portfolio, cash)
+    // Allow both institution and retail users
+    if (isSharedRoute(req)) {
+      if (userRole !== 'institution' && userRole !== 'retail') {
+        const url = new URL('/access-denied', req.url)
+        return Response.redirect(url)
+      }
+      // Allow access for both institution and retail users
+      return
     }
 
     // Check institution routes

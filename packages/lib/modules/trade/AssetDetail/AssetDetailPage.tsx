@@ -12,13 +12,29 @@ import { AssetHeader } from './AssetHeader'
 import { AssetChart } from './AssetChart'
 import { AssetTradingPanel } from './AssetTradingPanel'
 import { AssetInfo } from './AssetInfo'
+import { MarketOrders } from './MarketOrders'
+import ButtonGroup, {
+  ButtonGroupOption,
+} from '@repo/lib/shared/components/btns/button-group/ButtonGroup'
+import { useState } from 'react'
 
 interface AssetDetailPageProps {
-  assetId: string
+  marketId: string
 }
+
+enum ContentTab {
+  DETAILS = 'details',
+  ORDERS = 'orders',
+}
+
+const contentTabs: ButtonGroupOption[] = [
+  { value: ContentTab.DETAILS, label: 'Asset Details' },
+  { value: ContentTab.ORDERS, label: 'Market Orders' },
+]
 
 function AssetDetailContent() {
   const { asset, loading, error } = useAssetDetail()
+  const [activeTab, setActiveTab] = useState<ButtonGroupOption>(contentTabs[0])
 
   if (loading) {
     return <AssetDetailSkeleton />
@@ -100,10 +116,30 @@ function AssetDetailContent() {
       {/* Main Content Section */}
       <DefaultPageContainer noVerticalPadding pb="xl" pt={['lg', '40px']}>
         <HStack align="start" spacing={6} w="full">
-          {/* Left Column - Chart and Info */}
+          {/* Left Column - Chart and Tabbed Content */}
           <VStack align="stretch" flex={2} minW="700px" spacing={6}>
             <AssetChart asset={asset} />
-            <AssetInfo asset={asset} />
+
+            {/* Tab Navigation */}
+            <Box w="25%">
+              <ButtonGroup
+                currentOption={activeTab}
+                groupId="asset-detail-tabs"
+                isFullWidth
+                onChange={setActiveTab}
+                options={contentTabs}
+                size="md"
+              />
+            </Box>
+
+            {/* Tab Content */}
+            <Box>
+              {activeTab.value === ContentTab.DETAILS ? (
+                <AssetInfo asset={asset} />
+              ) : (
+                <MarketOrders />
+              )}
+            </Box>
           </VStack>
 
           {/* Right Column - Trading Panel */}
@@ -146,10 +182,10 @@ function AssetDetailError({ error }: { error: string | null }) {
   )
 }
 
-export function AssetDetailPage({ assetId }: AssetDetailPageProps) {
+export function AssetDetailPage({ marketId }: AssetDetailPageProps) {
   return (
     <AssetDetailProviders>
-      <AssetDetailProvider assetId={assetId}>
+      <AssetDetailProvider marketId={marketId}>
         <FadeInOnView animateOnce={false}>
           <AssetDetailContent />
         </FadeInOnView>

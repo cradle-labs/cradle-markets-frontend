@@ -8,15 +8,28 @@ import { useNav } from '@repo/lib/shared/components/navs/useNav'
 import { CradleLogoType } from '../imgs/CradleLogoType'
 import { PROJECT_CONFIG } from '@repo/lib/config/getProjectConfig'
 import { SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
-import { Button, HStack } from '@chakra-ui/react'
+import { Button, HStack, useToken } from '@chakra-ui/react'
 import Link from 'next/link'
 import { RoleBadge } from '../auth/RoleBadge'
 import DarkModeToggle from '@repo/lib/shared/components/btns/DarkModeToggle'
 import { useRole } from '@/lib/hooks/useRole'
+import { useTheme } from 'next-themes'
 
 export function NavBarContainer() {
   const { role } = useRole()
   const { allAppLinks: defaultNavLinks, getFilteredLinks } = useNav()
+  const { resolvedTheme } = useTheme()
+  const isDark = resolvedTheme === 'dark'
+
+  // Get theme colors from Chakra
+  const [purple500, gray50, gray400, gray500, gray700, gray800] = useToken('colors', [
+    'purple.500',
+    'gray.50',
+    'gray.400',
+    'gray.500',
+    'gray.700',
+    'gray.800',
+  ])
 
   const defaultAppLinks = role ? getFilteredLinks(role) : defaultNavLinks
 
@@ -65,7 +78,58 @@ export function NavBarContainer() {
               </SignedOut>
               <SignedIn>
                 <RoleBadge />
-                <UserButton />
+                <UserButton
+                  appearance={{
+                    variables: isDark
+                      ? {
+                          // Dark theme colors from your theme
+                          colorPrimary: purple500,
+                          colorText: '#ffffff',
+                          colorTextSecondary: gray400,
+                          colorBackground: gray800,
+                          colorInputBackground: gray700,
+                          colorInputText: '#ffffff',
+                        }
+                      : {
+                          // Light theme colors from your theme
+                          colorPrimary: purple500,
+                          colorText: gray700,
+                          colorTextSecondary: gray500,
+                          colorBackground: '#ffffff',
+                          colorInputBackground: gray50,
+                          colorInputText: gray700,
+                        },
+                    elements: {
+                      userButtonPopoverCard: {
+                        background: isDark ? gray800 : '#ffffff',
+                        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
+                        border: isDark ? `1px solid ${gray700}` : '1px solid #E5E7EB',
+                      },
+                      userButtonPopoverActionButton: {
+                        color: isDark ? '#ffffff' : gray700,
+                        '&:hover': {
+                          background: isDark ? gray700 : gray50,
+                        },
+                      },
+                      userButtonPopoverActionButtonText: {
+                        color: isDark ? '#ffffff' : gray700,
+                      },
+                      userButtonPopoverActionButtonIcon: {
+                        color: isDark ? gray400 : gray500,
+                      },
+                      userButtonPopoverFooter: {
+                        background: isDark ? gray800 : '#ffffff',
+                        borderTop: isDark ? `1px solid ${gray700}` : '1px solid #E5E7EB',
+                      },
+                      userPreviewMainIdentifier: {
+                        color: isDark ? '#ffffff' : gray700,
+                      },
+                      userPreviewSecondaryIdentifier: {
+                        color: isDark ? gray400 : gray500,
+                      },
+                    },
+                  }}
+                />
               </SignedIn>
             </HStack>
           }

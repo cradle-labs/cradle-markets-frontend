@@ -11,11 +11,12 @@ import {
   Card,
   CardBody,
   Flex,
+  useToast,
 } from '@chakra-ui/react'
 import { useAuth } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { setRole } from './actions'
-import { useActionState } from 'react'
+import { useActionState, useEffect } from 'react'
 /**
  * Select Role Page
  *
@@ -29,7 +30,34 @@ import { useActionState } from 'react'
 export default function SelectRolePage() {
   const { signOut } = useAuth()
   const router = useRouter()
+  const toast = useToast()
   const [state, formAction, isPending] = useActionState(setRole, { error: '' })
+
+  // Handle successful account creation
+  useEffect(() => {
+    if (state.success && !state.partialSuccess) {
+      // Show success toast
+      toast({
+        title: 'Account created successfully',
+        description: `Your ${state.role} account has been set up.`,
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      })
+
+      // Navigate to trade page
+      router.push('/trade')
+    } else if (state.partialSuccess) {
+      // Show warning toast for partial success
+      toast({
+        title: 'Account setup incomplete',
+        description: state.error || 'Please contact support to complete your account setup.',
+        status: 'warning',
+        duration: 7000,
+        isClosable: true,
+      })
+    }
+  }, [state.success, state.partialSuccess, state.role, state.error, router, toast])
 
   const handleSignOut = async () => {
     await signOut()

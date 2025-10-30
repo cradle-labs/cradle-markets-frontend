@@ -6,6 +6,7 @@ import FadeInOnView from '@repo/lib/shared/components/containers/FadeInOnView'
 import { PropsWithChildren } from 'react'
 import Noise from '@repo/lib/shared/components/layout/Noise'
 import { RadialPattern } from '@repo/lib/shared/components/zen/RadialPattern'
+import { LendDetails } from '@repo/lib/modules/lend'
 
 type LendPageProps = PropsWithChildren
 
@@ -86,9 +87,7 @@ export function LendPage({ children }: LendPageProps) {
               </VStack>
             </FadeInOnView>
             <FadeInOnView animateOnce={false}>
-              <Box pb={{ base: '0', md: '3' }}>
-                {children}
-              </Box>
+              <Box pb={{ base: '0', md: '3' }}>{children}</Box>
             </FadeInOnView>
           </DefaultPageContainer>
         </Noise>
@@ -100,7 +99,8 @@ export function LendPage({ children }: LendPageProps) {
         pt={['lg', '54px']}
       >
         <FadeInOnView animateOnce={false}>
-         {/* TODO: Implement perps components here */}
+          {/* TODO: Implement lending components here */}
+          <LendDetails />
         </FadeInOnView>
       </DefaultPageContainer>
     </>

@@ -49,6 +49,7 @@ export async function setRole(prevState: any, formData: FormData): Promise<SetRo
       const accountResult = await createAccount({
         linked_account_id: userId,
         account_type: accountType,
+        status: 'verified',
       })
 
       if (!accountResult.success) {

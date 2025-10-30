@@ -58,10 +58,10 @@ export interface UseAssetsOptions {
  * }
  * ```
  */
-export function useAssets({ filters, enabled = true, queryOptions }: UseAssetsOptions = {}) {
+export function useAssets({ enabled = true, queryOptions }: UseAssetsOptions = {}) {
   return useQuery({
-    queryKey: cradleQueryKeys.assets.list(filters),
-    queryFn: () => fetchAssets(filters),
+    queryKey: cradleQueryKeys.assets.list(),
+    queryFn: () => fetchAssets(),
     enabled,
     ...standardQueryOptions,
     ...queryOptions,

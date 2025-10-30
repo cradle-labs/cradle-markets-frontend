@@ -7,11 +7,15 @@ import {
   Heading,
   HStack,
   Image,
+  Skeleton,
+  Spinner,
   Text,
   useColorModeValue,
   VStack,
 } from '@chakra-ui/react'
 import { NoisyCard } from '@repo/lib/shared/components/containers/NoisyCard'
+import type { Asset } from '@repo/lib/cradle-client-ts/cradle-api-client'
+import { useTokenBalances } from '@repo/lib/shared/hooks/useTokenBalances'
 
 // Types for asset balances
 interface AssetBalance {
@@ -19,64 +23,17 @@ interface AssetBalance {
   name: string
   symbol: string
   icon: string
-  balance: number
+  balance: string
+  formatted: string
+  isLoading: boolean
   value?: number // USD value
 }
 
-// Mock data for demonstration - replace with actual API calls
-const mockTokenizedAssets: AssetBalance[] = [
-  {
-    id: 'asset-safaricom',
-    name: 'Safaricom',
-    symbol: 'cSAF',
-    icon: '/images/tokens/safaricom.svg',
-    balance: 0,
-    value: 0,
-  },
-  {
-    id: 'asset-equity',
-    name: 'Equity Bank',
-    symbol: 'cEQTY',
-    icon: '/images/tokens/equity.svg',
-    balance: 0,
-    value: 0,
-  },
-  {
-    id: 'asset-kcb',
-    name: 'KCB Group',
-    symbol: 'cKCB',
-    icon: '/images/tokens/kcb.svg',
-    balance: 0,
-    value: 0,
-  },
-]
-
-const mockHederaNativeTokens: AssetBalance[] = [
-  {
-    id: 'hbar',
-    name: 'Hedera',
-    symbol: 'HBAR',
-    icon: '/images/tokens/hbar.svg',
-    balance: 0,
-    value: 0,
-  },
-  {
-    id: 'usdc',
-    name: 'USD Coin',
-    symbol: 'USDC',
-    icon: '/images/tokens/usdc.svg',
-    balance: 0,
-    value: 0,
-  },
-  {
-    id: 'usdt',
-    name: 'Tether USD',
-    symbol: 'USDT',
-    icon: '/images/tokens/usdt.svg',
-    balance: 0,
-    value: 0,
-  },
-]
+interface PortfolioSummaryProps {
+  walletAddress: string | undefined
+  assets: Asset[] | undefined
+  isLoadingAssets: boolean
+}
 
 interface AssetCardProps {
   asset: AssetBalance
@@ -88,7 +45,13 @@ function AssetCard({ asset }: AssetCardProps) {
   const fallbackColor = useColorModeValue('font.secondary', 'font.secondary')
   const valueColor = useColorModeValue('font.secondary', 'font.secondary')
 
-  const displayBalance = `${asset.balance.toLocaleString()} ${asset.symbol}`
+  const displayBalance = asset.isLoading ? (
+    <Spinner size="xs" />
+  ) : (
+    `${parseFloat(asset.formatted).toLocaleString(undefined, {
+      maximumFractionDigits: 6,
+    })} ${asset.symbol}`
+  )
   const displayValue = `$${(asset.value || 0).toFixed(2)}`
 
   return (
@@ -108,28 +71,44 @@ function AssetCard({ asset }: AssetCardProps) {
     >
       {/* Icon */}
       <Box borderRadius="full" flexShrink={0} h={10} overflow="hidden" w={10}>
-        <Image
-          alt={`${asset.name} logo`}
-          fallback={
-            <Box
-              alignItems="center"
-              bg={fallbackBg}
-              borderRadius="full"
-              display="flex"
-              h="full"
-              justifyContent="center"
-              w="full"
-            >
-              <Text color={fallbackColor} fontSize="lg" fontWeight="bold">
-                {asset.symbol.charAt(0).toUpperCase()}
-              </Text>
-            </Box>
-          }
-          h="full"
-          objectFit="contain"
-          src={asset.icon}
-          w="full"
-        />
+        {asset.icon ? (
+          <Image
+            alt={`${asset.name} logo`}
+            fallback={
+              <Box
+                alignItems="center"
+                bg={fallbackBg}
+                borderRadius="full"
+                display="flex"
+                h="full"
+                justifyContent="center"
+                w="full"
+              >
+                <Text color={fallbackColor} fontSize="lg" fontWeight="bold">
+                  {asset.symbol.charAt(0).toUpperCase()}
+                </Text>
+              </Box>
+            }
+            h="full"
+            objectFit="contain"
+            src={asset.icon}
+            w="full"
+          />
+        ) : (
+          <Box
+            alignItems="center"
+            bg={fallbackBg}
+            borderRadius="full"
+            display="flex"
+            h="full"
+            justifyContent="center"
+            w="full"
+          >
+            <Text color={fallbackColor} fontSize="lg" fontWeight="bold">
+              {asset.symbol.charAt(0).toUpperCase()}
+            </Text>
+          </Box>
+        )}
       </Box>
 
       {/* Name */}
@@ -139,18 +118,101 @@ function AssetCard({ asset }: AssetCardProps) {
 
       {/* Balance and Dollar Value */}
       <VStack align="end" spacing={0}>
-        <Text fontSize="sm" fontWeight="semibold">
-          {displayBalance}
-        </Text>
-        <Text color={valueColor} fontSize="xs" fontWeight="medium">
-          {displayValue}
-        </Text>
+        {asset.isLoading ? (
+          <Skeleton h="20px" w="80px" />
+        ) : (
+          <>
+            <Text fontSize="sm" fontWeight="semibold">
+              {displayBalance}
+            </Text>
+            <Text color={valueColor} fontSize="xs" fontWeight="medium">
+              {displayValue}
+            </Text>
+          </>
+        )}
       </VStack>
     </HStack>
   )
 }
 
-const PortfolioSummary = () => {
+const PortfolioSummary = ({ walletAddress, assets, isLoadingAssets }: PortfolioSummaryProps) => {
+  // Fetch balances for all assets
+  const { balances } = useTokenBalances({
+    walletAddress,
+    assets,
+    enabled: !!walletAddress && !!assets && assets.length > 0,
+  })
+
+  // Group assets by type
+  const nativeAssets = assets?.filter(asset => asset.asset_type === 'native') || []
+  // Handle both yield_bearing and yield_breaking types (API inconsistency)
+  const yieldAssets =
+    assets?.filter(
+      asset =>
+        asset.asset_type === 'yield_breaking' || (asset.asset_type as string).includes('yield')
+    ) || []
+  const bridgedAssets = assets?.filter(asset => asset.asset_type === 'bridged') || []
+
+  // Combine bridged assets with native assets for display
+  const tokenizedAssets = [...bridgedAssets, ...nativeAssets]
+
+  // Map assets to AssetBalance format
+  const mapToAssetBalance = (asset: Asset): AssetBalance => {
+    const balance = balances[asset.id]
+    return {
+      id: asset.id,
+      name: asset.name,
+      symbol: asset.symbol,
+      icon: asset.icon || '',
+      balance: balance?.balance || '0',
+      formatted: balance?.formatted || '0',
+      isLoading: balance?.isLoading || false,
+      value: 0, // TODO: Add price data to calculate USD value
+    }
+  }
+
+  const tokenizedAssetBalances = tokenizedAssets.map(mapToAssetBalance)
+  const yieldAssetBalances = yieldAssets.map(mapToAssetBalance)
+
+  // Show loading state
+  if (isLoadingAssets) {
+    return (
+      <VStack align="start" spacing={6} w="full">
+        <Heading
+          background="font.special"
+          backgroundClip="text"
+          fontSize={{ base: 'xl', md: '2xl' }}
+          fontWeight="semibold"
+        >
+          Asset Balances
+        </Heading>
+        <Grid gap={6} templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} w="full">
+          <Skeleton borderRadius="lg" h="300px" w="full" />
+          <Skeleton borderRadius="lg" h="300px" w="full" />
+        </Grid>
+      </VStack>
+    )
+  }
+
+  // Show empty state
+  if (!assets || assets.length === 0) {
+    return (
+      <VStack align="start" spacing={6} w="full">
+        <Heading
+          background="font.special"
+          backgroundClip="text"
+          fontSize={{ base: 'xl', md: '2xl' }}
+          fontWeight="semibold"
+        >
+          Asset Balances
+        </Heading>
+        <Text color="font.secondary" fontSize="sm">
+          No assets found
+        </Text>
+      </VStack>
+    )
+  }
+
   return (
     <VStack align="start" spacing={6} w="full">
       {/* Title with gradient */}
@@ -182,15 +244,21 @@ const PortfolioSummary = () => {
             <Text color="font.secondary" fontSize="sm" fontWeight="medium">
               Tokenized Assets
             </Text>
-            <VStack spacing={3} w="full">
-              {mockTokenizedAssets.map(asset => (
-                <AssetCard asset={asset} key={asset.id} />
-              ))}
-            </VStack>
+            {tokenizedAssetBalances.length > 0 ? (
+              <VStack spacing={3} w="full">
+                {tokenizedAssetBalances.map(asset => (
+                  <AssetCard asset={asset} key={asset.id} />
+                ))}
+              </VStack>
+            ) : (
+              <Text color="font.secondary" fontSize="xs">
+                No tokenized assets
+              </Text>
+            )}
           </VStack>
         </NoisyCard>
 
-        {/* Hedera Native Tokens Column */}
+        {/* Yield Assets Column */}
         <NoisyCard
           cardProps={{
             borderRadius: 'lg',
@@ -205,13 +273,19 @@ const PortfolioSummary = () => {
         >
           <VStack align="start" spacing={4}>
             <Text color="font.secondary" fontSize="sm" fontWeight="medium">
-              Hedera Native Tokens
+              Yield Assets
             </Text>
-            <VStack spacing={3} w="full">
-              {mockHederaNativeTokens.map(asset => (
-                <AssetCard asset={asset} key={asset.id} />
-              ))}
-            </VStack>
+            {yieldAssetBalances.length > 0 ? (
+              <VStack spacing={3} w="full">
+                {yieldAssetBalances.map(asset => (
+                  <AssetCard asset={asset} key={asset.id} />
+                ))}
+              </VStack>
+            ) : (
+              <Text color="font.secondary" fontSize="xs">
+                No yield assets
+              </Text>
+            )}
           </VStack>
         </NoisyCard>
       </Grid>

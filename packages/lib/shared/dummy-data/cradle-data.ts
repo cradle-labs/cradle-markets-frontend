@@ -907,44 +907,6 @@ export const mockTimeSeriesRecords: TimeSeriesRecord[] = [
 // ============================================================================
 
 export const mockLendingPools: LendingPool[] = [
-  // Stablecoin Pools (borrow USDC/USDT with NSE stocks as collateral)
-  {
-    id: 'pool-usdc-001',
-    pool_address: '0x1234567890abcdef1234567890abcdef12345678',
-    pool_contract_id: 'CDPOOLUSDC001POOLUSDC001POOLUSDC',
-    reserve_asset: 'asset-usdc',
-    loan_to_value: '0.75',
-    base_rate: '0.02',
-    slope1: '0.04',
-    slope2: '0.75',
-    liquidation_threshold: '0.80',
-    liquidation_discount: '0.05',
-    reserve_factor: '0.10',
-    name: 'USDC Lending Pool',
-    title: 'Borrow USDC Against NSE Stocks',
-    description:
-      'Borrow USDC stablecoin by collateralizing your tokenized NSE securities. Access liquidity while maintaining exposure to Kenyan equities.',
-    created_at: '2024-01-20T12:00:00Z',
-  },
-  {
-    id: 'pool-usdt-001',
-    pool_address: '0xabcdef1234567890abcdef1234567890abcdef12',
-    pool_contract_id: 'CDPOOLUSDT001POOLUSDT001POOLUSDT',
-    reserve_asset: 'asset-usdt',
-    loan_to_value: '0.75',
-    base_rate: '0.025',
-    slope1: '0.045',
-    slope2: '0.80',
-    liquidation_threshold: '0.80',
-    liquidation_discount: '0.05',
-    reserve_factor: '0.10',
-    name: 'USDT Lending Pool',
-    title: 'Borrow USDT Against NSE Stocks',
-    description:
-      'Use your tokenized Safaricom, Equity, or other NSE stocks as collateral to borrow USDT stablecoin.',
-    created_at: '2024-01-20T12:30:00Z',
-  },
-
   // Blue-chip NSE Stock Lending Pools
   {
     id: 'pool-safaricom-001',

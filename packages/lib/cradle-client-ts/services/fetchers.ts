@@ -22,7 +22,6 @@ import type {
   OrderFilters,
   TimeSeriesFilters,
   LendingPoolFilters,
-  AssetType,
   HealthResponse,
 } from '../cradle-api-client'
 
@@ -87,9 +86,9 @@ export async function fetchAssetByManager(manager: string): Promise<Asset> {
   return getAssetByManager(manager)
 }
 
-export async function fetchAssets(filters?: { asset_type?: AssetType }): Promise<Asset[]> {
+export async function fetchAssets(): Promise<Asset[]> {
   const { getAssets } = await import('../../actions/assets')
-  return getAssets(filters)
+  return getAssets()
 }
 
 // =============================================================================

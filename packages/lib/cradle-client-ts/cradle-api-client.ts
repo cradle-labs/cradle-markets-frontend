@@ -235,6 +235,7 @@ export interface LendingPoolFilters {
 export interface CreateAccountInput {
   linked_account_id: string
   account_type: CradleAccountType
+  status: CradleAccountStatus
 }
 
 export interface UpdateAccountStatusInput {
@@ -565,9 +566,8 @@ export class CradleApiClient {
         `${this.axiosInstance.defaults.baseURL}/health`
       )
       return response.data
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Health check failed'
-      throw new Error(`Health check failed: ${errorMessage}`)
+    } catch {
+      throw new Error('Health check failed')
     }
   }
 
@@ -611,7 +611,7 @@ export class CradleApiClient {
    * Get wallet by account ID
    */
   async getWalletByAccountId(accountId: string): Promise<ApiResponse<CradleWallet>> {
-    return this.request<CradleWallet>('GET', `/wallets/account/${accountId}`)
+    return this.request<CradleWallet>('GET', `/accounts/${accountId}/wallets`)
   }
 
   // ============================================================================
@@ -623,6 +623,10 @@ export class CradleApiClient {
    */
   async getAsset(id: string): Promise<ApiResponse<Asset>> {
     return this.request<Asset>('GET', `/assets/${id}`)
+  }
+
+  async getAssets(): Promise<ApiResponse<Array<Asset>>> {
+    return this.request<Array<Asset>>('GET', '/assets')
   }
 
   /**
@@ -637,18 +641,6 @@ export class CradleApiClient {
    */
   async getAssetByManager(manager: string): Promise<ApiResponse<Asset>> {
     return this.request<Asset>('GET', `/assets/manager/${manager}`)
-  }
-
-  /**
-   * Get all assets with optional filters
-   */
-  async getAssets(filters?: { asset_type?: AssetType }): Promise<ApiResponse<Asset[]>> {
-    const params = new URLSearchParams()
-    if (filters?.asset_type) params.append('asset_type', filters.asset_type)
-
-    const query = params.toString()
-    const path = query ? `/assets?${query}` : '/assets'
-    return this.request<Asset[]>('GET', path)
   }
 
   // ============================================================================

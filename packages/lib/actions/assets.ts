@@ -11,7 +11,7 @@ import { revalidatePath } from 'next/cache'
 import { getCradleClient } from '../cradle-client-ts/client'
 import { executeCradleOperation } from '../cradle-client-ts/services/api.service'
 import { MutationResponseHelpers } from '../cradle-client-ts/cradle-api-client'
-import type { Asset, AssetType, CreateAssetInput } from '../cradle-client-ts/cradle-api-client'
+import type { Asset, CreateAssetInput } from '../cradle-client-ts/cradle-api-client'
 
 // =============================================================================
 // QUERIES
@@ -44,9 +44,9 @@ export async function getAssetByManager(manager: string): Promise<Asset> {
 /**
  * Get all assets with optional filters
  */
-export async function getAssets(filters?: { asset_type?: AssetType }): Promise<Asset[]> {
+export async function getAssets(): Promise<Asset[]> {
   const client = getCradleClient()
-  return executeCradleOperation(() => client.getAssets(filters))
+  return executeCradleOperation(() => client.getAssets())
 }
 
 // =============================================================================

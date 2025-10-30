@@ -3,16 +3,22 @@
 import { Box, Heading, Text, VStack } from '@chakra-ui/react'
 import { DefaultPageContainer } from '@repo/lib/shared/components/containers/DefaultPageContainer'
 import FadeInOnView from '@repo/lib/shared/components/containers/FadeInOnView'
-import { 
-  TokenizedAssetGrid, 
-  TokenizedAssetProvider, 
-  useTokenizedAssets, 
+import {
+  TokenizedAssetGrid,
+  TokenizedAssetProvider,
+  useTokenizedAssets,
   TokenizedAssetData,
-  TokenizedAssetTable
+  TokenizedAssetTable,
 } from '@repo/lib/modules/trade/TokenizedAssets'
 import { useRouter } from 'next/navigation'
-import { AssetSearchFilters, AssetCategory, ViewMode, SortOption } from '@repo/lib/modules/trade/components'
+import {
+  AssetSearchFilters,
+  AssetCategory,
+  ViewMode,
+  SortOption,
+} from '@repo/lib/modules/trade/components'
 import { PropsWithChildren, useState, useMemo } from 'react'
+import { useUser } from '@clerk/nextjs'
 import Noise from '@repo/lib/shared/components/layout/Noise'
 import { RadialPattern } from '@repo/lib/shared/components/zen/RadialPattern'
 
@@ -23,7 +29,9 @@ interface TokenizedAssetsContentProps {
 function TokenizedAssetsContent({ onAssetClick }: TokenizedAssetsContentProps) {
   const { assets, loading, error } = useTokenizedAssets()
   const router = useRouter()
-  
+  const { user } = useUser()
+  console.log('user', user?.id)
+
   // State for search and filters
   const [search, setSearch] = useState<string | null>(null)
   const [selectedCategory, setSelectedCategory] = useState<AssetCategory>('all')
@@ -48,7 +56,7 @@ function TokenizedAssetsContent({ onAssetClick }: TokenizedAssetsContentProps) {
     if (search && search.trim()) {
       const searchLower = search.toLowerCase()
       filtered = filtered.filter(
-        (asset) =>
+        asset =>
           asset.name.toLowerCase().includes(searchLower) ||
           asset.symbol.toLowerCase().includes(searchLower)
       )
@@ -57,24 +65,22 @@ function TokenizedAssetsContent({ onAssetClick }: TokenizedAssetsContentProps) {
     // Apply category filter (mock implementation)
     if (selectedCategory !== 'all') {
       // In a real app, assets would have category metadata
-      filtered = filtered.filter((asset) => {
+      filtered = filtered.filter(asset => {
         // Simple mock categorization for NSE stocks
         if (selectedCategory === 'technology') {
-          return ['Safaricom'].some(name => 
-            asset.name.toLowerCase().includes(name.toLowerCase())
-          )
+          return ['Safaricom'].some(name => asset.name.toLowerCase().includes(name.toLowerCase()))
         }
         if (selectedCategory === 'financials') {
-          return ['Equity Bank', 'KCB', 'Co-operative Bank', 'NCBA', 'Standard Chartered'].some(name => 
-            asset.name.toLowerCase().includes(name.toLowerCase())
+          return ['Equity Bank', 'KCB', 'Co-operative Bank', 'NCBA', 'Standard Chartered'].some(
+            name => asset.name.toLowerCase().includes(name.toLowerCase())
           )
         }
         if (selectedCategory === 'consumer') {
-          return ['EABL', 'BAT', 'Bamburi', 'Crown Paints'].some(name => 
+          return ['EABL', 'BAT', 'Bamburi', 'Crown Paints'].some(name =>
             asset.name.toLowerCase().includes(name.toLowerCase())
           )
         }
-        
+
         return true
       })
     }
@@ -138,16 +144,16 @@ function TokenizedAssetsContent({ onAssetClick }: TokenizedAssetsContentProps) {
 
       {/* Content based on view mode */}
       {viewMode === 'grid' ? (
-        <TokenizedAssetGrid 
-          assets={filteredAssets} 
-          loading={loading} 
-          onAssetClick={handleAssetClick} 
+        <TokenizedAssetGrid
+          assets={filteredAssets}
+          loading={loading}
+          onAssetClick={handleAssetClick}
         />
       ) : (
-        <TokenizedAssetTable 
-          assets={filteredAssets} 
-          loading={loading} 
-          onAssetClick={handleAssetClick} 
+        <TokenizedAssetTable
+          assets={filteredAssets}
+          loading={loading}
+          onAssetClick={handleAssetClick}
         />
       )}
     </VStack>
@@ -229,15 +235,14 @@ export function TokenizedAssetsPage({ children, onAssetClick }: TokenizedAssetsP
                     Explore Assets
                   </Heading>
                   <Text sx={{ textWrap: 'balance' }} variant="secondary">
-                    Discover and trade tokenized real-world assets with real-time pricing and 24/7 availability.
+                    Discover and trade tokenized real-world assets with real-time pricing and 24/7
+                    availability.
                   </Text>
                 </Box>
               </VStack>
             </FadeInOnView>
             <FadeInOnView animateOnce={false}>
-              <Box pb={{ base: '0', md: '3' }}>
-                {children}
-              </Box>
+              <Box pb={{ base: '0', md: '3' }}>{children}</Box>
             </FadeInOnView>
           </DefaultPageContainer>
         </Noise>

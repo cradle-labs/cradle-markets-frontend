@@ -12,58 +12,24 @@ import {
   CardBody,
   Flex,
 } from '@chakra-ui/react'
-import { useAuth, useUser } from '@clerk/nextjs'
+import { useAuth } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { setRole } from './actions'
-import { useActionState, useEffect, useRef } from 'react'
+import { useActionState } from 'react'
+/**
+ * Select Role Page
+ *
+ * This page allows users to select their account type (institution or retail).
+ * When a role is selected:
+ * 1. The role is set in Clerk's user metadata (server action)
+ * 2. A trading account is created in the Cradle system using useCreateAccount hook (client-side)
+ * 3. The user is redirected to the dashboard on success
+ */
 
 export default function SelectRolePage() {
-  const { signOut, getToken } = useAuth()
-  const { user } = useUser()
+  const { signOut } = useAuth()
   const router = useRouter()
   const [state, formAction, isPending] = useActionState(setRole, { error: '' })
-  const redirectAttempted = useRef(false)
-
-  useEffect(() => {
-    console.log('State changed:', state)
-    if (state.success && state.role && !redirectAttempted.current) {
-      redirectAttempted.current = true
-      console.log('Role set successfully, waiting for session to update...')
-
-      // Poll for the role to appear in the user object
-      let attempts = 0
-      const maxAttempts = 20 // 10 seconds max
-
-      const checkRole = async () => {
-        attempts++
-        console.log(`Checking for role update... (attempt ${attempts}/${maxAttempts})`)
-
-        // Force token refresh to get latest session
-        await getToken({ skipCache: true })
-
-        // Reload user data
-        await user?.reload()
-
-        // Check if role is now in publicMetadata
-        const currentRole = user?.publicMetadata?.role
-        console.log('Current role in metadata:', currentRole)
-
-        if (currentRole === state.role) {
-          console.log('Role confirmed in session, redirecting...')
-          window.location.href = '/trade'
-        } else if (attempts >= maxAttempts) {
-          console.log('Max attempts reached, redirecting anyway...')
-          window.location.href = '/trade'
-        } else {
-          // Try again in 500ms
-          setTimeout(checkRole, 500)
-        }
-      }
-
-      // Start checking after a brief initial delay
-      setTimeout(checkRole, 1000)
-    }
-  }, [state, getToken, user])
 
   const handleSignOut = async () => {
     await signOut()
@@ -135,7 +101,8 @@ export default function SelectRolePage() {
                     </VStack>
 
                     <Button
-                      isLoading={isPending}
+                      isDisabled={isPending || state.success}
+                      isLoading={isPending || state.success}
                       size="lg"
                       type="submit"
                       variant="primary"
@@ -192,7 +159,8 @@ export default function SelectRolePage() {
                     </VStack>
 
                     <Button
-                      isLoading={isPending}
+                      isDisabled={isPending || state.success}
+                      isLoading={isPending || state.success}
                       size="lg"
                       type="submit"
                       variant="primary"

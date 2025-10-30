@@ -44,7 +44,7 @@ export default clerkMiddleware(async (auth, req) => {
     if (!userRole && req.nextUrl.pathname !== '/select-role') {
       // Only redirect to role selection, don't block access
       // Individual pages with RoleGuard will handle access control
-      console.log('No role found in session claims, redirecting to /select-role')
+      // console.log('No role found in session claims, redirecting to /select-role')
       const url = new URL('/select-role', req.url)
       return Response.redirect(url)
     }

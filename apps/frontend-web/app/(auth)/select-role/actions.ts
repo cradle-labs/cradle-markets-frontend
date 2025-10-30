@@ -1,9 +1,18 @@
 'use server'
 
 import { auth, clerkClient } from '@clerk/nextjs/server'
-import { revalidatePath } from 'next/cache'
+import { createAccount } from '@repo/lib/actions/accounts'
+import type { CradleAccountType } from '@repo/lib/cradle-client-ts/cradle-api-client'
 
-export async function setRole(prevState: any, formData: FormData) {
+interface SetRoleResult {
+  error?: string
+  success?: boolean
+  role?: string
+  accountId?: string
+  partialSuccess?: boolean
+}
+
+export async function setRole(prevState: any, formData: FormData): Promise<SetRoleResult> {
   try {
     const { userId, sessionClaims } = await auth()
 
@@ -18,8 +27,8 @@ export async function setRole(prevState: any, formData: FormData) {
       return { error: 'Role is required' }
     }
 
-    if (!['institution', 'retail'].includes(role)) {
-      return { error: 'Invalid role. Must be "institution" or "retail"' }
+    if (!['institutional', 'retail'].includes(role)) {
+      return { error: 'Invalid role. Must be "institutional" or "retail"' }
     }
 
     // Allow users to set their own role if they don't have one yet
@@ -30,16 +39,35 @@ export async function setRole(prevState: any, formData: FormData) {
       // User is setting their role for the first time - allow this
       const client = await clerkClient()
 
+      // Update Clerk metadata
       await client.users.updateUserMetadata(userId, {
         publicMetadata: { role },
       })
 
-      // Revalidate the path to ensure fresh data
-      revalidatePath('/')
-      revalidatePath('/select-role')
+      // Create Cradle account
+      const accountType: CradleAccountType = role === 'institutional' ? 'institutional' : 'retail'
+      const accountResult = await createAccount({
+        linked_account_id: userId,
+        account_type: accountType,
+      })
 
-      // Return success state instead of redirecting
-      return { success: true, role }
+      if (!accountResult.success) {
+        // Role was set but account creation failed
+        console.error('Account creation failed:', accountResult.error)
+        return {
+          partialSuccess: true,
+          success: true,
+          role,
+          error: 'Role set successfully, but account creation failed. Please contact support.',
+        }
+      }
+
+      // Return success state with account ID
+      return {
+        success: true,
+        role,
+        accountId: accountResult.accountId,
+      }
     } else {
       // User already has a role and is trying to change it
       return {

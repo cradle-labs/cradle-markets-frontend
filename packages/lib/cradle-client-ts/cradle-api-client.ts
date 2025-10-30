@@ -639,6 +639,18 @@ export class CradleApiClient {
     return this.request<Asset>('GET', `/assets/manager/${manager}`)
   }
 
+  /**
+   * Get all assets with optional filters
+   */
+  async getAssets(filters?: { asset_type?: AssetType }): Promise<ApiResponse<Asset[]>> {
+    const params = new URLSearchParams()
+    if (filters?.asset_type) params.append('asset_type', filters.asset_type)
+
+    const query = params.toString()
+    const path = query ? `/assets?${query}` : '/assets'
+    return this.request<Asset[]>('GET', path)
+  }
+
   // ============================================================================
   // MARKETS API
   // ============================================================================

@@ -8,8 +8,8 @@ import { CradleApiClient, MutationResponseHelpers } from './cradle-api-client'
 
 // Initialize the client
 const client = new CradleApiClient({
-  baseUrl: 'http://localhost:3000',
-  apiKey: process.env.API_SECRET_KEY || 'your-secret-key',
+  baseUrl: 'https://cradle-back-end-production.up.railway.app',
+  apiKey: process.env.API_SECRET_KEY || 'test',
   timeout: 30000,
 })
 

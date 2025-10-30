@@ -30,6 +30,7 @@
     "@chakra-ui/next-js": "2.4.2",
     "@chakra-ui/react": "2.10.6",
     "@chakra-ui/theme-tools": "2.2.6",
+    "@clerk/nextjs": "^6.34.0",
     "@dicebear/collection": "9.2.2",
     "@dicebear/core": "9.2.4",
     "@emotion/react": "11.14.0",
@@ -115,5 +116,14 @@
     "lokijs": "^1.5.12",
     "msw": "2.8.4",
     "sentry-testkit": "5.0.10"
+  },
+  "exports": {
+    "./modules/cradle-api": "./modules/cradle-api/index.ts",
+    "./modules/cradle-api/server-actions": "./modules/cradle-api/server-actions/index.ts",
+    "./modules/cradle-api/mutations": "./modules/cradle-api/mutations/index.ts",
+    "./modules/cradle-api/queries": "./modules/cradle-api/queries/index.ts",
+    "./modules/cradle-api/hooks": "./modules/cradle-api/hooks/index.ts",
+    "./modules/cradle-api/types": "./modules/cradle-api/types.ts",
+    "./modules/cradle-api/utils": "./modules/cradle-api/utils/index.ts"
   }
 }

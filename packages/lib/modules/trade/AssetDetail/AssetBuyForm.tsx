@@ -14,7 +14,11 @@ import { useAccountByLinkedId } from '@repo/lib/cradle-client-ts/hooks/accounts/
 import { useWalletByAccountId } from '@repo/lib/cradle-client-ts/hooks/accounts/useWallet'
 import { useAsset } from '@repo/lib/cradle-client-ts/hooks/assets/useAsset'
 import { placeOrder } from '@repo/lib/actions/orders'
-import { blockInvalidNumberInput, formatTo8Decimals } from '@repo/lib/shared/utils/numbers'
+import {
+  blockInvalidNumberInput,
+  formatTo8Decimals,
+  formatToWholeNumber,
+} from '@repo/lib/shared/utils/numbers'
 import type { PlaceOrderInput } from '@repo/lib/cradle-client-ts/cradle-api-client'
 
 type OrderType = 'market' | 'limit'
@@ -169,14 +173,14 @@ export function AssetBuyForm() {
     try {
       const price = getPrice()
 
-      // Format amounts to 8 decimal places as required by the API
+      // Format amounts: whole numbers for amounts, 8 decimals for price
       const orderPayload: PlaceOrderInput = {
         wallet: wallet.id,
         market_id: market.id,
         bid_asset: assetOne.id, // We want to receive asset_one (SAF)
         ask_asset: assetTwo.id, // We're paying with asset_two (cpUSD)
-        bid_amount: formatTo8Decimals(receiveAmount), // Amount we want to receive (8 decimals)
-        ask_amount: formatTo8Decimals(payAmount), // Amount we're paying (8 decimals)
+        bid_amount: formatToWholeNumber(receiveAmount), // Amount we want to receive (whole number)
+        ask_amount: formatToWholeNumber(payAmount), // Amount we're paying (whole number)
         price: formatTo8Decimals(price), // Price (8 decimals)
         mode: 'good-till-cancel',
         order_type: orderType,

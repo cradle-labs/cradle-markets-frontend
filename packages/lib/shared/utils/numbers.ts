@@ -204,13 +204,38 @@ export function blockInvalidNumberInput(event: KeyboardEvent<HTMLInputElement>):
 /**
  * Format a number or string to 8 decimal places
  * Used for API payloads that require precise decimal formatting
+ * Uses BigNumber to avoid floating point precision issues
  */
 export function formatTo8Decimals(value: string | number): string {
-  const num = typeof value === 'string' ? parseFloat(value) : value
-  if (isNaN(num)) {
+  try {
+    const bnValue = bn(value)
+    if (bnValue.isNaN() || !bnValue.isFinite()) {
+      return '0.00000000'
+    }
+    // Use BigNumber's toFixed to ensure precision
+    return bnValue.toFixed(8, BigNumber.ROUND_DOWN)
+  } catch {
     return '0.00000000'
   }
-  return num.toFixed(8)
+}
+
+/**
+ * Format a number or string to a whole number (no decimals)
+ * Used for API payloads that require integer amounts
+ * Uses BigNumber to avoid floating point precision issues
+ * Rounds to the nearest whole number
+ */
+export function formatToWholeNumber(value: string | number): string {
+  try {
+    const bnValue = bn(value)
+    if (bnValue.isNaN() || !bnValue.isFinite()) {
+      return '0'
+    }
+    // Round to nearest whole number using ROUND_HALF_UP (standard rounding)
+    return bnValue.toFixed(0, BigNumber.ROUND_HALF_UP)
+  } catch {
+    return '0'
+  }
 }
 
 type NumberFormat =

@@ -39,6 +39,8 @@ const TIME_CONFIGS: Record<string, TimeConfig> = {
 interface AssetDetailContextType {
   asset: TokenizedAssetData | null
   market: Market | null
+  assetOne: any | null // The primary asset (e.g., SAF)
+  assetTwo: any | null // The quote asset (e.g., cpUSD)
   orders: Order[]
   loading: boolean
   error: string | null
@@ -61,15 +63,27 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
     refetch: refetchMarket,
   } = useMarket({ marketId })
 
+  console.log('Market:', market)
   // Fetch primary asset data (asset_one from the market)
   const {
     data: primaryAsset,
-    isLoading: assetLoading,
-    error: assetError,
-    refetch: refetchAsset,
+    isLoading: assetOneLoading,
+    error: assetOneError,
+    refetch: refetchAssetOne,
   } = useAsset({
     assetId: market?.asset_one || '',
     enabled: !!market?.asset_one,
+  })
+
+  // Fetch secondary asset data (asset_two from the market)
+  const {
+    data: secondaryAsset,
+    isLoading: assetTwoLoading,
+    error: assetTwoError,
+    refetch: refetchAssetTwo,
+  } = useAsset({
+    assetId: market?.asset_two || '',
+    enabled: !!market?.asset_two,
   })
 
   // Fetch time history data for all chart periods
@@ -127,10 +141,11 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
 
   // Aggregate loading states
   const timeHistoryLoading = timeHistoryQueries.some(q => q.isLoading)
-  const loading = marketLoading || assetLoading || timeHistoryLoading || ordersLoading
+  const loading =
+    marketLoading || assetOneLoading || assetTwoLoading || timeHistoryLoading || ordersLoading
 
   // Aggregate error states (time history and orders are optional)
-  const error = marketError?.message || assetError?.message || null
+  const error = marketError?.message || assetOneError?.message || assetTwoError?.message || null
 
   // Log time history errors as warnings
   const timeHistoryErrors = timeHistoryQueries.filter(q => q.error)
@@ -208,7 +223,8 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
 
   const refetch = () => {
     refetchMarket()
-    refetchAsset()
+    refetchAssetOne()
+    refetchAssetTwo()
     timeHistoryQueries.forEach(query => query.refetch())
     refetchOrders()
   }
@@ -216,6 +232,8 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
   const value: AssetDetailContextType = {
     asset,
     market: market || null,
+    assetOne: primaryAsset || null,
+    assetTwo: secondaryAsset || null,
     orders,
     loading,
     error,

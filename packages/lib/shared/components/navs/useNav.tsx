@@ -21,11 +21,11 @@ export function useNav() {
       label: 'Trade',
       roles: ['institution', 'retail'],
     },
-    {
-      href: '/perps',
-      label: 'Perps',
-      roles: ['institution', 'retail'],
-    },
+    // {
+    //   href: '/perps',
+    //   label: 'Perps',
+    //   roles: ['institution', 'retail'],
+    // },
     {
       href: '/lend',
       label: 'Lend',

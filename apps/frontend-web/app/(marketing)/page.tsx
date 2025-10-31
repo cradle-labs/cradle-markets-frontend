@@ -1,21 +1,11 @@
-'use client'
+import { LandingV3Layout } from './_lib/landing-page/LandingV3Layout'
+import { checkHealth } from '@repo/lib/actions/health'
 
-import { Box, Container, Heading, Text } from '@chakra-ui/react'
-import FadeInOnView from '@repo/lib/shared/components/containers/FadeInOnView'
+export default async function Home() {
+  // Check API health status
+  const healthStatus = await checkHealth()
 
-export default function Home() {
-  return (
-    <Container maxW="container.md" py="20">
-      <FadeInOnView>
-        <Box textAlign="center">
-          <Heading mb="6" size="2xl">
-            🚧 Under Construction 🚧
-          </Heading>
-          <Text color="gray.600" fontSize="xl">
-            This page is currently being built. Please check back soon!
-          </Text>
-        </Box>
-      </FadeInOnView>
-    </Container>
-  )
+  console.log('API Health Status:', healthStatus)
+
+  return <LandingV3Layout />
 }

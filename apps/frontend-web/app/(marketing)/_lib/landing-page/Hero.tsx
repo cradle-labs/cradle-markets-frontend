@@ -168,7 +168,7 @@ export function Hero() {
                     : {}
                 }
                 as={Link}
-                href="https://app.cradleprotocol.com"
+                href="https://cradleprotocol.com/sign-up"
                 initial={{ opacity: 0 }}
                 rel="noopener"
                 rightIcon={<ArrowUpRight size="14px" />}

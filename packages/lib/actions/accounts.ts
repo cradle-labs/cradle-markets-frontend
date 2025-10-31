@@ -17,6 +17,7 @@ import type {
   CreateAccountInput,
   UpdateAccountStatusInput,
   CreateWalletInput,
+  CradleAccountStatus,
 } from '../cradle-client-ts/cradle-api-client'
 
 // =============================================================================
@@ -60,6 +61,7 @@ export async function getAccountWallets(accountId: string): Promise<CradleWallet
 export async function createAccount(input: CreateAccountInput): Promise<{
   success: boolean
   accountId?: string
+  status?: CradleAccountStatus
   error?: string
 }> {
   try {

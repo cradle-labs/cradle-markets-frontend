@@ -287,6 +287,7 @@ export interface LoanLiquidationFilters {
 export interface CreateAccountInput {
   linked_account_id: string
   account_type: CradleAccountType
+  status?: CradleAccountStatus
 }
 
 export interface UpdateAccountStatusInput {

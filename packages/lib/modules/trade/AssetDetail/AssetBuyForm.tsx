@@ -4,7 +4,6 @@ import { Box, Button, HStack, Input, Text, VStack, useToast } from '@chakra-ui/r
 import { ArrowDown } from 'react-feather'
 import { IconButton } from '@chakra-ui/react'
 import { TokenInput } from '@repo/lib/modules/tokens/TokenInput/TokenInput'
-import { ConnectWallet } from '@repo/lib/modules/web3/ConnectWallet'
 import { useState, useEffect } from 'react'
 import { HumanAmount } from '@balancer/sdk'
 import { useAssetDetail } from './AssetDetailProvider'
@@ -471,20 +470,16 @@ export function AssetBuyForm() {
       </VStack>
 
       {/* Action Button */}
-      {!isConnected ? (
-        <ConnectWallet connectLabel="Sign In to Continue" size="lg" variant="primary" w="full" />
-      ) : (
-        <Button
-          isDisabled={!market || !assetOne || !assetTwo || Number(payAmount) <= 0}
-          isLoading={isSubmitting}
-          onClick={handleSubmitOrder}
-          size="lg"
-          variant="primary"
-          w="full"
-        >
-          {orderType === 'market' ? 'Buy at Market' : 'Place Limit Order'}
-        </Button>
-      )}
+      <Button
+        isDisabled={!market || !assetOne || !assetTwo || Number(payAmount) <= 0}
+        isLoading={isSubmitting}
+        onClick={handleSubmitOrder}
+        size="lg"
+        variant="primary"
+        w="full"
+      >
+        {orderType === 'market' ? 'Buy at Market' : 'Place Limit Order'}
+      </Button>
     </VStack>
   )
 }

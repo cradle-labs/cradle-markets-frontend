@@ -483,6 +483,7 @@ export class CradleApiClient {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${config.apiKey}`,
+        'ngrok-skip-browser-warning': '6969',
       },
     })
 
@@ -523,30 +524,9 @@ export class CradleApiClient {
       return response.data
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        // If we got a response with error data, check its format
+        // If we got a response with error data, return it
         if (error.response?.data) {
-          const errorData = error.response.data
-
-          // Handle API error format: {status: "error", code: number, message: string}
-          if (errorData.status === 'error' && errorData.message) {
-            return {
-              success: false,
-              data: null,
-              error: `${errorData.message} (code: ${errorData.code || 'unknown'})`,
-            }
-          }
-
-          // Handle standard format
-          if ('success' in errorData) {
-            return errorData as ApiResponse<T>
-          }
-
-          // Fallback for unexpected error format
-          return {
-            success: false,
-            data: null,
-            error: JSON.stringify(errorData),
-          }
+          return error.response.data as ApiResponse<T>
         }
 
         // Otherwise create error response
@@ -735,11 +715,10 @@ export class CradleApiClient {
     filters?: TimeSeriesFilters
   ): Promise<ApiResponse<TimeSeriesRecord[]>> {
     const params = new URLSearchParams()
-    if (filters?.market_id) params.append('market_id', filters.market_id)
+    if (filters?.market_id) params.append('market', filters.market_id)
     if (filters?.asset) params.append('asset', filters.asset)
     if (filters?.interval) params.append('interval', filters.interval)
-    if (filters?.start_time) params.append('start_time', filters.start_time)
-    if (filters?.end_time) params.append('end_time', filters.end_time)
+    if (filters?.start_time) params.append('duration_sec', '')
     if (filters?.data_provider) params.append('data_provider', filters.data_provider)
 
     const query = params.toString()
@@ -763,7 +742,9 @@ export class CradleApiClient {
    */
   async getLendingPools(filters?: LendingPoolFilters): Promise<ApiResponse<LendingPool[]>> {
     const params = new URLSearchParams()
-    if (filters?.reserve_asset) params.append('reserve_asset', filters.reserve_asset)
+    if (filters?.reserve_asset) {
+      params.append('reserve_asset', filters.reserve_asset)
+    }
     if (filters?.min_loan_to_value !== undefined) {
       params.append('min_loan_to_value', filters.min_loan_to_value.toString())
     }

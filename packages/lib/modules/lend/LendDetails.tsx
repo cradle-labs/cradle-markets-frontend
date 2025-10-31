@@ -1,32 +1,29 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Box } from '@chakra-ui/react'
 import { LendingPoolTable, LendingPoolData } from './LendingPoolTable'
-import {
-  mockLendingPools,
-  mockAssets,
-  getTotalSuppliedToPool,
-  getTotalBorrowedFromPool,
-  getPoolUtilizationRate,
-} from '@repo/lib/shared/dummy-data/cradle-data'
-import { useLendingPools } from '@repo/lib/cradle-client-ts/hooks'
+import { useLendingPools, useAssets } from '@repo/lib/cradle-client-ts/hooks'
 
 export function LendDetails() {
   const router = useRouter()
-  const [loading] = useState(false)
   const { data: lendingPools, isLoading: isLoadingLendingPools } = useLendingPools()
-  console.log('lending pools', lendingPools)
-  console.log('isLoadingLendingPools', isLoadingLendingPools)
+  console.log('lendingPools', lendingPools)
+  const { data: assets, isLoading: isLoadingAssets } = useAssets()
+  console.log('assets', assets)
 
   // Enrich lending pool data with asset info and calculated values
   const enrichedPools: LendingPoolData[] = useMemo(() => {
-    return mockLendingPools.map(pool => {
-      const asset = mockAssets.find(a => a.id === pool.reserve_asset)
-      const totalSupplied = getTotalSuppliedToPool(pool.id)
-      const totalBorrowed = getTotalBorrowedFromPool(pool.id)
-      const utilization = getPoolUtilizationRate(pool.id)
+    if (!lendingPools || !assets) return []
+
+    return lendingPools.map(pool => {
+      const asset = assets.find(a => a.id === pool.reserve_asset)
+
+      // TODO: Replace with actual API data when available
+      const totalSupplied = 0
+      const totalBorrowed = 0
+      const utilization = 0
 
       // Calculate APYs based on utilization and pool parameters
       const baseRate = parseFloat(pool.base_rate)
@@ -55,15 +52,17 @@ export function LendDetails() {
         borrowAPY,
       }
     })
-  }, [])
+  }, [lendingPools, assets])
 
   const handlePoolClick = (pool: LendingPoolData) => {
     router.push(`/lend/${pool.id}`)
   }
 
+  const isLoading = isLoadingLendingPools || isLoadingAssets
+
   return (
     <Box w="full">
-      <LendingPoolTable loading={loading} onPoolClick={handlePoolClick} pools={enrichedPools} />
+      <LendingPoolTable loading={isLoading} onPoolClick={handlePoolClick} pools={enrichedPools} />
     </Box>
   )
 }

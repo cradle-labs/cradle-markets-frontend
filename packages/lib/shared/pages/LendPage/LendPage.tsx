@@ -99,7 +99,6 @@ export function LendPage({ children }: LendPageProps) {
         pt={['lg', '54px']}
       >
         <FadeInOnView animateOnce={false}>
-          {/* TODO: Implement lending components here */}
           <LendDetails />
         </FadeInOnView>
       </DefaultPageContainer>

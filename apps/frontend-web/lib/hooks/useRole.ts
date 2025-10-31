@@ -12,7 +12,7 @@ export function useRole() {
 
   return {
     role,
-    isInstitution: role === 'institution',
+    isInstitutional: role === 'institutional',
     isRetail: role === 'retail',
     hasRole: (requiredRole: Roles) => role === requiredRole,
     hasAnyRole: (roles: Roles[]) => (role ? roles.includes(role) : false),

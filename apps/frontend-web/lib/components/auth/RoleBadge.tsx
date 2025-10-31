@@ -8,20 +8,20 @@ interface RoleBadgeProps extends Omit<BadgeProps, 'children'> {
 }
 
 export function RoleBadge({ showRole = true, ...props }: RoleBadgeProps) {
-  const { role, isInstitution, isRetail } = useRole()
+  const { role, isInstitutional, isRetail } = useRole()
 
   if (!role || !showRole) {
     return null
   }
 
   const getColorScheme = () => {
-    if (isInstitution) return 'blue'
+    if (isInstitutional) return 'blue'
     if (isRetail) return 'green'
     return 'gray'
   }
 
   const getDisplayText = () => {
-    if (isInstitution) return 'Institution'
+    if (isInstitutional) return 'Institutional'
     if (isRetail) return 'Retail'
     return role
   }

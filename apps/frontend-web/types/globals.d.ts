@@ -4,7 +4,7 @@ declare global {
   /**
    * User roles for role-based access control
    */
-  type Roles = 'institution' | 'retail'
+  type Roles = 'institutional' | 'retail'
 
   /**
    * Custom JWT session claims

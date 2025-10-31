@@ -20,11 +20,11 @@ export const getUserRole = async (): Promise<Roles | undefined> => {
 }
 
 /**
- * Check if the current user is an institution
+ * Check if the current user is institutional
  * @returns Promise<boolean>
  */
-export const isInstitution = async (): Promise<boolean> => {
-  return checkRole('institution')
+export const isInstitutional = async (): Promise<boolean> => {
+  return checkRole('institutional')
 }
 
 /**

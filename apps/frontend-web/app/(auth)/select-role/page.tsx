@@ -20,7 +20,7 @@ import { useActionState, useEffect } from 'react'
 /**
  * Select Role Page
  *
- * This page allows users to select their account type (institution or retail).
+ * This page allows users to select their account type (institutional or retail).
  * When a role is selected:
  * 1. The role is set in Clerk's user metadata (server action)
  * 2. A trading account is created in the Cradle system using useCreateAccount hook (client-side)
@@ -99,11 +99,11 @@ export default function SelectRolePage() {
                   action={formAction}
                   style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
                 >
-                  <input name="role" type="hidden" value="institution" />
+                  <input name="role" type="hidden" value="institutional" />
                   <Flex align="center" direction="column" gap={6} h="full">
                     <VStack align="center" spacing={3}>
                       <Heading color="font.primary" size="lg">
-                        Institution
+                        Institutional
                       </Heading>
                       <Text color="font.secondary" textAlign="center">
                         For institutional traders, funds, and professional organizations
@@ -136,7 +136,7 @@ export default function SelectRolePage() {
                       variant="primary"
                       w="full"
                     >
-                      Select Institution
+                      Select Institutional
                     </Button>
                   </Flex>
                 </form>

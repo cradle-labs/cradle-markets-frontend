@@ -45,7 +45,7 @@ export async function setRole(prevState: any, formData: FormData): Promise<SetRo
       })
 
       // Create Cradle account
-      const accountType: CradleAccountType = role === 'institution' ? 'institutional' : 'retail'
+      const accountType: CradleAccountType = role === 'institutional' ? 'institutional' : 'retail'
       const accountResult = await createAccount({
         linked_account_id: userId,
         account_type: accountType,

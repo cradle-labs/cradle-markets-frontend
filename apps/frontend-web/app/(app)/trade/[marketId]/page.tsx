@@ -10,7 +10,7 @@ interface MarketDetailPageProps {
 export default async function MarketDetailPageWrapper({ params }: MarketDetailPageProps) {
   const { marketId } = await params
   return (
-    <RoleGuard allowedRoles={['institution', 'retail']} fallbackPath="/access-denied">
+    <RoleGuard allowedRoles={['institutional', 'retail']} fallbackPath="/access-denied">
       <AssetDetailPage marketId={marketId} />
     </RoleGuard>
   )

@@ -9,7 +9,7 @@ export type AppLink = {
   isExternal?: boolean
   iconType?: IconType
   onClick?: () => void
-  roles?: ('institution' | 'retail')[]
+  roles?: ('institutional' | 'retail')[]
 }
 
 export function useNav() {
@@ -19,27 +19,27 @@ export function useNav() {
     {
       href: '/trade',
       label: 'Trade',
-      roles: ['institution', 'retail'],
+      roles: ['institutional', 'retail'],
     },
     // {
     //   href: '/perps',
     //   label: 'Perps',
-    //   roles: ['institution', 'retail'],
+    //   roles: ['institutional', 'retail'],
     // },
     {
       href: '/lend',
       label: 'Lend',
-      roles: ['institution', 'retail'],
+      roles: ['institutional', 'retail'],
     },
     {
       href: '/portfolio',
       label: 'Portfolio',
-      roles: ['institution', 'retail'],
+      roles: ['institutional', 'retail'],
     },
     {
       href: '/cash',
       label: 'Cash',
-      roles: ['institution', 'retail'],
+      roles: ['institutional', 'retail'],
     },
     // {
     //   href: '/docs',
@@ -47,7 +47,7 @@ export function useNav() {
     // },
   ]
 
-  function getFilteredLinks(userRole?: 'institution' | 'retail') {
+  function getFilteredLinks(userRole?: 'institutional' | 'retail') {
     return allAppLinks.filter(link => {
       if (!link.roles) return true
       if (!userRole) return false

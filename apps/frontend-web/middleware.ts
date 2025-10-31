@@ -13,13 +13,13 @@ const isPublicRoute = createRouteMatcher([
   '/access-denied',
 ])
 
-const isInstitutionRoute = createRouteMatcher(['/institution(.*)'])
+const isInstitutionalRoute = createRouteMatcher(['/institutional(.*)'])
 const isRetailRoute = createRouteMatcher(['/retail(.*)'])
 
-// Institution-only pages: only perps
-// const isInstitutionOnlyRoute = createRouteMatcher(['/perps(.*)'])
+// Institutional-only pages: only perps
+// const isInstitutionalOnlyRoute = createRouteMatcher(['/perps(.*)'])
 
-// Shared routes accessible by both institution and retail users
+// Shared routes accessible by both institutional and retail users
 const isSharedRoute = createRouteMatcher([
   '/trade(.*)',
   '/lend(.*)',
@@ -58,28 +58,28 @@ export default clerkMiddleware(async (auth, req) => {
       return Response.redirect(url)
     }
 
-    // Check institution-only routes (perps)
-    // if (isInstitutionOnlyRoute(req)) {
-    //   if (userRole !== 'institution') {
+    // Check institutional-only routes (perps)
+    // if (isInstitutionalOnlyRoute(req)) {
+    //   if (userRole !== 'institutional') {
     //     const url = new URL('/access-denied', req.url)
     //     return Response.redirect(url)
     //   }
     // }
 
     // Check shared routes (trade, lend, portfolio, cash)
-    // Allow both institution and retail users
+    // Allow both institutional and retail users
     if (isSharedRoute(req)) {
-      if (userRole !== 'institution' && userRole !== 'retail') {
+      if (userRole !== 'institutional' && userRole !== 'retail') {
         const url = new URL('/access-denied', req.url)
         return Response.redirect(url)
       }
-      // Allow access for both institution and retail users
+      // Allow access for both institutional and retail users
       return
     }
 
-    // Check institution routes
-    if (isInstitutionRoute(req)) {
-      if (userRole !== 'institution') {
+    // Check institutional routes
+    if (isInstitutionalRoute(req)) {
+      if (userRole !== 'institutional') {
         const url = new URL('/access-denied', req.url)
         return Response.redirect(url)
       }

@@ -196,9 +196,22 @@ export interface LendingPool {
   liquidation_threshold: string
   liquidation_discount: string
   reserve_factor: string
-  name: string
-  title: string
-  description: string
+  name?: string
+  title?: string
+  description?: string
+  created_at: string
+  updated_at?: string
+}
+
+export interface LendingPoolSnapshot {
+  id: string
+  lending_pool_id: string
+  total_supply: string
+  total_borrow: string
+  available_liquidity: string
+  utilization_rate: string
+  supply_apy: string
+  borrow_apy: string
   created_at: string
 }
 
@@ -213,18 +226,57 @@ export interface LendingTransaction {
 
 export interface Loan {
   id: string
-  wallet: string
+  account_id: string
+  wallet_id: string
   pool: string
-  amount: number
-  collateral: string
-  status: LoanStatus
+  borrow_index: string
+  principal_amount: string
   created_at: string
+  status: LoanStatus
+  transaction?: string
+}
+
+export interface LoanRepayment {
+  id: string
+  loan_id: string
+  repayment_amount: string
+  repayment_date: string
+  transaction?: string
+}
+
+export interface LoanLiquidation {
+  id: string
+  loan_id: string
+  liquidator_wallet_id: string
+  liquidation_amount: string
+  liquidation_date: string
+  transaction?: string
 }
 
 export interface LendingPoolFilters {
   reserve_asset?: string
   min_loan_to_value?: number
   max_loan_to_value?: number
+}
+
+export interface LoanFilters {
+  pool_id?: string
+  wallet_id?: string
+  status?: LoanStatus
+  from_date?: string
+  to_date?: string
+}
+
+export interface LoanRepaymentFilters {
+  loan_id?: string
+  from_date?: string
+  to_date?: string
+}
+
+export interface LoanLiquidationFilters {
+  loan_id?: string
+  from_date?: string
+  to_date?: string
 }
 
 // ============================================================================
@@ -235,7 +287,6 @@ export interface LendingPoolFilters {
 export interface CreateAccountInput {
   linked_account_id: string
   account_type: CradleAccountType
-  status: CradleAccountStatus
 }
 
 export interface UpdateAccountStatusInput {
@@ -350,6 +401,19 @@ export interface RepayBorrowInput {
   amount: number
 }
 
+export interface CreateLoanRepaymentInput {
+  loan_id: string
+  repayment_amount: string
+  transaction?: string
+}
+
+export interface CreateLoanLiquidationInput {
+  loan_id: string
+  liquidator_wallet_id: string
+  liquidation_amount: string
+  transaction?: string
+}
+
 // Mutation Action Types
 export type MutationAction =
   | { Accounts: { CreateAccount: CreateAccountInput } }
@@ -366,6 +430,8 @@ export type MutationAction =
   | { Pool: { SupplyLiquidity: SupplyLiquidityInput } }
   | { Pool: { BorrowAsset: BorrowAssetInput } }
   | { Pool: { RepayBorrow: RepayBorrowInput } }
+  | { Loans: { CreateRepayment: CreateLoanRepaymentInput } }
+  | { Loans: { CreateLiquidation: CreateLoanLiquidationInput } }
 
 export type MutationResponse =
   | { Accounts: { CreateAccount: string } }
@@ -382,6 +448,8 @@ export type MutationResponse =
   | { Pool: { SupplyLiquidity: string } }
   | { Pool: { BorrowAsset: string } }
   | { Pool: { RepayBorrow: null } }
+  | { Loans: { CreateRepayment: string } }
+  | { Loans: { CreateLiquidation: string } }
 
 // ============================================================================
 // TYPE GUARD HELPERS
@@ -453,6 +521,18 @@ export const MutationResponseHelpers = {
   },
   isRepayBorrow(response: MutationResponse): response is { Pool: { RepayBorrow: null } } {
     return 'Pool' in response && 'RepayBorrow' in response.Pool
+  },
+
+  // Loan helpers
+  isCreateRepayment(
+    response: MutationResponse
+  ): response is { Loans: { CreateRepayment: string } } {
+    return 'Loans' in response && 'CreateRepayment' in response.Loans
+  },
+  isCreateLiquidation(
+    response: MutationResponse
+  ): response is { Loans: { CreateLiquidation: string } } {
+    return 'Loans' in response && 'CreateLiquidation' in response.Loans
   },
 }
 
@@ -567,8 +647,9 @@ export class CradleApiClient {
         `${this.axiosInstance.defaults.baseURL}/health`
       )
       return response.data
-    } catch {
-      throw new Error('Health check failed')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      throw new Error(`Health check failed: ${message}`)
     }
   }
 
@@ -734,26 +815,14 @@ export class CradleApiClient {
    * Get a lending pool by UUID
    */
   async getLendingPool(id: string): Promise<ApiResponse<LendingPool>> {
-    return this.request<LendingPool>('GET', `/lending-pools/${id}`)
+    return this.request<LendingPool>('GET', `/pools/${id}`)
   }
 
   /**
    * Get all lending pools with optional filters
    */
-  async getLendingPools(filters?: LendingPoolFilters): Promise<ApiResponse<LendingPool[]>> {
-    const params = new URLSearchParams()
-    if (filters?.reserve_asset) {
-      params.append('reserve_asset', filters.reserve_asset)
-    }
-    if (filters?.min_loan_to_value !== undefined) {
-      params.append('min_loan_to_value', filters.min_loan_to_value.toString())
-    }
-    if (filters?.max_loan_to_value !== undefined) {
-      params.append('max_loan_to_value', filters.max_loan_to_value.toString())
-    }
-
-    const query = params.toString()
-    const path = query ? `/lending-pools?${query}` : '/lending-pools'
+  async getLendingPools(): Promise<ApiResponse<LendingPool[]>> {
+    const path = '/pools'
     return this.request<LendingPool[]>('GET', path)
   }
 
@@ -761,7 +830,7 @@ export class CradleApiClient {
    * Get lending transactions for a specific pool
    */
   async getLendingTransactions(poolId: string): Promise<ApiResponse<LendingTransaction[]>> {
-    return this.request<LendingTransaction[]>('GET', `/lending-pools/${poolId}/transactions`)
+    return this.request<LendingTransaction[]>('GET', `/pools/${poolId}/transactions`)
   }
 
   /**

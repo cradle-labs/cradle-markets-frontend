@@ -74,7 +74,7 @@ export function useLendingPools({
 }: UseLendingPoolsOptions = {}) {
   return useQuery({
     queryKey: cradleQueryKeys.lendingPools.list(filters),
-    queryFn: () => fetchLendingPools(filters),
+    queryFn: () => fetchLendingPools(),
     enabled,
     ...standardQueryOptions,
     ...queryOptions,

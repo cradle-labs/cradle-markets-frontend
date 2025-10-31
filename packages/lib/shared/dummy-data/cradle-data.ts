@@ -1198,73 +1198,81 @@ export const mockLoans: Loan[] = [
   // Loans from USDC Pool (using NSE stocks as collateral)
   {
     id: 'loan-001',
-    wallet: 'wallet-001-john',
+    account_id: 'acc-001-retail-john',
+    wallet_id: 'wallet-001-john',
     pool: 'pool-usdc-001',
-    amount: 30000,
-    collateral: 'asset-safaricom',
+    borrow_index: '1.0',
+    principal_amount: '30000',
     status: 'active',
     created_at: '2024-02-15T10:30:00Z',
   },
   {
     id: 'loan-002',
-    wallet: 'wallet-002-jane',
+    account_id: 'acc-002-retail-jane',
+    wallet_id: 'wallet-002-jane',
     pool: 'pool-usdc-001',
-    amount: 75000,
-    collateral: 'asset-equity',
+    borrow_index: '1.0',
+    principal_amount: '75000',
     status: 'active',
     created_at: '2024-02-18T14:20:00Z',
   },
   {
     id: 'loan-003',
-    wallet: 'wallet-001-john',
+    account_id: 'acc-001-retail-john',
+    wallet_id: 'wallet-001-john',
     pool: 'pool-usdt-001',
-    amount: 20000,
-    collateral: 'asset-kcb',
+    borrow_index: '1.0',
+    principal_amount: '20000',
     status: 'repaid',
     created_at: '2024-01-25T09:00:00Z',
   },
   {
     id: 'loan-004',
-    wallet: 'wallet-003-blackrock',
+    account_id: 'acc-003-institutional-blackrock',
+    wallet_id: 'wallet-003-blackrock',
     pool: 'pool-usdc-001',
-    amount: 2000000,
-    collateral: 'asset-safaricom',
+    borrow_index: '1.0',
+    principal_amount: '2000000',
     status: 'active',
     created_at: '2024-02-20T11:00:00Z',
   },
   {
     id: 'loan-005',
-    wallet: 'wallet-005-vanguard',
+    account_id: 'acc-005-institutional-vanguard',
+    wallet_id: 'wallet-005-vanguard',
     pool: 'pool-usdt-001',
-    amount: 1500000,
-    collateral: 'asset-stanbic',
+    borrow_index: '1.0',
+    principal_amount: '1500000',
     status: 'active',
     created_at: '2024-02-22T13:45:00Z',
   },
   {
     id: 'loan-006',
-    wallet: 'wallet-002-jane',
+    account_id: 'acc-002-retail-jane',
+    wallet_id: 'wallet-002-jane',
     pool: 'pool-usdc-001',
-    amount: 50000,
-    collateral: 'asset-eabl',
+    borrow_index: '1.0',
+    principal_amount: '50000',
     status: 'active',
     created_at: '2024-03-01T10:15:00Z',
   },
   {
     id: 'loan-007',
-    wallet: 'wallet-001-john',
+    account_id: 'acc-001-retail-john',
+    wallet_id: 'wallet-001-john',
     pool: 'pool-usdc-001',
-    amount: 15000,
-    collateral: 'asset-coop',
+    borrow_index: '1.0',
+    principal_amount: '15000',
     status: 'liquidated',
     created_at: '2024-01-20T08:30:00Z',
   },
   {
     id: 'loan-008',
-    wallet: 'wallet-003-blackrock',
+    account_id: 'acc-003-institutional-blackrock',
+    wallet_id: 'wallet-003-blackrock',
     pool: 'pool-usdc-001',
-    amount: 500000,
-    collateral: 'asset-bat',
+    borrow_index: '1.0',
+    principal_amount: '500000',
     status: 'active',
     created_at: '2024-03-05T12:00:00Z',
   },
@@ -1272,46 +1280,51 @@ export const mockLoans: Loan[] = [
   // Loans from NSE Stock Pools (borrowing tokenized stocks)
   {
     id: 'loan-009',
-    wallet: 'wallet-002-jane',
+    account_id: 'acc-002-retail-jane',
+    wallet_id: 'wallet-002-jane',
     pool: 'pool-safaricom-001',
-    amount: 1000, // Borrowing 1000 cSAF shares
-    collateral: 'asset-equity',
+    borrow_index: '1.0',
+    principal_amount: '1000', // Borrowing 1000 cSAF shares
     status: 'active',
     created_at: '2024-02-25T09:30:00Z',
   },
   {
     id: 'loan-010',
-    wallet: 'wallet-001-john',
+    account_id: 'acc-001-retail-john',
+    wallet_id: 'wallet-001-john',
     pool: 'pool-equity-001',
-    amount: 800, // Borrowing 800 cEQTY shares
-    collateral: 'asset-safaricom',
+    borrow_index: '1.0',
+    principal_amount: '800', // Borrowing 800 cEQTY shares
     status: 'active',
     created_at: '2024-03-01T15:20:00Z',
   },
   {
     id: 'loan-011',
-    wallet: 'wallet-005-vanguard',
+    account_id: 'acc-005-institutional-vanguard',
+    wallet_id: 'wallet-005-vanguard',
     pool: 'pool-kcb-001',
-    amount: 5000, // Borrowing 5000 cKCB shares
-    collateral: 'asset-stanbic',
+    borrow_index: '1.0',
+    principal_amount: '5000', // Borrowing 5000 cKCB shares
     status: 'active',
     created_at: '2024-03-05T11:45:00Z',
   },
   {
     id: 'loan-012',
-    wallet: 'wallet-003-blackrock',
+    account_id: 'acc-003-institutional-blackrock',
+    wallet_id: 'wallet-003-blackrock',
     pool: 'pool-eabl-001',
-    amount: 2000, // Borrowing 2000 cEABL shares
-    collateral: 'asset-safaricom',
+    borrow_index: '1.0',
+    principal_amount: '2000', // Borrowing 2000 cEABL shares
     status: 'active',
     created_at: '2024-03-08T09:20:00Z',
   },
   {
     id: 'loan-013',
-    wallet: 'wallet-002-jane',
+    account_id: 'acc-002-retail-jane',
+    wallet_id: 'wallet-002-jane',
     pool: 'pool-stanbic-001',
-    amount: 1200, // Borrowing 1200 cSBIC shares
-    collateral: 'asset-equity',
+    borrow_index: '1.0',
+    principal_amount: '1200', // Borrowing 1200 cSBIC shares
     status: 'active',
     created_at: '2024-03-10T14:30:00Z',
   },
@@ -1319,19 +1332,21 @@ export const mockLoans: Loan[] = [
   // Banking Sector Pool Loans
   {
     id: 'loan-014',
-    wallet: 'wallet-001-john',
+    account_id: 'acc-001-retail-john',
+    wallet_id: 'wallet-001-john',
     pool: 'pool-banking-basket-001',
-    amount: 1500,
-    collateral: 'asset-eabl',
+    borrow_index: '1.0',
+    principal_amount: '1500',
     status: 'active',
     created_at: '2024-03-12T10:00:00Z',
   },
   {
     id: 'loan-015',
-    wallet: 'wallet-005-vanguard',
+    account_id: 'acc-005-institutional-vanguard',
+    wallet_id: 'wallet-005-vanguard',
     pool: 'pool-banking-basket-001',
-    amount: 10000,
-    collateral: 'asset-safaricom',
+    borrow_index: '1.0',
+    principal_amount: '10000',
     status: 'active',
     created_at: '2024-03-14T13:15:00Z',
   },
@@ -1339,28 +1354,31 @@ export const mockLoans: Loan[] = [
   // Additional USDT Pool Loans
   {
     id: 'loan-016',
-    wallet: 'wallet-002-jane',
+    account_id: 'acc-002-retail-jane',
+    wallet_id: 'wallet-002-jane',
     pool: 'pool-usdt-001',
-    amount: 45000,
-    collateral: 'asset-bamburi',
+    borrow_index: '1.0',
+    principal_amount: '45000',
     status: 'active',
     created_at: '2024-03-08T15:20:00Z',
   },
   {
     id: 'loan-017',
-    wallet: 'wallet-003-blackrock',
+    account_id: 'acc-003-institutional-blackrock',
+    wallet_id: 'wallet-003-blackrock',
     pool: 'pool-usdt-001',
-    amount: 1200000,
-    collateral: 'asset-ncba',
+    borrow_index: '1.0',
+    principal_amount: '1200000',
     status: 'repaid',
     created_at: '2024-02-28T09:20:00Z',
   },
   {
     id: 'loan-018',
-    wallet: 'wallet-001-john',
+    account_id: 'acc-001-retail-john',
+    wallet_id: 'wallet-001-john',
     pool: 'pool-usdc-001',
-    amount: 35000,
-    collateral: 'asset-britam',
+    borrow_index: '1.0',
+    principal_amount: '35000',
     status: 'active',
     created_at: '2024-03-10T11:45:00Z',
   },
@@ -1472,14 +1490,14 @@ export function getLendingTransactionsByPool(poolId: string): LendingTransaction
  * Get loans for a wallet
  */
 export function getLoansByWallet(walletId: string): Loan[] {
-  return mockLoans.filter(loan => loan.wallet === walletId)
+  return mockLoans.filter(loan => loan.wallet_id === walletId)
 }
 
 /**
  * Get active loans for a wallet
  */
 export function getActiveLoansByWallet(walletId: string): Loan[] {
-  return mockLoans.filter(loan => loan.wallet === walletId && loan.status === 'active')
+  return mockLoans.filter(loan => loan.wallet_id === walletId && loan.status === 'active')
 }
 
 /**
@@ -1506,7 +1524,7 @@ export function getTotalSuppliedToPool(poolId: string): number {
 export function getTotalBorrowedFromPool(poolId: string): number {
   return mockLoans
     .filter(loan => loan.pool === poolId && loan.status === 'active')
-    .reduce((total, loan) => total + loan.amount, 0)
+    .reduce((total, loan) => total + parseFloat(loan.principal_amount), 0)
 }
 
 /**
@@ -1535,8 +1553,8 @@ export function getUserPortfolioValue(walletId: string): {
     }, 0)
 
   const borrowed = mockLoans
-    .filter(loan => loan.wallet === walletId && loan.status === 'active')
-    .reduce((total, loan) => total + loan.amount, 0)
+    .filter(loan => loan.wallet_id === walletId && loan.status === 'active')
+    .reduce((total, loan) => total + parseFloat(loan.principal_amount), 0)
 
   return {
     supplied,

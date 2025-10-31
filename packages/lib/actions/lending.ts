@@ -15,7 +15,6 @@ import type {
   LendingPool,
   LendingTransaction,
   Loan,
-  LendingPoolFilters,
   CreateLendingPoolInput,
   SupplyLiquidityInput,
   BorrowAssetInput,
@@ -37,9 +36,9 @@ export async function getLendingPool(id: string): Promise<LendingPool> {
 /**
  * Get all lending pools with optional filters
  */
-export async function getLendingPools(filters?: LendingPoolFilters): Promise<LendingPool[]> {
+export async function getLendingPools(): Promise<LendingPool[]> {
   const client = getCradleClient()
-  return executeCradleOperation(() => client.getLendingPools(filters))
+  return executeCradleOperation(() => client.getLendingPools())
 }
 
 /**

@@ -21,7 +21,6 @@ import type {
   MarketFilters,
   OrderFilters,
   TimeSeriesFilters,
-  LendingPoolFilters,
   HealthResponse,
 } from '../cradle-api-client'
 
@@ -144,9 +143,9 @@ export async function fetchLendingPool(id: string): Promise<LendingPool> {
   return getLendingPool(id)
 }
 
-export async function fetchLendingPools(filters?: LendingPoolFilters): Promise<LendingPool[]> {
+export async function fetchLendingPools(): Promise<LendingPool[]> {
   const { getLendingPools } = await import('../../actions/lending')
-  return getLendingPools(filters)
+  return getLendingPools()
 }
 
 export async function fetchLendingTransactions(poolId: string): Promise<LendingTransaction[]> {

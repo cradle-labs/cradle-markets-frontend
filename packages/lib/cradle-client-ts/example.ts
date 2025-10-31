@@ -33,7 +33,6 @@ async function manageAccounts() {
   const createResponse = await client.createAccount({
     linked_account_id: 'user-12345',
     account_type: 'retail',
-    status: 'verified',
   })
 
   if (createResponse.success && createResponse.data) {
@@ -311,9 +310,7 @@ async function manageLendingPools() {
       }
 
       // Get all pools
-      const pools = await client.getLendingPools({
-        reserve_asset: assetId,
-      })
+      const pools = await client.getLendingPools()
       if (pools.success) {
         console.log('Lending pools:', pools.data)
       }
@@ -364,7 +361,6 @@ async function complexWorkflow() {
   const accountResponse = await client.createAccount({
     linked_account_id: 'trader-001',
     account_type: 'retail',
-    status: 'verified',
   })
 
   if (!accountResponse.success || !accountResponse.data) {

@@ -41,10 +41,10 @@ export function useNav() {
       label: 'Cash',
       roles: ['institution', 'retail'],
     },
-    {
-      href: '/docs',
-      label: 'Docs',
-    },
+    // {
+    //   href: '/docs',
+    //   label: 'Docs',
+    // },
   ]
 
   function getFilteredLinks(userRole?: 'institution' | 'retail') {

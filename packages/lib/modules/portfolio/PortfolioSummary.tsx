@@ -30,7 +30,7 @@ interface AssetBalance {
 }
 
 interface PortfolioSummaryProps {
-  walletAddress: string | undefined
+  walletContractId: string | undefined // Hedera contract ID (e.g., "0.0.7163140")
   assets: Asset[] | undefined
   isLoadingAssets: boolean
 }
@@ -48,9 +48,7 @@ function AssetCard({ asset }: AssetCardProps) {
   const displayBalance = asset.isLoading ? (
     <Spinner size="xs" />
   ) : (
-    `${parseFloat(asset.formatted).toLocaleString(undefined, {
-      maximumFractionDigits: 6,
-    })} ${asset.symbol}`
+    `${asset.formatted} ${asset.symbol}`
   )
   const displayValue = `$${(asset.value || 0).toFixed(2)}`
 
@@ -135,12 +133,12 @@ function AssetCard({ asset }: AssetCardProps) {
   )
 }
 
-const PortfolioSummary = ({ walletAddress, assets, isLoadingAssets }: PortfolioSummaryProps) => {
+const PortfolioSummary = ({ walletContractId, assets, isLoadingAssets }: PortfolioSummaryProps) => {
   // Fetch balances for all assets
   const { balances } = useTokenBalances({
-    walletAddress,
+    walletContractId,
     assets,
-    enabled: !!walletAddress && !!assets && assets.length > 0,
+    enabled: !!walletContractId && !!assets && assets.length > 0,
   })
 
   // Group assets by type

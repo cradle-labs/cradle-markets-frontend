@@ -1,14 +1,14 @@
 /**
- * Custom hook to fetch token balances for multiple assets using wagmi
+ * Custom hook to fetch token balances for multiple assets using Hedera
  */
 
 'use client'
 
-import { useBalance } from '@repo/lib/shared/utils/wagmi'
+import { useHederaBalance } from './useHederaBalance'
 import type { Asset } from '@repo/lib/cradle-client-ts/cradle-api-client'
 
 interface UseTokenBalancesParams {
-  walletAddress: string | undefined
+  walletContractId: string | undefined // Hedera contract ID (e.g., "0.0.7163140")
   assets: Asset[] | undefined
   enabled?: boolean
 }
@@ -26,18 +26,18 @@ interface TokenBalance {
 
 /**
  * Hook to fetch balances for multiple token assets
- * Uses wagmi's useBalance hook for each asset
+ * Uses Hedera Mirror Node API for each asset
  *
  * @example
  * ```tsx
  * const { balances, isLoading } = useTokenBalances({
- *   walletAddress: '0x123...',
+ *   walletContractId: wallet.contract_id, // "0.0.7163140"
  *   assets: assetsData,
  * })
  * ```
  */
 export function useTokenBalances({
-  walletAddress,
+  walletContractId,
   assets,
   enabled = true,
 }: UseTokenBalancesParams) {
@@ -47,25 +47,14 @@ export function useTokenBalances({
 
   // Fetch balance for each asset
   assets?.forEach(asset => {
-    const shouldFetch = enabled && !!walletAddress && !!asset.token
+    const shouldFetch = enabled && !!walletContractId && !!asset.token
 
-    // Format the token address to ensure it has 0x prefix
-    const formattedTokenAddress = asset.token.toLowerCase().startsWith('0x')
-      ? (asset.token as `0x${string}`)
-      : (`0x${asset.token}` as `0x${string}`)
-
-    // Use wagmi's useBalance hook
+    // Use Hedera balance hook
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    const { data, isLoading, error } = useBalance({
-      address: walletAddress as `0x${string}`,
-      token: formattedTokenAddress,
-      query: {
-        enabled: shouldFetch,
-        // Refetch every 30 seconds
-        refetchInterval: 30000,
-        // Keep previous data while refetching
-        placeholderData: previousData => previousData,
-      },
+    const { data, isLoading, error } = useHederaBalance({
+      accountId: walletContractId,
+      tokenId: asset.token,
+      enabled: shouldFetch,
     })
 
     if (isLoading) hasAnyLoading = true
@@ -75,9 +64,9 @@ export function useTokenBalances({
       assetId: asset.id,
       token: asset.token,
       symbol: asset.symbol,
-      balance: data?.value.toString() || '0',
+      balance: data?.balance || '0',
       decimals: data?.decimals || asset.decimals,
-      formatted: data?.formatted || '0',
+      formatted: data?.formatted || '0.00',
       isLoading,
       error: error as Error | null,
     }

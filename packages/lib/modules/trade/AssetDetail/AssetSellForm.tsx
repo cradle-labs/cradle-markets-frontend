@@ -1,32 +1,44 @@
 'use client'
 
-import { Box, Button, HStack, Text, VStack, useToast } from '@chakra-ui/react'
+import { Box, Button, HStack, Input, Text, VStack, useToast } from '@chakra-ui/react'
 import { ArrowDown } from 'react-feather'
 import { IconButton } from '@chakra-ui/react'
 import { TokenInput } from '@repo/lib/modules/tokens/TokenInput/TokenInput'
 import { ConnectWallet } from '@repo/lib/modules/web3/ConnectWallet'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { HumanAmount } from '@balancer/sdk'
 import { useAssetDetail } from './AssetDetailProvider'
-import { useBalance } from '@repo/lib/shared/utils/wagmi'
+import { useHederaBalance } from '@repo/lib/shared/hooks/useHederaBalance'
 import { useUser } from '@clerk/nextjs'
 import { useAccountByLinkedId } from '@repo/lib/cradle-client-ts/hooks/accounts/useAccountByLinkedId'
 import { useWalletByAccountId } from '@repo/lib/cradle-client-ts/hooks/accounts/useWallet'
+import { useAsset } from '@repo/lib/cradle-client-ts/hooks/assets/useAsset'
 import { placeOrder } from '@repo/lib/actions/orders'
+import { blockInvalidNumberInput } from '@repo/lib/shared/utils/numbers'
 
 type OrderType = 'market' | 'limit'
 
 export function AssetSellForm() {
   const { user } = useUser()
   const toast = useToast()
-  const { market, assetOne, assetTwo, refetch } = useAssetDetail()
+  const { market, refetch, asset } = useAssetDetail()
+
+  // Calculate current market price from asset data
+  const currentMarketPrice = asset?.currentPrice || 1.0
 
   // State
   const [sellAmount, setSellAmount] = useState<HumanAmount>('0' as HumanAmount)
   const [receiveAmount, setReceiveAmount] = useState<HumanAmount>('0' as HumanAmount)
   const [orderType, setOrderType] = useState<OrderType>('market')
-  const [limitPrice, setLimitPrice] = useState<string>('')
+  const [limitPrice, setLimitPrice] = useState<string>(currentMarketPrice.toFixed(4))
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Update limit price when market price changes
+  useEffect(() => {
+    if (currentMarketPrice && !limitPrice) {
+      setLimitPrice(currentMarketPrice.toFixed(4))
+    }
+  }, [currentMarketPrice])
 
   // Get user's Cradle account and wallet
   const { data: linkedAccount } = useAccountByLinkedId({
@@ -39,32 +51,38 @@ export function AssetSellForm() {
     enabled: !!linkedAccount?.id,
   })
 
-  // Format token addresses to ensure they have 0x prefix
-  const formatTokenAddress = (token: string | undefined) => {
-    if (!token) return undefined
-    return token.toLowerCase().startsWith('0x')
-      ? (token as `0x${string}`)
-      : (`0x${token}` as `0x${string}`)
+  // Fetch asset_one (the asset we're selling, e.g., SAF) using its ID
+  const { data: assetOne } = useAsset({
+    assetId: market?.asset_one || '',
+    enabled: !!market?.asset_one,
+  })
+
+  // Fetch asset_two (the asset we're receiving, e.g., cpUSD) using its ID
+  const { data: assetTwo } = useAsset({
+    assetId: market?.asset_two || '',
+    enabled: !!market?.asset_two,
+  })
+
+  // Format addresses to ensure they have 0x prefix (for display purposes)
+  const formatAddress = (address: string | undefined) => {
+    if (!address) return undefined
+    return address.toLowerCase().startsWith('0x')
+      ? (address as `0x${string}`)
+      : (`0x${address}` as `0x${string}`)
   }
 
   // Fetch balance for asset_one (the asset we're selling, e.g., SAF)
-  const { data: sellAssetBalance } = useBalance({
-    address: wallet?.address as `0x${string}`,
-    token: formatTokenAddress(assetOne?.token),
-    query: {
-      enabled: !!wallet?.address && !!assetOne?.token,
-      refetchInterval: 30000,
-    },
+  const { data: sellAssetBalance } = useHederaBalance({
+    accountId: wallet?.contract_id, // Use contract_id which is in Hedera format (0.0.XXXXX)
+    tokenId: assetOne?.token, // Token ID in hex format
+    enabled: !!wallet?.contract_id && !!assetOne?.token,
   })
 
   // Fetch balance for asset_two (the asset we're receiving, e.g., cpUSD)
-  const { data: receiveAssetBalance } = useBalance({
-    address: wallet?.address as `0x${string}`,
-    token: formatTokenAddress(assetTwo?.token),
-    query: {
-      enabled: !!wallet?.address && !!assetTwo?.token,
-      refetchInterval: 30000,
-    },
+  const { data: receiveAssetBalance } = useHederaBalance({
+    accountId: wallet?.contract_id, // Use contract_id which is in Hedera format (0.0.XXXXX)
+    tokenId: assetTwo?.token, // Token ID in hex format
+    enabled: !!wallet?.contract_id && !!assetTwo?.token,
   })
 
   // Calculate price based on order type
@@ -72,9 +90,8 @@ export function AssetSellForm() {
     if (orderType === 'limit' && limitPrice) {
       return limitPrice
     }
-    // For market orders, use current market price or 1:1 ratio as fallback
-    // In production, this should come from the order book or market data
-    return '1.00'
+    // For market orders, use current market price
+    return currentMarketPrice.toFixed(4)
   }
 
   const handleSellAmountChange = (e: any) => {
@@ -84,7 +101,7 @@ export function AssetSellForm() {
     // Calculate receive amount based on price
     if (value && !isNaN(Number(value))) {
       const price = Number(getPrice())
-      const calculatedReceive = (Number(value) * price).toString()
+      const calculatedReceive = (Number(value) * price).toFixed(4)
       setReceiveAmount(calculatedReceive as HumanAmount)
     } else {
       setReceiveAmount('0' as HumanAmount)
@@ -99,7 +116,7 @@ export function AssetSellForm() {
     if (value && !isNaN(Number(value))) {
       const price = Number(getPrice())
       if (price > 0) {
-        const calculatedSell = (Number(value) / price).toString()
+        const calculatedSell = (Number(value) / price).toFixed(4)
         setSellAmount(calculatedSell as HumanAmount)
       }
     } else {
@@ -111,7 +128,7 @@ export function AssetSellForm() {
     setLimitPrice(e.target.value)
     // Recalculate amounts when price changes
     if (sellAmount && Number(sellAmount) > 0 && e.target.value) {
-      const calculatedReceive = (Number(sellAmount) * Number(e.target.value)).toString()
+      const calculatedReceive = (Number(sellAmount) * Number(e.target.value)).toFixed(4)
       setReceiveAmount(calculatedReceive as HumanAmount)
     }
   }
@@ -276,24 +293,63 @@ export function AssetSellForm() {
           <Text color="font.secondary" fontSize="sm" fontWeight="medium">
             Limit Price
           </Text>
-          <Box w="full">
-            <input
-              onChange={handleLimitPriceChange}
-              placeholder="0.00"
-              style={{
-                width: '100%',
-                padding: '12px',
-                borderRadius: '8px',
-                border: '1px solid #E2E8F0',
-                fontSize: '16px',
-              }}
-              type="number"
-              value={limitPrice}
-            />
+          <Box
+            bg="background.level0"
+            borderRadius="md"
+            p={['ms', 'md']}
+            shadow="innerBase"
+            w="full"
+          >
+            <VStack align="start" spacing="md">
+              <HStack spacing={2} w="full">
+                <Input
+                  _focus={{
+                    outline: 'none',
+                    border: '0px solid transparent',
+                    boxShadow: 'none',
+                  }}
+                  _hover={{
+                    border: '0px solid transparent',
+                    boxShadow: 'none',
+                  }}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  bg="transparent"
+                  border="0px solid transparent"
+                  boxShadow="none"
+                  flex={1}
+                  fontSize="3xl"
+                  fontWeight="medium"
+                  min={0}
+                  onChange={handleLimitPriceChange}
+                  onKeyDown={blockInvalidNumberInput}
+                  onWheel={e => {
+                    // Avoid changing the input value when scrolling
+                    return e.currentTarget.blur()
+                  }}
+                  outline="none"
+                  p="0"
+                  placeholder="0.00"
+                  shadow="none"
+                  step="any"
+                  type="number"
+                  value={limitPrice}
+                />
+                <Text color="font.primary" fontSize="xl" fontWeight="bold">
+                  {assetTwo?.symbol || 'USD'}
+                </Text>
+              </HStack>
+
+              <HStack justify="space-between" w="full">
+                <Text color="font.secondary" fontSize="xs">
+                  Price per {assetOne?.symbol || 'token'}
+                </Text>
+                <Text color="font.secondary" fontSize="xs">
+                  Market: {currentMarketPrice.toFixed(4)} {assetTwo?.symbol || 'USD'}
+                </Text>
+              </HStack>
+            </VStack>
           </Box>
-          <Text color="font.secondary" fontSize="xs">
-            Price per {assetOne?.symbol || 'token'}
-          </Text>
         </VStack>
       )}
 
@@ -311,9 +367,9 @@ export function AssetSellForm() {
         </HStack>
         <Box w="full">
           <TokenInput
-            address={formatTokenAddress(assetOne?.token) || '0x0'}
+            address={formatAddress(assetOne?.token) || '0x0'}
             apiToken={{
-              address: formatTokenAddress(assetOne?.token) || '0x0',
+              address: formatAddress(assetOne?.token) || '0x0',
               chain: 'ETHEREUM',
               decimals: assetOne?.decimals || 18,
               logoURI: assetOne?.icon || '/images/tokens/default.svg',
@@ -321,6 +377,8 @@ export function AssetSellForm() {
               symbol: assetOne?.symbol || 'TOKEN',
             }}
             chain="ETHEREUM"
+            customUsdPrice={currentMarketPrice}
+            customUserBalance={sellAssetBalance?.formatted}
             onChange={handleSellAmountChange}
             placeholder="0.00"
             value={sellAmount}
@@ -356,9 +414,9 @@ export function AssetSellForm() {
         </HStack>
         <Box w="full">
           <TokenInput
-            address={formatTokenAddress(assetTwo?.token) || '0x0'}
+            address={formatAddress(assetTwo?.token) || '0x0'}
             apiToken={{
-              address: formatTokenAddress(assetTwo?.token) || '0x0',
+              address: formatAddress(assetTwo?.token) || '0x0',
               chain: 'ETHEREUM',
               decimals: assetTwo?.decimals || 18,
               logoURI: assetTwo?.icon || '/images/tokens/default.svg',
@@ -366,6 +424,8 @@ export function AssetSellForm() {
               symbol: assetTwo?.symbol || 'TOKEN',
             }}
             chain="ETHEREUM"
+            customUsdPrice={1} // Assuming stable coin, adjust if needed
+            customUserBalance={receiveAssetBalance?.formatted}
             onChange={handleReceiveAmountChange}
             placeholder="0.00"
             value={receiveAmount}

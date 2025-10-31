@@ -78,6 +78,8 @@ export const TokenInput = forwardRef(
       boxProps,
       onChange,
       onToggleTokenClicked,
+      customUserBalance,
+      customUsdPrice,
       ...inputProps
     }: InputProps & Props,
     ref
@@ -90,6 +92,9 @@ export const TokenInput = forwardRef(
         onChange({ currentTarget: { value: newValue } })
       }
     }
+
+    // Calculate USD value based on input amount and price
+    const usdValue = value && customUsdPrice ? (Number(value) * customUsdPrice).toFixed(2) : '0.00'
 
     return (
       <Box
@@ -159,10 +164,10 @@ export const TokenInput = forwardRef(
 
           <HStack h="4" justify="space-between" w="full">
             <Text color="font.secondary" fontSize="sm" opacity={0.5} variant="secondary">
-              $0.00
+              ${usdValue}
             </Text>
             <Text color="font.secondary" fontSize="sm">
-              Balance: 0.00
+              Balance: {customUserBalance || '0.00'}
             </Text>
           </HStack>
         </VStack>

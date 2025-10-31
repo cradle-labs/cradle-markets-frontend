@@ -37,12 +37,8 @@ export default function Portfolio() {
     enabled: !!linkedAccount?.id,
   })
 
-  console.log('wallet', wallet)
-
   // Fetch all assets
   const { data: assets, isLoading: isLoadingAssets } = useAssets()
-
-  console.log('assets data:', assets)
 
   // Handle copy to clipboard
   const handleCopyAddress = async (address: string) => {
@@ -179,7 +175,7 @@ export default function Portfolio() {
         <PortfolioSummary
           assets={assets}
           isLoadingAssets={isLoadingAssets}
-          walletAddress={wallet?.address}
+          walletContractId={wallet?.contract_id}
         />
       </VStack>
     </Stack>

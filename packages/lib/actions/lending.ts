@@ -218,7 +218,7 @@ export async function borrowAsset(input: BorrowAssetInput): Promise<{
     // Revalidate lending pages
     revalidatePath('/lend')
     revalidatePath('/portfolio')
-    revalidatePath(`/pool/${input.pool}`)
+    revalidatePath(`/lend/${input.pool}`)
 
     return {
       success: true,

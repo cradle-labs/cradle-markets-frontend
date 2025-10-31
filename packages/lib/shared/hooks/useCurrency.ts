@@ -12,30 +12,29 @@ type CurrencyOpts = {
 }
 
 export function useCurrency() {
-
   const { getFxRate, hasFxRates } = useFxRates()
-  const currency = 'KES' // Default to KES (Kenya Shilling)
+  const currency = 'USD' // Default to USD (US Dollar)
 
-  // Converts a KES value to the user's currency value.
-  function toUserCurrency(kesVal: Numberish): string {
-    const amount = kesVal.toString()
+  // Converts a USD value to the user's currency value.
+  function toUserCurrency(usdVal: Numberish): string {
+    const amount = usdVal.toString()
     const fxRate = getFxRate(currency as any)
 
     return bn(amount).times(fxRate).toString()
   }
 
   function formatCurrency(value: string | undefined) {
-    const symbol = hasFxRates ? symbolForCurrency(currency as any) : 'Ksh'
+    const symbol = hasFxRates ? symbolForCurrency(currency as any) : '$'
     return `${symbol} ${value ?? '0'}`
   }
 
   function parseCurrency(value: string) {
-    return value.replace(/^(Ksh|Ksh)\s*/, '')
+    return value.replace(/^(\$|\$)\s*/, '')
   }
 
-  // Converts a KES value to the user's currency and formats in fiat style.
+  // Converts a USD value to the user's currency and formats in fiat style.
   function toCurrency(
-    kesVal: Numberish,
+    usdVal: Numberish,
     {
       withSymbol = true,
       abbreviated = true,
@@ -43,8 +42,8 @@ export function useCurrency() {
       forceThreeDecimals = false,
     }: CurrencyOpts = {}
   ): string {
-    const symbol = hasFxRates ? symbolForCurrency(currency as any) : 'Ksh'
-    const convertedAmount = toUserCurrency(kesVal)
+    const symbol = hasFxRates ? symbolForCurrency(currency as any) : '$'
+    const convertedAmount = toUserCurrency(usdVal)
 
     const formattedAmount = fNum(noDecimals ? 'integer' : 'fiat', convertedAmount, {
       abbreviated,

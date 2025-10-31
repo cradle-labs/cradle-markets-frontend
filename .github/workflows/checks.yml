@@ -8,7 +8,6 @@ env:
   NEXT_PUBLIC_CRADLE_API_URL: https://cradle-back-end-production.up.railway.app
   NEXT_PUBLIC_WALLET_CONNECT_ID: ${{ secrets.NEXT_PUBLIC_WALLET_CONNECT_ID }}
   NEXT_PRIVATE_ALCHEMY_KEY: ${{ secrets.PRIVATE_ALCHEMY_KEY }}
-  NEXT_PRIVATE_DRPC_KEY: ${{ secrets.PRIVATE_DRPC_KEY }}
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
   TURBO_TEAM: ${{ vars.TURBO_TEAM }}
 
@@ -99,8 +98,6 @@ jobs:
         uses: ./.github/actions/setup
       - name: Set up foundry (includes anvil)
         uses: foundry-rs/foundry-toolchain@v1
-      - name: Start anvil fork in mainnet
-        run: anvil --fork-url "https://lb.drpc.org/ogrpc?network=ethereum&dkey=${{ env.NEXT_PRIVATE_DRPC_KEY }}" --port 8545 &
       - name: Install Playwright Browsers
         run: pnpm playwright:install:chromium # CI only tests in chromium
       - name: Run Playwright dev tests

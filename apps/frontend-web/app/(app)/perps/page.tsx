@@ -3,7 +3,7 @@ import { RoleGuard } from '@/lib/components/auth/RoleGuard'
 
 export default function PerpsPageWrapper() {
   return (
-    <RoleGuard allowedRoles={['institution']} fallbackPath="/access-denied">
+    <RoleGuard allowedRoles={['institution', 'retail']} fallbackPath="/access-denied">
       <PerpsPage />
     </RoleGuard>
   )

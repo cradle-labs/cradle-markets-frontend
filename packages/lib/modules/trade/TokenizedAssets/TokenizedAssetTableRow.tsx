@@ -101,9 +101,9 @@ export function TokenizedAssetTableRow({
   )
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-KE', {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'KES',
+      currency: 'USD',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(price)
@@ -120,9 +120,9 @@ export function TokenizedAssetTableRow({
   }
 
   const formatVolume = (vol: number) => {
-    return new Intl.NumberFormat('en-KE', {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'KES',
+      currency: 'USD',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(vol)
@@ -153,13 +153,7 @@ export function TokenizedAssetTableRow({
           {/* Asset Name */}
           <GridItem>
             <HStack align="start" spacing={3}>
-              <Box
-                borderRadius="md"
-                flexShrink={0}
-                h={8}
-                overflow="hidden"
-                w={8}
-              >
+              <Box borderRadius="md" flexShrink={0} h={8} overflow="hidden" w={8}>
                 <Image
                   alt={`${asset.name} logo`}
                   fallback={
@@ -239,10 +233,7 @@ export function TokenizedAssetTableRow({
           {/* 24h Chart */}
           <GridItem justifySelf="center">
             <Box borderRadius="sm" h={8} overflow="hidden" w="120px">
-              <ReactECharts
-                option={chartOptions}
-                style={{ height: '100%', width: '100%' }}
-              />
+              <ReactECharts option={chartOptions} style={{ height: '100%', width: '100%' }} />
             </Box>
           </GridItem>
         </Grid>

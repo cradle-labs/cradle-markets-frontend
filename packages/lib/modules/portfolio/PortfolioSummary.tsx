@@ -171,8 +171,23 @@ const PortfolioSummary = ({ walletAddress, assets, isLoadingAssets }: PortfolioS
     }
   }
 
-  const tokenizedAssetBalances = tokenizedAssets.map(mapToAssetBalance)
-  const yieldAssetBalances = yieldAssets.map(mapToAssetBalance)
+  const tokenizedAssetBalances = tokenizedAssets.map(mapToAssetBalance).filter(asset => {
+    // Only show assets with non-zero balance
+    // Don't filter while loading so user sees the loading state
+    if (asset.isLoading) return true
+    // Check raw balance for more accurate comparison with 8 decimal places
+    // balance is stored as string representation of the smallest unit (e.g., "10000000" for 0.1 tokens with 8 decimals)
+    return BigInt(asset.balance || '0') > BigInt(0)
+  })
+
+  const yieldAssetBalances = yieldAssets.map(mapToAssetBalance).filter(asset => {
+    // Only show assets with non-zero balance
+    // Don't filter while loading so user sees the loading state
+    if (asset.isLoading) return true
+    // Check raw balance for more accurate comparison with 8 decimal places
+    // balance is stored as string representation of the smallest unit (e.g., "10000000" for 0.1 tokens with 8 decimals)
+    return BigInt(asset.balance || '0') > BigInt(0)
+  })
 
   // Show loading state
   if (isLoadingAssets) {

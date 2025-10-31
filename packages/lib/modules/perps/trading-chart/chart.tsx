@@ -246,6 +246,15 @@ export function TradingChart({ symbol = 'SHARES/USDC', data, onCrosshairMove }: 
   }
 
   const latestData = chartData[chartData.length - 1]
+
+  // Safely parse price values
+  const safeCurrentPrice =
+    typeof currentPrice === 'number'
+      ? currentPrice
+      : latestData?.close && typeof latestData.close === 'number'
+        ? latestData.close
+        : 0
+
   const priceChange =
     latestData && chartData.length > 1
       ? latestData.close - chartData[chartData.length - 2].close
@@ -266,7 +275,7 @@ export function TradingChart({ symbol = 'SHARES/USDC', data, onCrosshairMove }: 
             </Text>
             <HStack spacing={2}>
               <Text fontSize="2xl" fontWeight="bold">
-                ${(currentPrice || latestData?.close || 0).toFixed(4)}
+                ${safeCurrentPrice.toFixed(4)}
               </Text>
               <Text color={priceChange >= 0 ? 'green.400' : 'red.400'} fontSize="sm">
                 {priceChange >= 0 ? '+' : ''}

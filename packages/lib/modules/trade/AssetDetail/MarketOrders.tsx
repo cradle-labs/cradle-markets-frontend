@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import {
   Box,
   Card,
@@ -14,11 +15,37 @@ import {
   Th,
   Td,
   TableContainer,
+  Button,
+  Select,
+  IconButton,
 } from '@chakra-ui/react'
+import { ChevronLeftIcon, ChevronRightIcon } from '@chakra-ui/icons'
 import { useAssetDetail } from './AssetDetailProvider'
 
 export function MarketOrders() {
   const { orders, market, loading } = useAssetDetail()
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+
+  // Pagination calculations
+  const totalPages = Math.ceil(orders.length / pageSize)
+  const startIndex = (currentPage - 1) * pageSize
+  const endIndex = startIndex + pageSize
+  const paginatedOrders = orders.slice(startIndex, endIndex)
+
+  // Reset to page 1 if current page exceeds total pages
+  if (currentPage > totalPages && totalPages > 0) {
+    setCurrentPage(1)
+  }
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage)
+  }
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize)
+    setCurrentPage(1) // Reset to first page when changing page size
+  }
 
   if (loading) {
     return (
@@ -112,69 +139,8 @@ export function MarketOrders() {
             </HStack>
           </HStack>
 
-          <TableContainer w="full">
-            <Table size="sm" variant="simple">
-              <Thead>
-                <Tr>
-                  <Th>Order ID</Th>
-                  <Th>Type</Th>
-                  <Th>Mode</Th>
-                  <Th isNumeric>Amount</Th>
-                  <Th isNumeric>Price</Th>
-                  <Th>Status</Th>
-                  <Th>Date</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {orders.map(order => (
-                  <Tr key={order.id}>
-                    <Td>
-                      <Text fontFamily="mono" fontSize="xs">
-                        {order.id}
-                      </Text>
-                    </Td>
-                    <Td>
-                      <Badge colorScheme={getOrderTypeColor(order.order_type)} size="sm">
-                        {order.order_type}
-                      </Badge>
-                    </Td>
-                    <Td>
-                      <Text fontSize="xs">{order.mode}</Text>
-                    </Td>
-                    <Td isNumeric>
-                      <Text fontSize="sm">{parseFloat(order.ask_amount).toLocaleString()}</Text>
-                    </Td>
-                    <Td isNumeric>
-                      <Text fontSize="sm" fontWeight="medium">
-                        $
-                        {parseFloat(order.price).toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </Text>
-                    </Td>
-                    <Td>
-                      <Badge colorScheme={getStatusColor(order.status)} size="sm">
-                        {order.status}
-                      </Badge>
-                    </Td>
-                    <Td>
-                      <Text fontSize="xs">
-                        {new Date(order.created_at).toLocaleDateString(undefined, {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })}
-                      </Text>
-                    </Td>
-                  </Tr>
-                ))}
-              </Tbody>
-            </Table>
-          </TableContainer>
-
           {/* Summary Statistics */}
-          <Box bg="background.level1" borderRadius="md" mt={4} p={4} w="full">
+          <Box bg="background.level1" borderRadius="md" p={4} w="full">
             <VStack align="start" spacing={3}>
               <Text fontSize="sm" fontWeight="semibold">
                 Order Summary
@@ -226,6 +192,144 @@ export function MarketOrders() {
               </Box>
             </VStack>
           </Box>
+
+          <TableContainer w="full">
+            <Table size="sm" variant="simple">
+              <Thead>
+                <Tr>
+                  <Th>Order ID</Th>
+                  <Th>Type</Th>
+                  <Th>Mode</Th>
+                  <Th isNumeric>Amount</Th>
+                  <Th isNumeric>Price</Th>
+                  <Th>Status</Th>
+                  <Th>Date</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {paginatedOrders.map(order => (
+                  <Tr key={order.id}>
+                    <Td>
+                      <Text fontFamily="mono" fontSize="xs">
+                        {order.id}
+                      </Text>
+                    </Td>
+                    <Td>
+                      <Badge colorScheme={getOrderTypeColor(order.order_type)} size="sm">
+                        {order.order_type}
+                      </Badge>
+                    </Td>
+                    <Td>
+                      <Text fontSize="xs">{order.mode}</Text>
+                    </Td>
+                    <Td isNumeric>
+                      <Text fontSize="sm">{parseFloat(order.ask_amount).toLocaleString()}</Text>
+                    </Td>
+                    <Td isNumeric>
+                      <Text fontSize="sm" fontWeight="medium">
+                        $
+                        {parseFloat(order.price).toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </Text>
+                    </Td>
+                    <Td>
+                      <Badge colorScheme={getStatusColor(order.status)} size="sm">
+                        {order.status}
+                      </Badge>
+                    </Td>
+                    <Td>
+                      <Text fontSize="xs">
+                        {new Date(order.created_at).toLocaleDateString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                      </Text>
+                    </Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </TableContainer>
+
+          {/* Pagination Controls */}
+          {orders.length > 0 && (
+            <HStack justify="space-between" pt={2} w="full">
+              <HStack spacing={2}>
+                <Text color="font.secondary" fontSize="sm">
+                  Rows per page:
+                </Text>
+                <Select
+                  onChange={e => handlePageSizeChange(Number(e.target.value))}
+                  size="sm"
+                  value={pageSize}
+                  w="80px"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                </Select>
+                <Text color="font.secondary" fontSize="sm">
+                  {startIndex + 1}-{Math.min(endIndex, orders.length)} of {orders.length}
+                </Text>
+              </HStack>
+
+              <HStack spacing={1}>
+                <IconButton
+                  aria-label="Previous page"
+                  icon={<ChevronLeftIcon />}
+                  isDisabled={currentPage === 1}
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  size="sm"
+                  variant="ghost"
+                />
+
+                {/* Page numbers */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(page => {
+                    // Show first page, last page, current page, and pages around current
+                    if (page === 1 || page === totalPages) return true
+                    if (Math.abs(page - currentPage) <= 1) return true
+                    return false
+                  })
+                  .map((page, idx, arr) => {
+                    // Add ellipsis between non-consecutive pages
+                    const prevPage = arr[idx - 1]
+                    const showEllipsis = prevPage && page - prevPage > 1
+
+                    return (
+                      <HStack key={page} spacing={1}>
+                        {showEllipsis && (
+                          <Text color="font.secondary" px={1}>
+                            ...
+                          </Text>
+                        )}
+                        <Button
+                          minW="32px"
+                          onClick={() => handlePageChange(page)}
+                          size="sm"
+                          variant={currentPage === page ? 'solid' : 'ghost'}
+                        >
+                          {page}
+                        </Button>
+                      </HStack>
+                    )
+                  })}
+
+                <IconButton
+                  aria-label="Next page"
+                  icon={<ChevronRightIcon />}
+                  isDisabled={currentPage === totalPages}
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  size="sm"
+                  variant="ghost"
+                />
+              </HStack>
+            </HStack>
+          )}
         </VStack>
       </Box>
     </Card>

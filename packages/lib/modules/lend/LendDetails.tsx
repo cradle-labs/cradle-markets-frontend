@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Box } from '@chakra-ui/react'
 import { LendingPoolTable, LendingPoolData } from './LendingPoolTable'
 import {
@@ -10,9 +11,14 @@ import {
   getTotalBorrowedFromPool,
   getPoolUtilizationRate,
 } from '@repo/lib/shared/dummy-data/cradle-data'
+import { useLendingPools } from '@repo/lib/cradle-client-ts/hooks'
 
 export function LendDetails() {
+  const router = useRouter()
   const [loading] = useState(false)
+  const { data: lendingPools, isLoading: isLoadingLendingPools } = useLendingPools()
+  console.log('lending pools', lendingPools)
+  console.log('isLoadingLendingPools', isLoadingLendingPools)
 
   // Enrich lending pool data with asset info and calculated values
   const enrichedPools: LendingPoolData[] = useMemo(() => {
@@ -52,8 +58,7 @@ export function LendDetails() {
   }, [])
 
   const handlePoolClick = (pool: LendingPoolData) => {
-    // TODO: Navigate to pool details page or open modal
-    console.log('Pool clicked:', pool)
+    router.push(`/lend/${pool.id}`)
   }
 
   return (

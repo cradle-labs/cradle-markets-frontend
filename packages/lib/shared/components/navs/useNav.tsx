@@ -24,7 +24,7 @@ export function useNav() {
     {
       href: '/perps',
       label: 'Perps',
-      roles: ['institution'],
+      roles: ['institution', 'retail'],
     },
     {
       href: '/lend',

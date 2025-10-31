@@ -5,7 +5,6 @@ import { ChevronUpIcon, ChevronDownIcon } from '@chakra-ui/icons'
 import { TokenizedAssetData } from '../TokenizedAssets/TokenizedAssetCard'
 import { useCurrency } from '@repo/lib/shared/hooks/useCurrency'
 
-
 interface AssetHeaderProps {
   asset: TokenizedAssetData
 }
@@ -46,7 +45,7 @@ export function AssetHeader({ asset }: AssetHeaderProps) {
             src={asset.logo}
           />
         </Box>
-        
+
         <VStack align="start" spacing={1}>
           <HStack spacing={2}>
             <Text fontSize="2xl" fontWeight="bold">
@@ -56,20 +55,30 @@ export function AssetHeader({ asset }: AssetHeaderProps) {
               {asset.symbol}
             </Text>
           </HStack>
-          
+
           <HStack spacing={2}>
             <Text fontSize="3xl" fontWeight="bold">
-              {toCurrency(asset.currentPrice)}
+              {asset.currentPrice > 0 ? toCurrency(asset.currentPrice) : 'N/A'}
             </Text>
-            <HStack color={isPositive ? 'green.500' : 'red.500'} spacing={1}>
-              <ChangeIcon boxSize={4} />
-              <Text fontSize="lg" fontWeight="medium">
-                {toCurrency(Math.abs(asset.dailyChange))} ({Math.abs(asset.dailyChangePercent).toFixed(2)}%)
+            {asset.currentPrice > 0 && (
+              <>
+                <HStack color={isPositive ? 'green.500' : 'red.500'} spacing={1}>
+                  <ChangeIcon boxSize={4} />
+                  <Text fontSize="lg" fontWeight="medium">
+                    {toCurrency(Math.abs(asset.dailyChange || 0))} (
+                    {Math.abs(asset.dailyChangePercent || 0).toFixed(2)}%)
+                  </Text>
+                </HStack>
+                <Text color="font.secondary" fontSize="sm">
+                  1W
+                </Text>
+              </>
+            )}
+            {asset.currentPrice === 0 && (
+              <Text color="font.tertiary" fontSize="sm">
+                Price data unavailable
               </Text>
-            </HStack>
-            <Text color="font.secondary" fontSize="sm">
-              1W
-            </Text>
+            )}
           </HStack>
         </VStack>
       </HStack>

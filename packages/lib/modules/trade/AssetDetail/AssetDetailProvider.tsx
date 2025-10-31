@@ -1,20 +1,45 @@
 'use client'
 
-import { createContext, useContext, ReactNode, useState, useEffect } from 'react'
+import { createContext, useContext, ReactNode, useMemo } from 'react'
+import { useQueries } from '@tanstack/react-query'
 import { TokenizedAssetData } from '../TokenizedAssets/TokenizedAssetCard'
-import {
-  mockMarkets,
-  getOrdersByMarket,
-  getTimeSeriesByMarket,
-  getAssetById,
-} from '@repo/lib/shared/dummy-data/cradle-data'
-import type { Market, Order, TimeSeriesRecord } from '@repo/lib/cradle-client-ts/types'
+import { useMarket } from '@repo/lib/cradle-client-ts/hooks/markets/useMarket'
+import { useAsset } from '@repo/lib/cradle-client-ts/hooks/assets/useAsset'
+import { useOrders } from '@repo/lib/cradle-client-ts/hooks/orders/useOrders'
+import type { Market, Order } from '@repo/lib/cradle-client-ts/types'
+import type { TimeHistoryDataPoint } from '@repo/lib/actions/time-history'
+
+// Import the fetcher function
+async function fetchTimeHistory(params: {
+  market: string
+  asset_id: string
+  duration_secs: string
+  interval: '15secs' | '1min' | '5min' | '15min' | '30min' | '1hr' | '4hr' | '1day' | '1week'
+}): Promise<TimeHistoryDataPoint[]> {
+  const { getTimeHistory } = await import('@repo/lib/actions/time-history')
+  return getTimeHistory(params)
+}
+
+// Configuration for different time periods
+interface TimeConfig {
+  duration_secs: string
+  interval: '15secs' | '1min' | '5min' | '15min' | '30min' | '1hr' | '4hr' | '1day' | '1week'
+}
+
+const TIME_CONFIGS: Record<string, TimeConfig> = {
+  REALTIME: { duration_secs: '900', interval: '15secs' }, // 15 minutes: 15-second intervals for live chart
+  '1D': { duration_secs: '86400', interval: '15min' }, // 1 day: 15-minute intervals
+  '1W': { duration_secs: '604800', interval: '15min' }, // 1 week: 15-minute intervals
+  '1M': { duration_secs: '2592000', interval: '4hr' }, // 1 month: 4-hour intervals
+  '3M': { duration_secs: '7776000', interval: '1day' }, // 3 months: daily intervals
+  '1Y': { duration_secs: '31536000', interval: '1week' }, // 1 year: weekly intervals
+  ALL: { duration_secs: '94608000', interval: '1week' }, // 3 years: weekly intervals
+}
 
 interface AssetDetailContextType {
   asset: TokenizedAssetData | null
   market: Market | null
   orders: Order[]
-  timeSeriesData: TimeSeriesRecord[]
   loading: boolean
   error: string | null
   refetch: () => void
@@ -27,178 +52,171 @@ interface AssetDetailProviderProps {
   marketId: string
 }
 
-// Mock data - in a real app this would come from an API
-// Using Nairobi Securities Exchange (NSE) stocks
-const mockAssets: TokenizedAssetData[] = [
-  {
-    id: 'safaricom',
-    symbol: 'cSAF',
-    name: 'Safaricom',
-    logo: '/images/tokens/safaricom.svg',
-    currentPrice: 26.5,
-    dailyChange: 0.75,
-    dailyChangePercent: 2.91,
-    priceHistory: [
-      [1696320000, 25.2], // Oct 3
-      [1696406400, 25.45], // Oct 4
-      [1696492800, 25.1], // Oct 5
-      [1696579200, 25.8], // Oct 6
-      [1696665600, 26.0], // Oct 7
-      [1696752000, 25.65], // Oct 8
-      [1696838400, 26.15], // Oct 9
-      [1696924800, 26.3], // Oct 10
-      [1697011200, 26.45], // Oct 11
-      [1697097600, 26.2], // Oct 12
-      [1697184000, 25.75], // Oct 13
-      [1697270400, 26.5], // Oct 14
-    ],
-  },
-  {
-    id: 'equity',
-    symbol: 'cEQTY',
-    name: 'Equity Bank',
-    logo: '/images/tokens/equity.svg',
-    currentPrice: 52.75,
-    dailyChange: -1.25,
-    dailyChangePercent: -2.31,
-    priceHistory: [
-      [1696320000, 54.0],
-      [1696406400, 54.5],
-      [1696492800, 53.75],
-      [1696579200, 53.25],
-      [1696665600, 54.1],
-      [1696752000, 53.5],
-      [1696838400, 54.25],
-      [1696924800, 53.8],
-      [1697011200, 54.35],
-      [1697097600, 54.0],
-      [1697184000, 53.5],
-      [1697270400, 52.75],
-    ],
-  },
-  {
-    id: 'kcb',
-    symbol: 'cKCB',
-    name: 'KCB Group',
-    logo: '/images/tokens/kcb.svg',
-    currentPrice: 38.25,
-    dailyChange: 1.5,
-    dailyChangePercent: 4.08,
-    priceHistory: [
-      [1696320000, 36.5],
-      [1696406400, 36.85],
-      [1696492800, 36.2],
-      [1696579200, 37.0],
-      [1696665600, 37.45],
-      [1696752000, 36.9],
-      [1696838400, 37.75],
-      [1696924800, 38.25],
-    ],
-  },
-]
-
 export function AssetDetailProvider({ children, marketId }: AssetDetailProviderProps) {
-  const [asset, setAsset] = useState<TokenizedAssetData | null>(null)
-  const [market, setMarket] = useState<Market | null>(null)
-  const [orders, setOrders] = useState<Order[]>([])
-  const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesRecord[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  // Fetch market data
+  const {
+    data: market,
+    isLoading: marketLoading,
+    error: marketError,
+    refetch: refetchMarket,
+  } = useMarket({ marketId })
 
-  const fetchMarketData = async () => {
-    try {
-      setLoading(true)
-      setError(null)
+  // Fetch primary asset data (asset_one from the market)
+  const {
+    data: primaryAsset,
+    isLoading: assetLoading,
+    error: assetError,
+    refetch: refetchAsset,
+  } = useAsset({
+    assetId: market?.asset_one || '',
+    enabled: !!market?.asset_one,
+  })
 
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500))
+  // Fetch time history data for all chart periods
+  const timeHistoryQueries = useQueries({
+    queries: Object.entries(TIME_CONFIGS).map(([period, config]) => ({
+      queryKey: [
+        'time-history',
+        marketId,
+        market?.asset_one,
+        config.duration_secs,
+        config.interval,
+      ],
+      queryFn: () =>
+        fetchTimeHistory({
+          market: marketId,
+          asset_id: market?.asset_one || '',
+          duration_secs: config.duration_secs,
+          interval: config.interval,
+        }),
+      enabled: !!market?.asset_one,
+      // For REALTIME data, refetch every 15 seconds
+      refetchInterval: (period === 'REALTIME' ? 15000 : false) as number | false,
+      staleTime: period === 'REALTIME' ? 0 : 1000 * 60 * 2, // No stale time for realtime, 2 minutes for others
+      gcTime: 1000 * 60 * 10, // 10 minutes
+      retry: false,
+    })),
+  })
 
-      // Find the market by ID
-      const foundMarket = mockMarkets.find(m => m.id === marketId)
-      if (!foundMarket) {
-        setError(`Market with ID "${marketId}" not found`)
-        return
+  // Combine all time history data and sort by timestamp
+  const allTimeHistoryData = useMemo(() => {
+    const allData: TimeHistoryDataPoint[] = []
+    timeHistoryQueries.forEach(query => {
+      if (query.data && Array.isArray(query.data)) {
+        allData.push(...query.data)
       }
+    })
 
-      setMarket(foundMarket)
+    // Remove duplicates and sort by timestamp
+    const uniqueData = Array.from(
+      new Map(allData.map(item => [item.timestamp, item])).values()
+    ).sort((a, b) => a.timestamp - b.timestamp)
 
-      // Get the primary asset for the market (asset_one)
-      const primaryAsset = getAssetById(foundMarket.asset_one)
+    console.log('Combined time history data:', uniqueData.length, 'data points')
+    return uniqueData
+  }, [timeHistoryQueries])
 
-      // Convert market data to TokenizedAssetData format for compatibility
-      if (primaryAsset) {
-        // Find matching mock asset data (from the old mockAssets) for price history
-        const matchingMockAsset = mockAssets.find(
-          a => a.symbol === primaryAsset.symbol || a.name === primaryAsset.name
-        )
+  // Fetch orders for this market
+  const {
+    data: orders = [],
+    isLoading: ordersLoading,
+    refetch: refetchOrders,
+  } = useOrders({
+    filters: { market_id: marketId },
+  })
 
-        // Get time series data for chart
-        const marketTimeSeries = getTimeSeriesByMarket(marketId)
+  // Aggregate loading states
+  const timeHistoryLoading = timeHistoryQueries.some(q => q.isLoading)
+  const loading = marketLoading || assetLoading || timeHistoryLoading || ordersLoading
 
-        // Convert time series to price history format
-        const priceHistory: [number, number][] = marketTimeSeries.map(ts => [
-          new Date(ts.start_time).getTime() / 1000,
-          parseFloat(ts.close),
-        ])
+  // Aggregate error states (time history and orders are optional)
+  const error = marketError?.message || assetError?.message || null
 
-        // Use last close price as current price, or fall back to mock data
-        const currentPrice =
-          marketTimeSeries.length > 0
-            ? parseFloat(marketTimeSeries[marketTimeSeries.length - 1].close)
-            : matchingMockAsset?.currentPrice || 0
-
-        // Calculate daily change if we have at least 2 data points
-        let dailyChange = 0
-        let dailyChangePercent = 0
-        if (marketTimeSeries.length >= 2) {
-          const latest = parseFloat(marketTimeSeries[marketTimeSeries.length - 1].close)
-          const previous = parseFloat(marketTimeSeries[marketTimeSeries.length - 2].close)
-          dailyChange = latest - previous
-          dailyChangePercent = (dailyChange / previous) * 100
-        } else if (matchingMockAsset) {
-          dailyChange = matchingMockAsset.dailyChange
-          dailyChangePercent = matchingMockAsset.dailyChangePercent
-        }
-
-        setAsset({
-          id: foundMarket.id,
-          symbol: primaryAsset.symbol,
-          name: primaryAsset.name,
-          logo: primaryAsset.icon,
-          currentPrice,
-          dailyChange,
-          dailyChangePercent,
-          priceHistory:
-            priceHistory.length > 0 ? priceHistory : matchingMockAsset?.priceHistory || [],
-        })
-
-        setTimeSeriesData(marketTimeSeries)
-      }
-
-      // Get orders for this market
-      const marketOrders = getOrdersByMarket(marketId)
-      setOrders(marketOrders)
-    } catch (err) {
-      setError('Failed to load market details')
-      console.error('Error fetching market:', err)
-    } finally {
-      setLoading(false)
-    }
+  // Log time history errors as warnings
+  const timeHistoryErrors = timeHistoryQueries.filter(q => q.error)
+  if (timeHistoryErrors.length > 0) {
+    console.warn(`Time history fetch failed for market ${marketId}:`, timeHistoryErrors)
   }
 
-  useEffect(() => {
-    fetchMarketData()
-  }, [marketId])
+  // Transform data into TokenizedAssetData format
+  const asset = useMemo((): TokenizedAssetData | null => {
+    if (!market || !primaryAsset) return null
+
+    console.log('Transforming asset detail data:')
+    console.log('- Market:', market)
+    console.log('- Primary Asset:', primaryAsset)
+    console.log('- Combined Time History:', allTimeHistoryData.length, 'data points')
+
+    // If no time history data, return asset with empty chart data
+    if (allTimeHistoryData.length === 0) {
+      console.warn(
+        'No time history data available for market:',
+        marketId,
+        '- showing details without chart'
+      )
+      return {
+        id: market.id,
+        symbol: primaryAsset.symbol,
+        name: primaryAsset.name,
+        logo: primaryAsset.icon,
+        currentPrice: 0,
+        dailyChange: 0,
+        dailyChangePercent: 0,
+        priceHistory: [], // Empty array = no chart
+        timeHistoryData: [],
+      }
+    }
+
+    // Convert time history to price history format
+    const priceHistory: Array<[number, number]> = allTimeHistoryData.map(point => [
+      point.timestamp * 1000,
+      point.close,
+    ])
+
+    // Calculate current price from the latest data
+    const latestDataPoint = allTimeHistoryData[allTimeHistoryData.length - 1]
+    const currentPrice = typeof latestDataPoint?.close === 'number' ? latestDataPoint.close : 0
+
+    // Find data point from ~24 hours ago for daily change
+    const dayAgo = Date.now() / 1000 - 86400
+    const dayAgoData = allTimeHistoryData.find(point => point.timestamp >= dayAgo)
+    const previousPrice = dayAgoData
+      ? typeof dayAgoData.close === 'number'
+        ? dayAgoData.close
+        : currentPrice
+      : allTimeHistoryData.length > 1
+        ? typeof allTimeHistoryData[0].close === 'number'
+          ? allTimeHistoryData[0].close
+          : currentPrice
+        : currentPrice
+
+    const dailyChange = currentPrice - previousPrice
+    const dailyChangePercent = previousPrice !== 0 ? (dailyChange / previousPrice) * 100 : 0
+
+    return {
+      id: market.id,
+      symbol: primaryAsset.symbol,
+      name: primaryAsset.name,
+      logo: primaryAsset.icon,
+      currentPrice,
+      dailyChange,
+      dailyChangePercent,
+      priceHistory,
+      timeHistoryData: allTimeHistoryData, // Pass full OHLC data for candlestick chart
+    }
+  }, [market, primaryAsset, allTimeHistoryData, marketId])
 
   const refetch = () => {
-    fetchMarketData()
+    refetchMarket()
+    refetchAsset()
+    timeHistoryQueries.forEach(query => query.refetch())
+    refetchOrders()
   }
 
   const value: AssetDetailContextType = {
     asset,
-    market,
+    market: market || null,
     orders,
-    timeSeriesData,
     loading,
     error,
     refetch,

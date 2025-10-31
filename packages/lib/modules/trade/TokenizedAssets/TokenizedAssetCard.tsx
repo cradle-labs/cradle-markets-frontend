@@ -23,6 +23,14 @@ export interface TokenizedAssetData {
   dailyChange: number
   dailyChangePercent: number
   priceHistory: Array<[number, number]> // [timestamp, price] pairs
+  timeHistoryData?: Array<{
+    timestamp: number
+    open: number
+    high: number
+    low: number
+    close: number
+    volume: number
+  }>
 }
 
 interface TokenizedAssetCardProps {
@@ -47,63 +55,66 @@ export function TokenizedAssetCard({ asset, onClick }: TokenizedAssetCardProps) 
   const fallbackBg = useColorModeValue('gray.200', 'gray.600')
   const fallbackColor = useColorModeValue('gray.700', 'gray.200')
 
-  const chartOptions = useMemo(() => ({
-    grid: {
-      left: 0,
-      right: 0,
-      top: 0,
-      bottom: 0,
-      containLabel: false,
-    },
-    xAxis: {
-      type: 'time',
-      show: false,
-    },
-    yAxis: {
-      type: 'value',
-      show: false,
-    },
-    series: [
-      {
-        type: 'line',
-        data: asset.priceHistory,
-        smooth: true,
-        symbol: 'none',
-        lineStyle: {
-          color: chartLineColor,
-          width: 2,
-        },
-        areaStyle: {
-          color: {
-            type: 'linear',
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              {
-                offset: 0,
-                color: `${chartLineColor}20`,
-              },
-              {
-                offset: 1,
-                color: `${chartLineColor}05`,
-              },
-            ],
+  const chartOptions = useMemo(
+    () => ({
+      grid: {
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: 0,
+        containLabel: false,
+      },
+      xAxis: {
+        type: 'time',
+        show: false,
+      },
+      yAxis: {
+        type: 'value',
+        show: false,
+      },
+      series: [
+        {
+          type: 'line',
+          data: asset.priceHistory,
+          smooth: true,
+          symbol: 'none',
+          lineStyle: {
+            color: chartLineColor,
+            width: 2,
+          },
+          areaStyle: {
+            color: {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                {
+                  offset: 0,
+                  color: `${chartLineColor}20`,
+                },
+                {
+                  offset: 1,
+                  color: `${chartLineColor}05`,
+                },
+              ],
+            },
           },
         },
+      ],
+      tooltip: {
+        show: false,
       },
-    ],
-    tooltip: {
-      show: false,
-    },
-    animation: false,
-  }), [asset.priceHistory, chartLineColor])
+      animation: false,
+    }),
+    [asset.priceHistory, chartLineColor]
+  )
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-KE', {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'KES',
+      currency: 'USD',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(price)
@@ -141,13 +152,7 @@ export function TokenizedAssetCard({ asset, onClick }: TokenizedAssetCardProps) 
         <VStack align="stretch" h="full" spacing={4}>
           {/* 1. Header (Top Left) - Logo, ticker, company name in horizontal row */}
           <HStack align="start" spacing={3}>
-            <Box
-              borderRadius="md"
-              flexShrink={0}
-              h={10}
-              overflow="hidden"
-              w={10}
-            >
+            <Box borderRadius="md" flexShrink={0} h={10} overflow="hidden" w={10}>
               <Image
                 alt={`${asset.name} logo`}
                 fallback={
@@ -214,14 +219,10 @@ export function TokenizedAssetCard({ asset, onClick }: TokenizedAssetCardProps) 
             position="relative"
             w="full"
           >
-            <ReactECharts
-              option={chartOptions}
-              style={{ height: '100%', width: '100%' }}
-            />
+            <ReactECharts option={chartOptions} style={{ height: '100%', width: '100%' }} />
           </Box>
         </VStack>
       </CardBody>
     </Card>
   )
 }
-

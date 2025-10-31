@@ -1,12 +1,22 @@
 'use client'
 
-import { createContext, useContext, ReactNode, useState, useEffect } from 'react'
+import { createContext, useContext, ReactNode, useMemo } from 'react'
+import { useQueries } from '@tanstack/react-query'
 import { TokenizedAssetData } from './TokenizedAssetCard'
-import {
-  mockMarkets,
-  mockAssets,
-  mockTimeSeriesRecords,
-} from '@repo/lib/shared/dummy-data/cradle-data'
+import { useMarkets } from '@repo/lib/cradle-client-ts/hooks/markets/useMarkets'
+import { useAssets } from '@repo/lib/cradle-client-ts/hooks/assets/useAssets'
+import type { TimeHistoryDataPoint } from '@repo/lib/actions/time-history'
+
+// Import the fetcher function
+async function fetchTimeHistory(params: {
+  market: string
+  asset_id: string
+  duration_secs: string
+  interval: '15secs' | '1min' | '5min' | '15min' | '30min' | '1hr' | '4hr' | '1day' | '1week'
+}): Promise<TimeHistoryDataPoint[]> {
+  const { getTimeHistory } = await import('@repo/lib/actions/time-history')
+  return getTimeHistory(params)
+}
 
 interface TokenizedAssetContextType {
   assets: TokenizedAssetData[]
@@ -22,50 +32,74 @@ interface TokenizedAssetProviderProps {
 }
 
 /**
- * Transform markets and assets data from cradle-data into TokenizedAssetData format
+ * Transform markets and assets data from real API into TokenizedAssetData format
  */
-function transformMarketsToAssets(): TokenizedAssetData[] {
+function transformMarketsToAssets(
+  markets: any[],
+  assets: any[],
+  timeHistoryResults: Array<{ data?: TimeHistoryDataPoint[]; error: any }>
+): TokenizedAssetData[] {
+  console.log('Markets from API:', markets)
+  console.log('Assets from API:', assets)
+  console.log('Time history results:', timeHistoryResults)
+
   // Only get spot markets (not futures or derivatives) for the main trading page
-  const spotMarkets = mockMarkets.filter(market => market.market_type === 'spot')
-  console.log('spotMarkets:', spotMarkets)
+  const spotMarkets = markets.filter(market => market.market_type === 'spot')
+  console.log('Spot markets:', spotMarkets)
 
   return spotMarkets
-    .map(market => {
+    .map((market, index) => {
       // Find the primary asset (asset_one) for this market
-      const asset = mockAssets.find(a => a.id === market.asset_one)
+      const asset = assets.find(a => a.id === market.asset_one)
 
       if (!asset) {
         console.warn(`Asset not found for market ${market.id}`)
         return null
       }
 
-      // Get time series data for this market to calculate prices
-      const timeSeriesData = mockTimeSeriesRecords.filter(ts => ts.market_id === market.id)
+      // Get time history data for this market (matches by index)
+      const timeHistoryResult = timeHistoryResults[index]
+      const timeHistoryData = timeHistoryResult?.data || []
 
-      // Sort by end_time to get chronological order
-      const sortedTimeSeries = timeSeriesData.sort(
-        (a, b) => new Date(a.end_time).getTime() - new Date(b.end_time).getTime()
-      )
+      if (timeHistoryResult?.error) {
+        console.warn(`Time history fetch failed for market ${market.id}:`, timeHistoryResult.error)
+      }
 
-      // Generate price history from time series data
-      const priceHistory: Array<[number, number]> =
-        sortedTimeSeries.length > 0
-          ? sortedTimeSeries.map(ts => [new Date(ts.end_time).getTime(), parseFloat(ts.close)])
-          : generateMockPriceHistory() // Fallback to mock data if no time series
+      // If no time history data, show market without chart data
+      if (timeHistoryData.length === 0) {
+        console.warn(`No time history data for market ${market.id} - showing without chart`)
+        return {
+          id: market.id,
+          symbol: asset.symbol,
+          name: asset.name,
+          logo: asset.icon,
+          currentPrice: 0,
+          dailyChange: 0,
+          dailyChangePercent: 0,
+          priceHistory: [], // Empty array = no chart
+          timeHistoryData: [],
+        }
+      }
 
-      // Calculate current price and daily change
-      const currentPrice =
-        sortedTimeSeries.length > 0
-          ? parseFloat(sortedTimeSeries[sortedTimeSeries.length - 1].close)
-          : generateRandomPrice(asset.symbol)
+      // Convert time history to price history format
+      const priceHistory: Array<[number, number]> = timeHistoryData.map(point => [
+        point.timestamp * 1000,
+        point.close,
+      ])
 
+      // Calculate current price and daily change from real data
+      const latestDataPoint = timeHistoryData[timeHistoryData.length - 1]
+      const currentPrice = typeof latestDataPoint?.close === 'number' ? latestDataPoint.close : 0
+
+      const previousDataPoint =
+        timeHistoryData.length > 1 ? timeHistoryData[timeHistoryData.length - 2] : null
       const previousPrice =
-        sortedTimeSeries.length > 1
-          ? parseFloat(sortedTimeSeries[sortedTimeSeries.length - 2].close)
-          : currentPrice * 0.98 // Default to -2% if no history
+        previousDataPoint && typeof previousDataPoint.close === 'number'
+          ? previousDataPoint.close
+          : currentPrice
 
       const dailyChange = currentPrice - previousPrice
-      const dailyChangePercent = (dailyChange / previousPrice) * 100
+      const dailyChangePercent = previousPrice !== 0 ? (dailyChange / previousPrice) * 100 : 0
 
       return {
         id: market.id,
@@ -76,89 +110,101 @@ function transformMarketsToAssets(): TokenizedAssetData[] {
         dailyChange,
         dailyChangePercent,
         priceHistory,
+        timeHistoryData,
       }
     })
     .filter(Boolean) as TokenizedAssetData[]
 }
 
-/**
- * Generate mock price history when no time series data is available
- */
-function generateMockPriceHistory(): Array<[number, number]> {
-  const history: Array<[number, number]> = []
-  const now = Date.now()
-  const basePrice = 100 + Math.random() * 200
-
-  for (let i = 11; i >= 0; i--) {
-    const timestamp = now - i * 3600000 // 1 hour intervals
-    const variance = (Math.random() - 0.5) * 10
-    const price = basePrice + variance
-    history.push([timestamp, price])
-  }
-
-  return history
-}
-
-/**
- * Generate a realistic random price based on asset symbol
- */
-function generateRandomPrice(symbol: string): number {
-  // Different price ranges for different types of assets
-  const priceRanges: Record<string, [number, number]> = {
-    cSAF: [25, 30],
-    cEQTY: [50, 60],
-    cKCB: [35, 45],
-    cEABL: [200, 220],
-    cCOOP: [15, 20],
-    cBAT: [470, 500],
-    cBMB: [55, 65],
-    cNCBA: [40, 50],
-    cSBIC: [120, 130],
-    cSCB: [165, 175],
-    cBRIT: [8, 10],
-    cABSA: [14, 16],
-  }
-
-  const [min, max] = priceRanges[symbol] || [10, 100]
-  return min + Math.random() * (max - min)
-}
-
 export function TokenizedAssetProvider({ children }: TokenizedAssetProviderProps) {
-  const [assets, setAssets] = useState<TokenizedAssetData[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  // Fetch real data from API using TanStack Query hooks
+  const {
+    data: markets = [],
+    isLoading: marketsLoading,
+    error: marketsError,
+    refetch: refetchMarkets,
+  } = useMarkets()
+  const {
+    data: assets = [],
+    isLoading: assetsLoading,
+    error: assetsError,
+    refetch: refetchAssets,
+  } = useAssets()
 
-  const fetchAssets = async () => {
-    try {
-      setLoading(true)
-      setError(null)
+  // Filter spot markets for time history fetching
+  const spotMarkets = useMemo(
+    () => markets.filter(market => market.market_type === 'spot'),
+    [markets]
+  )
 
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
+  // Fetch time history for each spot market using useQueries
+  const timeHistoryQueries = useQueries({
+    queries: spotMarkets.map(market => ({
+      queryKey: ['time-history', market.id, market.asset_one, '86400', '15secs'],
+      queryFn: () =>
+        fetchTimeHistory({
+          market: market.id,
+          asset_id: market.asset_one,
+          duration_secs: '86400', // 1 day
+          interval: '15secs' as const,
+        }),
+      enabled: !!market.id && !!market.asset_one && assets.length > 0,
+      staleTime: 1000 * 60, // 1 minute
+      gcTime: 1000 * 60 * 5, // 5 minutes
+      retry: false, // Don't retry on failure, just use fallback
+    })),
+  })
 
-      // Transform markets data from cradle-data into tokenized assets
-      const transformedAssets = transformMarketsToAssets()
+  console.log(
+    'timeHistoryQueries',
+    timeHistoryQueries.map(query => query.data)
+  )
 
-      setAssets(transformedAssets)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch assets')
-    } finally {
-      setLoading(false)
+  // Aggregate loading states
+  const timeHistoryLoading = timeHistoryQueries.some(query => query.isLoading)
+  const loading = marketsLoading || assetsLoading || timeHistoryLoading
+
+  // Aggregate error states (only for markets and assets - time history is optional)
+  const error = marketsError?.message || assetsError?.message || null
+
+  // Transform data using useMemo - no useEffect needed with TanStack Query
+  const transformedAssets = useMemo(() => {
+    if (!loading && markets.length > 0 && assets.length > 0) {
+      console.log('Raw data received:')
+      console.log('- Markets:', markets)
+      console.log('- Assets:', assets)
+      console.log(
+        '- Time history queries:',
+        timeHistoryQueries.map(q => ({
+          isLoading: q.isLoading,
+          isError: q.isError,
+          dataLength: q.data?.length || 0,
+        }))
+      )
+
+      // Extract time history results
+      const timeHistoryResults = timeHistoryQueries.map(query => ({
+        data: query.data,
+        error: query.error,
+      }))
+
+      const transformed = transformMarketsToAssets(markets, assets, timeHistoryResults)
+      console.log('Transformed assets:', transformed)
+      return transformed
     }
-  }
-
-  useEffect(() => {
-    fetchAssets()
-  }, [])
+    return []
+  }, [markets, assets, timeHistoryQueries, loading])
 
   const refetch = () => {
-    fetchAssets()
+    refetchMarkets()
+    refetchAssets()
+    timeHistoryQueries.forEach(query => query.refetch())
   }
 
   return (
     <TokenizedAssetContext.Provider
       value={{
-        assets,
+        assets: transformedAssets,
         loading,
         error,
         refetch,

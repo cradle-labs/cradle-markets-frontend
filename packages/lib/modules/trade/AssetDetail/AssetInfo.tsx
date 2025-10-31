@@ -51,17 +51,20 @@ The token is backed by the underlying asset and maintains a 1:1 ratio with the o
 }
 
 export function AssetInfo({ asset }: AssetInfoProps) {
-  const { market, timeSeriesData } = useAssetDetail()
+  const { market } = useAssetDetail()
   const info = getAssetInfo(asset)
 
-  // Calculate volume from time series data
-  const totalVolume = timeSeriesData.reduce((sum, ts) => sum + parseFloat(ts.volume), 0)
+  // Safely handle price values
+  const currentPrice = typeof asset.currentPrice === 'number' ? asset.currentPrice : 0
+  const dailyChange = typeof asset.dailyChange === 'number' ? asset.dailyChange : 0
+  const dailyChangePercent =
+    typeof asset.dailyChangePercent === 'number' ? asset.dailyChangePercent : 0
 
-  // Calculate high and low from time series
-  const allHighs = timeSeriesData.map(ts => parseFloat(ts.high))
-  const allLows = timeSeriesData.map(ts => parseFloat(ts.low))
-  const allTimeHigh = allHighs.length > 0 ? Math.max(...allHighs) : null
-  const allTimeLow = allLows.length > 0 ? Math.min(...allLows) : null
+  // Calculate high and low from price history
+  const prices = asset.priceHistory?.map(([, price]) => price) || []
+  const allTimeHigh = prices.length > 0 ? Math.max(...prices) : null
+  const allTimeLow = prices.length > 0 ? Math.min(...prices) : null
+  const dataPoints = asset.priceHistory?.length || 0
 
   return (
     <Card>
@@ -130,7 +133,7 @@ export function AssetInfo({ asset }: AssetInfoProps) {
                   Current Price
                 </Text>
                 <Text fontSize="sm" fontWeight="medium">
-                  ${asset.currentPrice.toFixed(2)}
+                  ${currentPrice.toFixed(2)}
                 </Text>
               </VStack>
 
@@ -139,21 +142,21 @@ export function AssetInfo({ asset }: AssetInfoProps) {
                   24h Change
                 </Text>
                 <Text
-                  color={asset.dailyChange >= 0 ? 'green.500' : 'red.500'}
+                  color={dailyChange >= 0 ? 'green.500' : 'red.500'}
                   fontSize="sm"
                   fontWeight="medium"
                 >
-                  {asset.dailyChange >= 0 ? '+' : ''}
-                  {asset.dailyChangePercent.toFixed(2)}%
+                  {dailyChange >= 0 ? '+' : ''}
+                  {dailyChangePercent.toFixed(2)}%
                 </Text>
               </VStack>
 
               <VStack align="start" spacing={1}>
                 <Text color="font.secondary" fontSize="xs" textTransform="uppercase">
-                  Total Volume
+                  24h Volume
                 </Text>
                 <Text fontSize="sm" fontWeight="medium">
-                  {totalVolume > 0 ? totalVolume.toLocaleString() : 'N/A'}
+                  {info.volume24h}
                 </Text>
               </VStack>
 
@@ -180,7 +183,7 @@ export function AssetInfo({ asset }: AssetInfoProps) {
                   Data Points
                 </Text>
                 <Text fontSize="sm" fontWeight="medium">
-                  {timeSeriesData.length} records
+                  {dataPoints} records
                 </Text>
               </VStack>
             </Box>

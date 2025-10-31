@@ -54,17 +54,32 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{
   error?: string
 }> {
   try {
+    console.log('=== Server Action: placeOrder ===')
+    console.log('Input:', JSON.stringify(input, null, 2))
+
     const client = getCradleClient()
     const response = await client.placeOrder(input)
 
+    console.log('API Response:', JSON.stringify(response, null, 2))
+
     if (!response.success || !response.data) {
+      console.error('Order placement failed:', response.error)
+
+      // Provide more user-friendly error messages
+      let userError = response.error || 'Failed to place order'
+
+      if (response.error?.includes('502') || response.error?.includes('failed to respond')) {
+        userError = 'The trading system is temporarily unavailable. Please try again in a moment.'
+      }
+
       return {
         success: false,
-        error: response.error || 'Failed to place order',
+        error: userError,
       }
     }
 
     if (!MutationResponseHelpers.isPlaceOrder(response.data)) {
+      console.error('Unexpected response format:', response.data)
       return {
         success: false,
         error: 'Unexpected response format from API',

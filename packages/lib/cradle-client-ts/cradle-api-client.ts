@@ -523,9 +523,30 @@ export class CradleApiClient {
       return response.data
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        // If we got a response with error data, return it
+        // If we got a response with error data, check its format
         if (error.response?.data) {
-          return error.response.data as ApiResponse<T>
+          const errorData = error.response.data
+
+          // Handle API error format: {status: "error", code: number, message: string}
+          if (errorData.status === 'error' && errorData.message) {
+            return {
+              success: false,
+              data: null,
+              error: `${errorData.message} (code: ${errorData.code || 'unknown'})`,
+            }
+          }
+
+          // Handle standard format
+          if ('success' in errorData) {
+            return errorData as ApiResponse<T>
+          }
+
+          // Fallback for unexpected error format
+          return {
+            success: false,
+            data: null,
+            error: JSON.stringify(errorData),
+          }
         }
 
         // Otherwise create error response

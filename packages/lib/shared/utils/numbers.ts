@@ -201,6 +201,18 @@ export function blockInvalidNumberInput(event: KeyboardEvent<HTMLInputElement>):
   }
 }
 
+/**
+ * Format a number or string to 8 decimal places
+ * Used for API payloads that require precise decimal formatting
+ */
+export function formatTo8Decimals(value: string | number): string {
+  const num = typeof value === 'string' ? parseFloat(value) : value
+  if (isNaN(num)) {
+    return '0.00000000'
+  }
+  return num.toFixed(8)
+}
+
 type NumberFormat =
   | 'integer'
   | 'fiat'

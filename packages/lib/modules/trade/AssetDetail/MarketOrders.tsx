@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   Box,
   Card,
@@ -18,20 +18,63 @@ import {
   Button,
   Select,
   IconButton,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
 } from '@chakra-ui/react'
 import { ChevronLeftIcon, ChevronRightIcon } from '@chakra-ui/icons'
+import { useUser } from '@clerk/nextjs'
+import { useAccountByLinkedId } from '@repo/lib/cradle-client-ts/hooks/accounts/useAccountByLinkedId'
+import { useWalletByAccountId } from '@repo/lib/cradle-client-ts/hooks/accounts/useWallet'
 import { useAssetDetail } from './AssetDetailProvider'
 
 export function MarketOrders() {
   const { orders, market, loading } = useAssetDetail()
+  const { user } = useUser()
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const [activeTab, setActiveTab] = useState(0) // 0 = Open, 1 = Closed
+
+  // First get the account ID using the Clerk user ID
+  const { data: linkedAccount } = useAccountByLinkedId({
+    enabled: !!user?.id,
+    linkedAccountId: user?.id || '',
+  })
+
+  // Fetch wallet for the account
+  const { data: wallet, isLoading: isLoadingWallet } = useWalletByAccountId({
+    accountId: linkedAccount?.id || '',
+    enabled: !!linkedAccount?.id,
+  })
+
+  console.log('User wallet:', wallet)
+  console.log('All orders:', orders)
+
+  // Filter orders by user's wallet
+  const userOrders = useMemo(() => {
+    if (!wallet?.id) return []
+    return orders.filter(order => order.wallet === wallet.id)
+  }, [orders, wallet?.id])
+
+  // Split orders by status
+  const openOrders = useMemo(() => {
+    return userOrders.filter(order => order.status === 'open')
+  }, [userOrders])
+
+  const closedOrders = useMemo(() => {
+    return userOrders.filter(order => order.status === 'closed' || order.status === 'cancelled')
+  }, [userOrders])
+
+  // Get current orders based on active tab
+  const currentOrders = activeTab === 0 ? openOrders : closedOrders
 
   // Pagination calculations
-  const totalPages = Math.ceil(orders.length / pageSize)
+  const totalPages = Math.ceil(currentOrders.length / pageSize)
   const startIndex = (currentPage - 1) * pageSize
   const endIndex = startIndex + pageSize
-  const paginatedOrders = orders.slice(startIndex, endIndex)
+  const paginatedOrders = currentOrders.slice(startIndex, endIndex)
 
   // Reset to page 1 if current page exceeds total pages
   if (currentPage > totalPages && totalPages > 0) {
@@ -47,7 +90,27 @@ export function MarketOrders() {
     setCurrentPage(1) // Reset to first page when changing page size
   }
 
-  if (loading) {
+  const handleTabChange = (index: number) => {
+    setActiveTab(index)
+    setCurrentPage(1) // Reset to first page when changing tabs
+  }
+
+  // Helper function to format date in UTC
+  const formatDateUTC = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'UTC',
+      timeZoneName: 'short',
+    })
+  }
+
+  if (loading || isLoadingWallet) {
     return (
       <Card>
         <Box p={6}>
@@ -67,7 +130,24 @@ export function MarketOrders() {
     )
   }
 
-  if (orders.length === 0) {
+  if (!wallet) {
+    return (
+      <Card>
+        <Box p={6}>
+          <VStack align="center" py={8} spacing={3}>
+            <Text fontSize="lg" fontWeight="semibold">
+              Wallet not found
+            </Text>
+            <Text color="font.secondary" fontSize="sm" textAlign="center">
+              Please connect your wallet to view your orders.
+            </Text>
+          </VStack>
+        </Box>
+      </Card>
+    )
+  }
+
+  if (userOrders.length === 0) {
     return (
       <Card>
         <Box p={6}>
@@ -76,7 +156,7 @@ export function MarketOrders() {
               No orders found
             </Text>
             <Text color="font.secondary" fontSize="sm" textAlign="center">
-              There are currently no orders for this market.
+              You don't have any orders for this market yet.
             </Text>
           </VStack>
         </Box>
@@ -110,6 +190,137 @@ export function MarketOrders() {
     }
   }
 
+  // Render order table
+  const renderOrderTable = (orders: typeof paginatedOrders) => (
+    <>
+      <TableContainer w="full">
+        <Table size="sm" variant="simple">
+          <Thead>
+            <Tr>
+              <Th>Type</Th>
+              <Th>Mode</Th>
+              <Th isNumeric>Amount</Th>
+              <Th isNumeric>Price</Th>
+              <Th>Status</Th>
+              <Th>Date (UTC)</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {orders.map(order => (
+              <Tr key={order.id}>
+                <Td>
+                  <Badge colorScheme={getOrderTypeColor(order.order_type)} size="sm">
+                    {order.order_type}
+                  </Badge>
+                </Td>
+                <Td>
+                  <Text fontSize="xs">{order.mode}</Text>
+                </Td>
+                <Td isNumeric>
+                  <Text fontSize="sm">{parseFloat(order.ask_amount).toLocaleString()}</Text>
+                </Td>
+                <Td isNumeric>
+                  <Text fontSize="sm" fontWeight="medium">
+                    $
+                    {parseFloat(order.price).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </Text>
+                </Td>
+                <Td>
+                  <Badge colorScheme={getStatusColor(order.status)} size="sm">
+                    {order.status}
+                  </Badge>
+                </Td>
+                <Td>
+                  <Text fontSize="xs">{formatDateUTC(order.created_at)}</Text>
+                </Td>
+              </Tr>
+            ))}
+          </Tbody>
+        </Table>
+      </TableContainer>
+
+      {/* Pagination Controls */}
+      {currentOrders.length > 0 && (
+        <HStack justify="space-between" pt={2} w="full">
+          <HStack spacing={2}>
+            <Text color="font.secondary" fontSize="sm">
+              Rows per page:
+            </Text>
+            <Select
+              onChange={e => handlePageSizeChange(Number(e.target.value))}
+              size="sm"
+              value={pageSize}
+              w="80px"
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+            </Select>
+            <Text color="font.secondary" fontSize="sm">
+              {startIndex + 1}-{Math.min(endIndex, currentOrders.length)} of {currentOrders.length}
+            </Text>
+          </HStack>
+
+          <HStack spacing={1}>
+            <IconButton
+              aria-label="Previous page"
+              icon={<ChevronLeftIcon />}
+              isDisabled={currentPage === 1}
+              onClick={() => handlePageChange(currentPage - 1)}
+              size="sm"
+              variant="ghost"
+            />
+
+            {/* Page numbers */}
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(page => {
+                // Show first page, last page, current page, and pages around current
+                if (page === 1 || page === totalPages) return true
+                if (Math.abs(page - currentPage) <= 1) return true
+                return false
+              })
+              .map((page, idx, arr) => {
+                // Add ellipsis between non-consecutive pages
+                const prevPage = arr[idx - 1]
+                const showEllipsis = prevPage && page - prevPage > 1
+
+                return (
+                  <HStack key={page} spacing={1}>
+                    {showEllipsis && (
+                      <Text color="font.secondary" px={1}>
+                        ...
+                      </Text>
+                    )}
+                    <Button
+                      minW="32px"
+                      onClick={() => handlePageChange(page)}
+                      size="sm"
+                      variant={currentPage === page ? 'solid' : 'ghost'}
+                    >
+                      {page}
+                    </Button>
+                  </HStack>
+                )
+              })}
+
+            <IconButton
+              aria-label="Next page"
+              icon={<ChevronRightIcon />}
+              isDisabled={currentPage === totalPages}
+              onClick={() => handlePageChange(currentPage + 1)}
+              size="sm"
+              variant="ghost"
+            />
+          </HStack>
+        </HStack>
+      )}
+    </>
+  )
+
   return (
     <Card>
       <Box p={6}>
@@ -117,25 +328,20 @@ export function MarketOrders() {
           <HStack justify="space-between" w="full">
             <VStack align="start" spacing={1}>
               <Text fontSize="lg" fontWeight="semibold">
-                Market Orders
+                My Orders
               </Text>
               <Text color="font.secondary" fontSize="sm">
-                {market.name} - {orders.length} order{orders.length !== 1 ? 's' : ''}
+                {market.name} - {userOrders.length} order{userOrders.length !== 1 ? 's' : ''}
               </Text>
             </VStack>
 
             <HStack spacing={2}>
               <Badge colorScheme="green" variant="subtle">
-                {orders.filter(o => o.status === 'open').length} Open
+                {openOrders.length} Open
               </Badge>
               <Badge colorScheme="gray" variant="subtle">
-                {orders.filter(o => o.status === 'closed').length} Closed
+                {closedOrders.length} Closed
               </Badge>
-              {orders.filter(o => o.status === 'cancelled').length > 0 && (
-                <Badge colorScheme="red" variant="subtle">
-                  {orders.filter(o => o.status === 'cancelled').length} Cancelled
-                </Badge>
-              )}
             </HStack>
           </HStack>
 
@@ -156,7 +362,7 @@ export function MarketOrders() {
                     Total Volume
                   </Text>
                   <Text fontSize="sm" fontWeight="medium">
-                    {orders
+                    {userOrders
                       .reduce((sum, order) => sum + parseFloat(order.ask_amount), 0)
                       .toLocaleString()}
                   </Text>
@@ -168,10 +374,12 @@ export function MarketOrders() {
                   </Text>
                   <Text fontSize="sm" fontWeight="medium">
                     $
-                    {(
-                      orders.reduce((sum, order) => sum + parseFloat(order.price), 0) /
-                      orders.length
-                    ).toFixed(2)}
+                    {userOrders.length > 0
+                      ? (
+                          userOrders.reduce((sum, order) => sum + parseFloat(order.price), 0) /
+                          userOrders.length
+                        ).toFixed(2)
+                      : '0.00'}
                   </Text>
                 </VStack>
 
@@ -181,7 +389,7 @@ export function MarketOrders() {
                   </Text>
                   <Text fontSize="sm" fontWeight="medium">
                     $
-                    {orders
+                    {userOrders
                       .reduce((sum, order) => sum + parseFloat(order.bid_amount), 0)
                       .toLocaleString(undefined, {
                         minimumFractionDigits: 2,
@@ -193,143 +401,55 @@ export function MarketOrders() {
             </VStack>
           </Box>
 
-          <TableContainer w="full">
-            <Table size="sm" variant="simple">
-              <Thead>
-                <Tr>
-                  <Th>Order ID</Th>
-                  <Th>Type</Th>
-                  <Th>Mode</Th>
-                  <Th isNumeric>Amount</Th>
-                  <Th isNumeric>Price</Th>
-                  <Th>Status</Th>
-                  <Th>Date</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {paginatedOrders.map(order => (
-                  <Tr key={order.id}>
-                    <Td>
-                      <Text fontFamily="mono" fontSize="xs">
-                        {order.id}
-                      </Text>
-                    </Td>
-                    <Td>
-                      <Badge colorScheme={getOrderTypeColor(order.order_type)} size="sm">
-                        {order.order_type}
-                      </Badge>
-                    </Td>
-                    <Td>
-                      <Text fontSize="xs">{order.mode}</Text>
-                    </Td>
-                    <Td isNumeric>
-                      <Text fontSize="sm">{parseFloat(order.ask_amount).toLocaleString()}</Text>
-                    </Td>
-                    <Td isNumeric>
-                      <Text fontSize="sm" fontWeight="medium">
-                        $
-                        {parseFloat(order.price).toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </Text>
-                    </Td>
-                    <Td>
-                      <Badge colorScheme={getStatusColor(order.status)} size="sm">
-                        {order.status}
-                      </Badge>
-                    </Td>
-                    <Td>
-                      <Text fontSize="xs">
-                        {new Date(order.created_at).toLocaleDateString(undefined, {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })}
-                      </Text>
-                    </Td>
-                  </Tr>
-                ))}
-              </Tbody>
-            </Table>
-          </TableContainer>
+          {/* Tabs for Open and Closed Orders */}
+          <Tabs index={activeTab} onChange={handleTabChange} w="full">
+            <TabList>
+              <Tab>
+                Open Orders
+                <Badge colorScheme="green" ml={2} variant="subtle">
+                  {openOrders.length}
+                </Badge>
+              </Tab>
+              <Tab>
+                Closed Orders
+                <Badge colorScheme="gray" ml={2} variant="subtle">
+                  {closedOrders.length}
+                </Badge>
+              </Tab>
+            </TabList>
 
-          {/* Pagination Controls */}
-          {orders.length > 0 && (
-            <HStack justify="space-between" pt={2} w="full">
-              <HStack spacing={2}>
-                <Text color="font.secondary" fontSize="sm">
-                  Rows per page:
-                </Text>
-                <Select
-                  onChange={e => handlePageSizeChange(Number(e.target.value))}
-                  size="sm"
-                  value={pageSize}
-                  w="80px"
-                >
-                  <option value={5}>5</option>
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                </Select>
-                <Text color="font.secondary" fontSize="sm">
-                  {startIndex + 1}-{Math.min(endIndex, orders.length)} of {orders.length}
-                </Text>
-              </HStack>
+            <TabPanels>
+              <TabPanel px={0}>
+                {openOrders.length === 0 ? (
+                  <VStack align="center" py={8} spacing={3}>
+                    <Text fontSize="md" fontWeight="semibold">
+                      No open orders
+                    </Text>
+                    <Text color="font.secondary" fontSize="sm" textAlign="center">
+                      You don't have any open orders for this market.
+                    </Text>
+                  </VStack>
+                ) : (
+                  renderOrderTable(paginatedOrders)
+                )}
+              </TabPanel>
 
-              <HStack spacing={1}>
-                <IconButton
-                  aria-label="Previous page"
-                  icon={<ChevronLeftIcon />}
-                  isDisabled={currentPage === 1}
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  size="sm"
-                  variant="ghost"
-                />
-
-                {/* Page numbers */}
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter(page => {
-                    // Show first page, last page, current page, and pages around current
-                    if (page === 1 || page === totalPages) return true
-                    if (Math.abs(page - currentPage) <= 1) return true
-                    return false
-                  })
-                  .map((page, idx, arr) => {
-                    // Add ellipsis between non-consecutive pages
-                    const prevPage = arr[idx - 1]
-                    const showEllipsis = prevPage && page - prevPage > 1
-
-                    return (
-                      <HStack key={page} spacing={1}>
-                        {showEllipsis && (
-                          <Text color="font.secondary" px={1}>
-                            ...
-                          </Text>
-                        )}
-                        <Button
-                          minW="32px"
-                          onClick={() => handlePageChange(page)}
-                          size="sm"
-                          variant={currentPage === page ? 'solid' : 'ghost'}
-                        >
-                          {page}
-                        </Button>
-                      </HStack>
-                    )
-                  })}
-
-                <IconButton
-                  aria-label="Next page"
-                  icon={<ChevronRightIcon />}
-                  isDisabled={currentPage === totalPages}
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  size="sm"
-                  variant="ghost"
-                />
-              </HStack>
-            </HStack>
-          )}
+              <TabPanel px={0}>
+                {closedOrders.length === 0 ? (
+                  <VStack align="center" py={8} spacing={3}>
+                    <Text fontSize="md" fontWeight="semibold">
+                      No closed orders
+                    </Text>
+                    <Text color="font.secondary" fontSize="sm" textAlign="center">
+                      You don't have any closed orders for this market.
+                    </Text>
+                  </VStack>
+                ) : (
+                  renderOrderTable(paginatedOrders)
+                )}
+              </TabPanel>
+            </TabPanels>
+          </Tabs>
         </VStack>
       </Box>
     </Card>

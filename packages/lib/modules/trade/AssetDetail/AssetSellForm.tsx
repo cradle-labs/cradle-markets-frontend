@@ -14,7 +14,8 @@ import { useAccountByLinkedId } from '@repo/lib/cradle-client-ts/hooks/accounts/
 import { useWalletByAccountId } from '@repo/lib/cradle-client-ts/hooks/accounts/useWallet'
 import { useAsset } from '@repo/lib/cradle-client-ts/hooks/assets/useAsset'
 import { placeOrder } from '@repo/lib/actions/orders'
-import { blockInvalidNumberInput } from '@repo/lib/shared/utils/numbers'
+import { blockInvalidNumberInput, formatTo8Decimals } from '@repo/lib/shared/utils/numbers'
+import type { PlaceOrderInput } from '@repo/lib/cradle-client-ts/cradle-api-client'
 
 type OrderType = 'market' | 'limit'
 
@@ -169,17 +170,29 @@ export function AssetSellForm() {
     try {
       const price = getPrice()
 
-      const result = await placeOrder({
+      // Format amounts to 8 decimal places as required by the API
+      const orderPayload: PlaceOrderInput = {
         wallet: wallet.id,
         market_id: market.id,
         bid_asset: assetTwo.id, // We want to receive asset_two (cpUSD)
         ask_asset: assetOne.id, // We're selling asset_one (SAF)
-        bid_amount: receiveAmount, // Amount we want to receive
-        ask_amount: sellAmount, // Amount we're selling
-        price,
+        bid_amount: formatTo8Decimals(receiveAmount), // Amount we want to receive (8 decimals)
+        ask_amount: formatTo8Decimals(sellAmount), // Amount we're selling (8 decimals)
+        price: formatTo8Decimals(price), // Price (8 decimals)
         mode: 'good-till-cancel',
         order_type: orderType,
-      })
+      }
+
+      console.log('=== Order Placement Debug (SELL) ===')
+      console.log('Wallet:', wallet)
+      console.log('Market:', market)
+      console.log('Asset One (selling):', assetOne)
+      console.log('Asset Two (receiving):', assetTwo)
+      console.log('Order Payload:', orderPayload)
+
+      const result = await placeOrder(orderPayload)
+
+      console.log('Order Result:', result)
 
       if (result.success) {
         toast({

@@ -9,13 +9,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1,
     },
     {
-      url: 'https://cradleprotocol.com/pools',
+      url: 'https://cradleprotocol.com/trade',
       lastModified: new Date(),
       changeFrequency: 'daily',
       priority: 0.9,
     },
     {
-      url: 'https://cradleprotocol.com/swap',
+      url: 'https://cradleprotocol.com/lend',
       lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 0.9,

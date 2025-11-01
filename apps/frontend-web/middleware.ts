@@ -26,6 +26,7 @@ const isSharedRoute = createRouteMatcher([
   '/portfolio(.*)',
   '/cash(.*)',
   '/perps(.*)',
+  '/faucet(.*)',
 ])
 
 export default clerkMiddleware(async (auth, req) => {

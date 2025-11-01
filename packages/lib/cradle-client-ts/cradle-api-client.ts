@@ -864,6 +864,11 @@ export class CradleApiClient {
     return this.request<Loan>('GET', `/loans/${id}`)
   }
 
+  // faucet
+  async airdrop(airdropArgs: { account: string; asset: string }) {
+    return this.request('POST', '/faucet', airdropArgs)
+  }
+
   // ============================================================================
   // MUTATIONS API
   // ============================================================================

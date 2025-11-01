@@ -41,6 +41,11 @@ export function useNav() {
       label: 'Cash',
       roles: ['institutional', 'retail'],
     },
+    {
+      href: '/faucet',
+      label: 'Faucet',
+      roles: ['institutional', 'retail'],
+    },
     // {
     //   href: '/docs',
     //   label: 'Docs',

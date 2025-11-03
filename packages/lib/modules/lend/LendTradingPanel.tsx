@@ -17,6 +17,7 @@ interface LendTradingPanelProps {
   supplyAPY: number
   borrowAPY: number
   loanToValue: string
+  onTransactionSuccess?: () => void
 }
 
 type TabValue = 'supply' | 'borrow'
@@ -30,6 +31,7 @@ export function LendTradingPanel({
   supplyAPY,
   borrowAPY,
   loanToValue,
+  onTransactionSuccess,
 }: LendTradingPanelProps) {
   const [activeTab, setActiveTab] = useState<TabValue>('supply')
 
@@ -61,6 +63,7 @@ export function LendTradingPanel({
           {activeTab === 'supply' ? (
             <LendSupplyForm
               assetSymbol={assetSymbol}
+              onSuccess={onTransactionSuccess}
               poolId={poolId}
               supplyAPY={supplyAPY}
               walletId={walletId}

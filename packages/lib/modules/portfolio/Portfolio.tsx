@@ -50,11 +50,18 @@ export default function Portfolio() {
   const { data: assets, isLoading: isLoadingAssets } = useAssets()
 
   // Fetch lending transactions for the wallet
-  const { data: lendingTransactions = [], isLoading: isLoadingTransactions } =
-    useLendingTransactionsByWallet({
-      walletId: wallet?.id || '',
-      enabled: !!wallet?.id,
-    })
+  const {
+    data: lendingTransactions = [],
+    isLoading: isLoadingTransactions,
+    error: transactionsError,
+  } = useLendingTransactionsByWallet({
+    walletId: wallet?.id || '',
+    enabled: !!wallet?.id,
+  })
+
+  console.log('Wallet ID:', wallet?.id)
+  console.log('lendingTransactions', lendingTransactions)
+  console.log('transactionsError', transactionsError)
 
   // Fetch loans for the wallet
   const { data: loans = [], isLoading: isLoadingLoans } = useLoansByWallet({
@@ -221,6 +228,14 @@ export default function Portfolio() {
           isLoading={isLoadingPools || isLoadingTransactions || isLoadingLoans}
           onPoolClick={(poolId: string) => router.push(`/lend/${poolId}`)}
           pools={userPools}
+        />
+
+        {/* Transaction History Section */}
+        <TransactionHistorySection
+          assets={assets || []}
+          isLoading={isLoadingTransactions}
+          pools={allPools}
+          transactions={lendingTransactions}
         />
       </VStack>
     </Stack>
@@ -392,6 +407,286 @@ function LendingPoolsSection({ pools, isLoading, onPoolClick }: LendingPoolsSect
           </Box>
         ))}
       </Grid>
+    </VStack>
+  )
+}
+
+interface TransactionHistorySectionProps {
+  transactions: Array<{
+    id: string
+    wallet: string
+    pool: string
+    amount: number
+    transaction_type: string
+    created_at: string
+  }>
+  pools: Array<{
+    id: string
+    name?: string
+    title?: string
+    reserve_asset: string
+  }>
+  assets: Array<{
+    id: string
+    name: string
+    symbol: string
+    icon?: string
+  }>
+  isLoading: boolean
+}
+
+function TransactionHistorySection({
+  transactions,
+  pools,
+  assets,
+  isLoading,
+}: TransactionHistorySectionProps) {
+  const cardBg = useColorModeValue('background.level1', 'background.level1')
+  const borderColor = useColorModeValue('border.base', 'border.base')
+  console.log('transactions', transactions)
+
+  // Create lookup maps for quick access
+  const poolMap = useMemo(() => {
+    const map = new Map()
+    pools.forEach(pool => map.set(pool.id, pool))
+    return map
+  }, [pools])
+
+  const assetMap = useMemo(() => {
+    const map = new Map()
+    assets.forEach(asset => map.set(asset.id, asset))
+    return map
+  }, [assets])
+
+  // Sort transactions by date (most recent first)
+  const sortedTransactions = useMemo(() => {
+    return [...transactions].sort((a, b) => {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    })
+  }, [transactions])
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount)
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
+
+  const getTransactionBadgeColor = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'supply':
+        return 'green'
+      case 'borrow':
+        return 'blue'
+      case 'repay':
+        return 'purple'
+      case 'withdraw':
+        return 'orange'
+      default:
+        return 'gray'
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <VStack align="start" spacing={6} w="full">
+        <Heading
+          background="font.special"
+          backgroundClip="text"
+          fontSize={{ base: 'xl', md: '2xl' }}
+          fontWeight="semibold"
+        >
+          Transaction History
+        </Heading>
+        <Skeleton borderRadius="lg" h="200px" w="full" />
+      </VStack>
+    )
+  }
+
+  if (transactions.length === 0) {
+    return (
+      <VStack align="start" spacing={6} w="full">
+        <Heading
+          background="font.special"
+          backgroundClip="text"
+          fontSize={{ base: 'xl', md: '2xl' }}
+          fontWeight="semibold"
+        >
+          Transaction History
+        </Heading>
+        <NoisyCard
+          cardProps={{
+            borderRadius: 'lg',
+            w: 'full',
+          }}
+          contentProps={{
+            p: 8,
+            position: 'relative',
+          }}
+          shadowContainerProps={{
+            shadow: 'innerXl',
+          }}
+        >
+          <VStack spacing={2}>
+            <Text color="font.secondary" fontSize="sm">
+              No transactions yet
+            </Text>
+            <Text color="font.secondary" fontSize="xs">
+              Your lending transactions will appear here
+            </Text>
+          </VStack>
+        </NoisyCard>
+      </VStack>
+    )
+  }
+
+  return (
+    <VStack align="start" spacing={6} w="full">
+      <Heading
+        background="font.special"
+        backgroundClip="text"
+        fontSize={{ base: 'xl', md: '2xl' }}
+        fontWeight="semibold"
+      >
+        Transaction History
+      </Heading>
+
+      <Box bg={cardBg} borderRadius="lg" overflowX="auto" shadow="xl" w="full">
+        <Box as="table" w="full">
+          <Box as="thead" bg="background.level2" borderBottom="1px solid" borderColor={borderColor}>
+            <Box as="tr">
+              <Box as="th" p={4} textAlign="left">
+                <Text
+                  color="font.secondary"
+                  fontSize="xs"
+                  fontWeight="semibold"
+                  textTransform="uppercase"
+                >
+                  Type
+                </Text>
+              </Box>
+              <Box as="th" p={4} textAlign="left">
+                <Text
+                  color="font.secondary"
+                  fontSize="xs"
+                  fontWeight="semibold"
+                  textTransform="uppercase"
+                >
+                  Pool
+                </Text>
+              </Box>
+              <Box as="th" p={4} textAlign="left">
+                <Text
+                  color="font.secondary"
+                  fontSize="xs"
+                  fontWeight="semibold"
+                  textTransform="uppercase"
+                >
+                  Asset
+                </Text>
+              </Box>
+              <Box as="th" p={4} textAlign="right">
+                <Text
+                  color="font.secondary"
+                  fontSize="xs"
+                  fontWeight="semibold"
+                  textTransform="uppercase"
+                >
+                  Amount
+                </Text>
+              </Box>
+              <Box as="th" p={4} textAlign="right">
+                <Text
+                  color="font.secondary"
+                  fontSize="xs"
+                  fontWeight="semibold"
+                  textTransform="uppercase"
+                >
+                  Date
+                </Text>
+              </Box>
+            </Box>
+          </Box>
+          <Box as="tbody">
+            {sortedTransactions.slice(0, 10).map((tx, index) => {
+              const pool = poolMap.get(tx.pool)
+              const asset = pool ? assetMap.get(pool.reserve_asset) : undefined
+
+              return (
+                <Box
+                  _hover={{ bg: 'background.level2' }}
+                  as="tr"
+                  borderBottom={index !== sortedTransactions.length - 1 ? '1px solid' : 'none'}
+                  borderColor={borderColor}
+                  key={tx.id}
+                  transition="background 0.2s"
+                >
+                  <Box as="td" p={4}>
+                    <Badge
+                      colorScheme={getTransactionBadgeColor(tx.transaction_type)}
+                      fontSize="xs"
+                    >
+                      {tx.transaction_type}
+                    </Badge>
+                  </Box>
+                  <Box as="td" p={4}>
+                    <Text fontSize="sm" fontWeight="medium">
+                      {pool?.title || pool?.name || 'Unknown Pool'}
+                    </Text>
+                  </Box>
+                  <Box as="td" p={4}>
+                    <HStack spacing={2}>
+                      {asset?.icon && (
+                        <Box h="20px" w="20px">
+                          <Box
+                            alt={asset.symbol}
+                            as="img"
+                            h="full"
+                            objectFit="contain"
+                            src={asset.icon}
+                            w="full"
+                          />
+                        </Box>
+                      )}
+                      <Text fontSize="sm" fontWeight="medium">
+                        {asset?.symbol || 'Unknown'}
+                      </Text>
+                    </HStack>
+                  </Box>
+                  <Box as="td" p={4} textAlign="right">
+                    <Text fontSize="sm" fontWeight="semibold">
+                      {formatCurrency(tx.amount)}
+                    </Text>
+                  </Box>
+                  <Box as="td" p={4} textAlign="right">
+                    <Text color="font.secondary" fontSize="xs">
+                      {formatDate(tx.created_at)}
+                    </Text>
+                  </Box>
+                </Box>
+              )
+            })}
+          </Box>
+        </Box>
+      </Box>
+
+      {transactions.length > 10 && (
+        <Text color="font.secondary" fontSize="xs" textAlign="center" w="full">
+          Showing 10 of {transactions.length} transactions
+        </Text>
+      )}
     </VStack>
   )
 }

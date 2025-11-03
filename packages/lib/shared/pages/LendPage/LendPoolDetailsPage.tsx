@@ -72,10 +72,11 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
   })
 
   // Fetch transactions and loans
-  const { data: transactions = [] } = useLendingTransactions({
+  const { data: transactions = [], refetch: refetchTransactions } = useLendingTransactions({
     poolId,
     enabled: !!pool,
   })
+  console.log('transactions', transactions)
 
   const { data: loans = [] } = useLoansByPool({
     poolId,
@@ -306,6 +307,7 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
             assetSymbol={poolData.asset?.symbol}
             borrowAPY={poolData.borrowAPY}
             loanToValue={poolData.loan_to_value}
+            onTransactionSuccess={refetchTransactions}
             poolId={poolData.id}
             reserveAssetId={poolData.reserve_asset}
             supplyAPY={poolData.supplyAPY}

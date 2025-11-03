@@ -25,10 +25,14 @@ export class CradleApiError extends Error {
  * Transform an API response into an error if it failed
  */
 export function throwIfError<T>(
-  response: ApiResponse<T>
+  response: ApiResponse<T>,
+  context?: string
 ): asserts response is ApiResponse<T> & { success: true } {
   if (!response.success) {
-    throw new CradleApiError(response.error || 'Unknown API error', undefined, response)
+    const errorMessage = context
+      ? `${context}: ${response.error || 'Unknown API error'}`
+      : response.error || 'Unknown API error'
+    throw new CradleApiError(errorMessage, undefined, response)
   }
 }
 

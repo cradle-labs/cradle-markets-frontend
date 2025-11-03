@@ -10,13 +10,7 @@ interface PoolInterestModelCardProps {
   poolAddress: string
 }
 
-export function PoolInterestModelCard({
-  baseRate,
-  slope1,
-  slope2,
-  poolContractId,
-  poolAddress,
-}: PoolInterestModelCardProps) {
+export function PoolInterestModelCard({ baseRate, slope1, slope2 }: PoolInterestModelCardProps) {
   const formatPercentage = (value: string) => {
     return `${(parseFloat(value) * 100).toFixed(2)}%`
   }
@@ -38,18 +32,6 @@ export function PoolInterestModelCard({
         <HStack justify="space-between">
           <Text color="text.secondary">Slope 2 (80-100% util)</Text>
           <Text fontWeight="semibold">{formatPercentage(slope2)}</Text>
-        </HStack>
-        <HStack justify="space-between">
-          <Text color="text.secondary">Pool Contract ID</Text>
-          <Text fontSize="xs" fontWeight="mono">
-            {poolContractId.slice(0, 12)}...
-          </Text>
-        </HStack>
-        <HStack justify="space-between">
-          <Text color="text.secondary">Pool Address</Text>
-          <Text fontSize="xs" fontWeight="mono">
-            {poolAddress.slice(0, 10)}...
-          </Text>
         </HStack>
       </VStack>
     </Card>

@@ -928,7 +928,12 @@ export class CradleApiClient {
   async getLendingTransactionsByWallet(
     walletId: string
   ): Promise<ApiResponse<LendingTransaction[]>> {
-    return this.request<LendingTransaction[]>('GET', `/lending-transactions/wallet/${walletId}`)
+    console.log('[CradleAPI] Fetching transactions for wallet:', walletId)
+    const endpoint = `/lending-transactions/wallet/${walletId}`
+    console.log('[CradleAPI] Endpoint:', endpoint)
+    const response = await this.request<LendingTransaction[]>('GET', endpoint)
+    console.log('[CradleAPI] Response:', response)
+    return response
   }
 
   /**

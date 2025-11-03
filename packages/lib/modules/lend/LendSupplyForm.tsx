@@ -19,9 +19,16 @@ interface LendSupplyFormProps {
   walletId?: string
   assetSymbol?: string
   supplyAPY: number
+  onSuccess?: () => void
 }
 
-export function LendSupplyForm({ poolId, walletId, assetSymbol, supplyAPY }: LendSupplyFormProps) {
+export function LendSupplyForm({
+  poolId,
+  walletId,
+  assetSymbol,
+  supplyAPY,
+  onSuccess,
+}: LendSupplyFormProps) {
   const [amount, setAmount] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const toast = useToast()
@@ -73,6 +80,8 @@ export function LendSupplyForm({ poolId, walletId, assetSymbol, supplyAPY }: Len
           isClosable: true,
         })
         setAmount('')
+        // Refetch transactions after successful supply
+        onSuccess?.()
       } else {
         toast({
           title: 'Supply Failed',

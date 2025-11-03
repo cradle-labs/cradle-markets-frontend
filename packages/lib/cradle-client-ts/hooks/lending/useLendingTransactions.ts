@@ -103,9 +103,18 @@ export function useLendingTransactionsByWallet({
 }: UseLendingTransactionsByWalletOptions) {
   return useQuery({
     queryKey: cradleQueryKeys.lendingPools.transactionsByWallet(walletId),
-    queryFn: () => fetchLendingTransactionsByWallet(walletId),
+    queryFn: async () => {
+      try {
+        return await fetchLendingTransactionsByWallet(walletId)
+      } catch (error) {
+        // Log the error but return empty array instead of throwing
+        console.warn('Failed to fetch lending transactions for wallet:', walletId, error)
+        return []
+      }
+    },
     enabled: enabled && !!walletId,
     ...userDataQueryOptions,
+    retry: false, // Don't retry 404 errors
     ...queryOptions,
   })
 }

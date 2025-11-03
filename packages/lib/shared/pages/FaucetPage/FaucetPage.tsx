@@ -17,6 +17,7 @@ import {
 } from '@chakra-ui/react'
 import { useUser } from '@clerk/nextjs'
 import { useAccountByLinkedId } from '@repo/lib/cradle-client-ts/hooks/accounts/useAccountByLinkedId'
+import { useWalletByAccountId } from '@repo/lib/cradle-client-ts/hooks/accounts/useWallet'
 import { useAssets } from '@repo/lib/cradle-client-ts/hooks/assets/useAssets'
 import { requestFaucetTokens } from '@repo/lib/actions/faucet'
 import { DefaultPageContainer } from '@repo/lib/shared/components/containers/DefaultPageContainer'
@@ -31,6 +32,12 @@ export function FaucetPage() {
   const { data: linkedAccount, isLoading: isLoadingAccount } = useAccountByLinkedId({
     enabled: !!user?.id,
     linkedAccountId: user?.id || '',
+  })
+
+  // Fetch wallet for the account to enable balance refetching
+  const { refetch: refetchWallet } = useWalletByAccountId({
+    accountId: linkedAccount?.id || '',
+    enabled: !!linkedAccount?.id,
   })
 
   // Fetch all assets and filter for cpUSD only
@@ -70,6 +77,9 @@ export function FaucetPage() {
       })
 
       if (result.success) {
+        // Refetch wallet balance to update UI with new balance
+        refetchWallet()
+
         toast({
           title: 'Success!',
           description: 'cpUSD tokens have been added to your account',

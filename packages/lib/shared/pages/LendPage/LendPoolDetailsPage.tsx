@@ -63,6 +63,7 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
     poolId,
     enabled: !!pool,
   })
+  console.log('snapshot', snapshot)
 
   // Fetch asset details
   const { data: asset, isLoading: isLoadingAsset } = useAsset({

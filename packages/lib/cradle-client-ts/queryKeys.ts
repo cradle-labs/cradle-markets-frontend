@@ -116,21 +116,54 @@ export const cradleQueryKeys = {
       [...cradleQueryKeys.lendingPools.lists(), filters] as const,
     details: () => [...cradleQueryKeys.lendingPools.all, 'detail'] as const,
     byId: (id: string) => [...cradleQueryKeys.lendingPools.details(), id] as const,
+    byName: (name: string) => [...cradleQueryKeys.lendingPools.details(), 'name', name] as const,
+    byAddress: (address: string) =>
+      [...cradleQueryKeys.lendingPools.details(), 'address', address] as const,
+    snapshot: (poolId: string) =>
+      [...cradleQueryKeys.lendingPools.byId(poolId), 'snapshot'] as const,
     transactions: (poolId: string) =>
       [...cradleQueryKeys.lendingPools.byId(poolId), 'transactions'] as const,
     transactionsByWallet: (walletId: string) =>
       [...cradleQueryKeys.lendingPools.all, 'transactions', 'wallet', walletId] as const,
+    interestRates: (poolId: string) =>
+      [...cradleQueryKeys.lendingPools.byId(poolId), 'interest-rates'] as const,
+    collateralInfo: (poolId: string) =>
+      [...cradleQueryKeys.lendingPools.byId(poolId), 'collateral-info'] as const,
+    statistics: (poolId: string) =>
+      [...cradleQueryKeys.lendingPools.byId(poolId), 'statistics'] as const,
+    userPositions: (poolId: string, walletId: string) =>
+      [...cradleQueryKeys.lendingPools.byId(poolId), 'user-positions', walletId] as const,
   },
 
   // Loans
   loans: {
     all: ['cradle', 'loans'] as const,
     lists: () => [...cradleQueryKeys.loans.all, 'list'] as const,
+    listAll: () => [...cradleQueryKeys.loans.lists(), 'all'] as const,
     listByPool: (poolId: string) => [...cradleQueryKeys.loans.lists(), 'pool', poolId] as const,
     listByWallet: (walletId: string) =>
       [...cradleQueryKeys.loans.lists(), 'wallet', walletId] as const,
+    listByStatus: (status: string) => [...cradleQueryKeys.loans.lists(), 'status', status] as const,
     details: () => [...cradleQueryKeys.loans.all, 'detail'] as const,
     byId: (id: string) => [...cradleQueryKeys.loans.details(), id] as const,
+  },
+
+  // Loan Repayments
+  repayments: {
+    all: ['cradle', 'repayments'] as const,
+    lists: () => [...cradleQueryKeys.repayments.all, 'list'] as const,
+    listAll: () => [...cradleQueryKeys.repayments.lists(), 'all'] as const,
+    listByLoan: (loanId: string) =>
+      [...cradleQueryKeys.repayments.lists(), 'loan', loanId] as const,
+  },
+
+  // Loan Liquidations
+  liquidations: {
+    all: ['cradle', 'liquidations'] as const,
+    lists: () => [...cradleQueryKeys.liquidations.all, 'list'] as const,
+    listAll: () => [...cradleQueryKeys.liquidations.lists(), 'all'] as const,
+    listByLoan: (loanId: string) =>
+      [...cradleQueryKeys.liquidations.lists(), 'loan', loanId] as const,
   },
 } as const
 

@@ -16,8 +16,16 @@ import type {
   Order,
   TimeSeriesRecord,
   LendingPool,
+  LendingPoolSnapshot,
   LendingTransaction,
   Loan,
+  LoanRepayment,
+  LoanLiquidation,
+  InterestRates,
+  CollateralInfo,
+  PoolStatistics,
+  UserPositions,
+  LoanStatus,
   MarketFilters,
   OrderFilters,
   TimeSeriesFilters,
@@ -177,4 +185,86 @@ export async function fetchLoansByWallet(walletId: string): Promise<Loan[]> {
 export async function fetchLoan(id: string): Promise<Loan> {
   const { getLoan } = await import('../../actions/lending')
   return getLoan(id)
+}
+
+export async function fetchLendingPoolByName(name: string): Promise<LendingPool> {
+  const { getLendingPoolByName } = await import('../../actions/lending')
+  return getLendingPoolByName(name)
+}
+
+export async function fetchLendingPoolByAddress(address: string): Promise<LendingPool> {
+  const { getLendingPoolByAddress } = await import('../../actions/lending')
+  return getLendingPoolByAddress(address)
+}
+
+export async function fetchPoolSnapshot(poolId: string): Promise<LendingPoolSnapshot> {
+  const { getPoolSnapshot } = await import('../../actions/lending')
+  return getPoolSnapshot(poolId)
+}
+
+export async function fetchAllLoans(): Promise<Loan[]> {
+  const { getAllLoans } = await import('../../actions/lending')
+  return getAllLoans()
+}
+
+export async function fetchLoansByPool(poolId: string): Promise<Loan[]> {
+  const { getLoansByPool } = await import('../../actions/lending')
+  return getLoansByPool(poolId)
+}
+
+export async function fetchLoansByStatus(status: LoanStatus): Promise<Loan[]> {
+  const { getLoansByStatus } = await import('../../actions/lending')
+  return getLoansByStatus(status)
+}
+
+// =============================================================================
+// LOAN REPAYMENTS
+// =============================================================================
+
+export async function fetchAllRepayments(): Promise<LoanRepayment[]> {
+  const { getAllRepayments } = await import('../../actions/lending')
+  return getAllRepayments()
+}
+
+export async function fetchRepaymentsByLoan(loanId: string): Promise<LoanRepayment[]> {
+  const { getRepaymentsByLoan } = await import('../../actions/lending')
+  return getRepaymentsByLoan(loanId)
+}
+
+// =============================================================================
+// LOAN LIQUIDATIONS
+// =============================================================================
+
+export async function fetchAllLiquidations(): Promise<LoanLiquidation[]> {
+  const { getAllLiquidations } = await import('../../actions/lending')
+  return getAllLiquidations()
+}
+
+export async function fetchLiquidationsByLoan(loanId: string): Promise<LoanLiquidation[]> {
+  const { getLiquidationsByLoan } = await import('../../actions/lending')
+  return getLiquidationsByLoan(loanId)
+}
+
+// =============================================================================
+// POOL CONTRACT GETTERS
+// =============================================================================
+
+export async function fetchPoolInterestRates(poolId: string): Promise<InterestRates> {
+  const { getPoolInterestRates } = await import('../../actions/lending')
+  return getPoolInterestRates(poolId)
+}
+
+export async function fetchPoolCollateralInfo(poolId: string): Promise<CollateralInfo> {
+  const { getPoolCollateralInfo } = await import('../../actions/lending')
+  return getPoolCollateralInfo(poolId)
+}
+
+export async function fetchPoolStatistics(poolId: string): Promise<PoolStatistics> {
+  const { getPoolStatistics } = await import('../../actions/lending')
+  return getPoolStatistics(poolId)
+}
+
+export async function fetchUserPositions(poolId: string, walletId: string): Promise<UserPositions> {
+  const { getUserPositions } = await import('../../actions/lending')
+  return getUserPositions(poolId, walletId)
 }

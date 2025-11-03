@@ -13,8 +13,16 @@ import { executeCradleOperation } from '../cradle-client-ts/services/api.service
 import { MutationResponseHelpers } from '../cradle-client-ts/cradle-api-client'
 import type {
   LendingPool,
+  LendingPoolSnapshot,
   LendingTransaction,
   Loan,
+  LoanRepayment,
+  LoanLiquidation,
+  InterestRates,
+  CollateralInfo,
+  PoolStatistics,
+  UserPositions,
+  LoanStatus,
   CreateLendingPoolInput,
   SupplyLiquidityInput,
   BorrowAssetInput,
@@ -81,6 +89,118 @@ export async function getLoansByWallet(walletId: string): Promise<Loan[]> {
 export async function getLoan(id: string): Promise<Loan> {
   const client = getCradleClient()
   return executeCradleOperation(() => client.getLoan(id))
+}
+
+/**
+ * Get lending pool by name
+ */
+export async function getLendingPoolByName(name: string): Promise<LendingPool> {
+  const client = getCradleClient()
+  return executeCradleOperation(() => client.getLendingPoolByName(name))
+}
+
+/**
+ * Get lending pool by contract address
+ */
+export async function getLendingPoolByAddress(address: string): Promise<LendingPool> {
+  const client = getCradleClient()
+  return executeCradleOperation(() => client.getLendingPoolByAddress(address))
+}
+
+/**
+ * Get the latest snapshot (metrics) for a lending pool
+ */
+export async function getPoolSnapshot(poolId: string): Promise<LendingPoolSnapshot> {
+  const client = getCradleClient()
+  return executeCradleOperation(() => client.getPoolSnapshot(poolId))
+}
+
+/**
+ * Get all loans
+ */
+export async function getAllLoans(): Promise<Loan[]> {
+  const client = getCradleClient()
+  return executeCradleOperation(() => client.getAllLoans())
+}
+
+/**
+ * Get loans by pool ID
+ */
+export async function getLoansByPool(poolId: string): Promise<Loan[]> {
+  const client = getCradleClient()
+  return executeCradleOperation(() => client.getLoansByPool(poolId))
+}
+
+/**
+ * Get loans by status (active, repaid, or liquidated)
+ */
+export async function getLoansByStatus(status: LoanStatus): Promise<Loan[]> {
+  const client = getCradleClient()
+  return executeCradleOperation(() => client.getLoansByStatus(status))
+}
+
+/**
+ * Get all loan repayments
+ */
+export async function getAllRepayments(): Promise<LoanRepayment[]> {
+  const client = getCradleClient()
+  return executeCradleOperation(() => client.getAllRepayments())
+}
+
+/**
+ * Get repayments for a specific loan
+ */
+export async function getRepaymentsByLoan(loanId: string): Promise<LoanRepayment[]> {
+  const client = getCradleClient()
+  return executeCradleOperation(() => client.getRepaymentsByLoan(loanId))
+}
+
+/**
+ * Get all loan liquidations
+ */
+export async function getAllLiquidations(): Promise<LoanLiquidation[]> {
+  const client = getCradleClient()
+  return executeCradleOperation(() => client.getAllLiquidations())
+}
+
+/**
+ * Get liquidations for a specific loan
+ */
+export async function getLiquidationsByLoan(loanId: string): Promise<LoanLiquidation[]> {
+  const client = getCradleClient()
+  return executeCradleOperation(() => client.getLiquidationsByLoan(loanId))
+}
+
+/**
+ * Get interest rate configuration for a lending pool
+ */
+export async function getPoolInterestRates(poolId: string): Promise<InterestRates> {
+  const client = getCradleClient()
+  return executeCradleOperation(() => client.getPoolInterestRates(poolId))
+}
+
+/**
+ * Get collateral configuration and risk parameters for a lending pool
+ */
+export async function getPoolCollateralInfo(poolId: string): Promise<CollateralInfo> {
+  const client = getCradleClient()
+  return executeCradleOperation(() => client.getPoolCollateralInfo(poolId))
+}
+
+/**
+ * Get comprehensive statistics and metrics for a lending pool
+ */
+export async function getPoolStatistics(poolId: string): Promise<PoolStatistics> {
+  const client = getCradleClient()
+  return executeCradleOperation(() => client.getPoolStatistics(poolId))
+}
+
+/**
+ * Get detailed borrow position and repayment history for a user in a specific pool
+ */
+export async function getUserPositions(poolId: string, walletId: string): Promise<UserPositions> {
+  const client = getCradleClient()
+  return executeCradleOperation(() => client.getUserPositions(poolId, walletId))
 }
 
 // =============================================================================

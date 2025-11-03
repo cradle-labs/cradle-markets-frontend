@@ -8,9 +8,16 @@
 
 import { useQuery, type UseQueryOptions } from '@tanstack/react-query'
 import { cradleQueryKeys } from '../../queryKeys'
-import { fetchLoans, fetchLoansByWallet, fetchLoan } from '../../services/fetchers'
-import { userDataQueryOptions } from '../../utils/query-options'
-import type { Loan } from '../../cradle-api-client'
+import {
+  fetchLoans,
+  fetchLoansByWallet,
+  fetchLoan,
+  fetchAllLoans,
+  fetchLoansByPool,
+  fetchLoansByStatus,
+} from '../../services/fetchers'
+import { userDataQueryOptions, standardQueryOptions } from '../../utils/query-options'
+import type { Loan, LoanStatus } from '../../cradle-api-client'
 
 export interface UseLoansOptions {
   /**
@@ -147,6 +154,117 @@ export function useLoan({ loanId, enabled = true, queryOptions }: UseLoanOptions
     queryFn: () => fetchLoan(loanId),
     enabled: enabled && !!loanId,
     ...userDataQueryOptions,
+    ...queryOptions,
+  })
+}
+
+export interface UseAllLoansOptions {
+  /**
+   * Whether the query is enabled
+   * @default true
+   */
+  enabled?: boolean
+  /**
+   * Custom query options
+   */
+  queryOptions?: Omit<UseQueryOptions<Loan[]>, 'queryKey' | 'queryFn'>
+}
+
+/**
+ * Hook to fetch all loans
+ *
+ * @example
+ * ```tsx
+ * function AllLoans() {
+ *   const { data: loans, isLoading } = useAllLoans()
+ *
+ *   if (isLoading) return <Spinner />
+ *   return (
+ *     <div>
+ *       {loans?.map(loan => (
+ *         <LoanCard key={loan.id} loan={loan} />
+ *       ))}
+ *     </div>
+ *   )
+ * }
+ * ```
+ */
+export function useAllLoans({ enabled = true, queryOptions }: UseAllLoansOptions = {}) {
+  return useQuery({
+    queryKey: cradleQueryKeys.loans.listAll(),
+    queryFn: () => fetchAllLoans(),
+    enabled,
+    ...standardQueryOptions,
+    ...queryOptions,
+  })
+}
+
+/**
+ * Hook to fetch loans by pool (alternative to useLoans for better naming)
+ *
+ * @example
+ * ```tsx
+ * function PoolLoans({ poolId }: { poolId: string }) {
+ *   const { data: loans } = useLoansByPool({ poolId })
+ *   return <LoansList loans={loans} />
+ * }
+ * ```
+ */
+export function useLoansByPool({ poolId, enabled = true, queryOptions }: UseLoansOptions) {
+  return useQuery({
+    queryKey: cradleQueryKeys.loans.listByPool(poolId),
+    queryFn: () => fetchLoansByPool(poolId),
+    enabled: enabled && !!poolId,
+    ...userDataQueryOptions,
+    ...queryOptions,
+  })
+}
+
+export interface UseLoansByStatusOptions {
+  /**
+   * Status to filter loans by
+   */
+  status: LoanStatus
+  /**
+   * Whether the query is enabled
+   * @default true
+   */
+  enabled?: boolean
+  /**
+   * Custom query options
+   */
+  queryOptions?: Omit<UseQueryOptions<Loan[]>, 'queryKey' | 'queryFn'>
+}
+
+/**
+ * Hook to fetch loans by status
+ *
+ * @example
+ * ```tsx
+ * function ActiveLoans() {
+ *   const { data: loans } = useLoansByStatus({ status: 'active' })
+ *
+ *   return (
+ *     <div>
+ *       <h3>Active Loans ({loans?.length})</h3>
+ *       {loans?.map(loan => (
+ *         <LoanCard key={loan.id} loan={loan} />
+ *       ))}
+ *     </div>
+ *   )
+ * }
+ * ```
+ */
+export function useLoansByStatus({
+  status,
+  enabled = true,
+  queryOptions,
+}: UseLoansByStatusOptions) {
+  return useQuery({
+    queryKey: cradleQueryKeys.loans.listByStatus(status),
+    queryFn: () => fetchLoansByStatus(status),
+    enabled: enabled && !!status,
+    ...standardQueryOptions,
     ...queryOptions,
   })
 }

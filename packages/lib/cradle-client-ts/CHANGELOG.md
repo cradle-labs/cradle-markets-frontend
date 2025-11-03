@@ -5,6 +5,37 @@ All notable changes to the Cradle API Client will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-11-03
+
+### Added
+
+- **Comprehensive Lending Pools & Loans API Support** (17 new methods)
+  - Lending pool query methods: by name, address, and snapshot
+  - Complete loan query methods: all loans, by pool, by wallet, by status
+  - Loan repayment query methods: all repayments, by loan
+  - Loan liquidation query methods: all liquidations, by loan
+  - Pool contract getter methods: interest rates, collateral info, statistics, user positions
+  - Mutation methods: create loan repayment, create loan liquidation
+- **New TypeScript Interfaces** (12 new types)
+  - `InterestRateModel`, `InterestRates`, `RiskParameters`, `CollateralInfo`
+  - `PoolMetrics`, `RateConfiguration`, `PoolStatistics`
+  - `LoanDetail`, `BorrowPosition`, `RecentRepayment`, `RepaymentHistory`, `UserPositions`
+- **Documentation Files**
+  - `LENDING_POOLS_API.md` - Complete API reference with 40+ endpoints
+  - `QUICK_REFERENCE.md` - Visual endpoint overview and common use cases
+  - `CHANGELOG_LENDING_POOLS.md` - Detailed implementation changelog
+  - `IMPLEMENTATION_SUMMARY.md` - Implementation overview
+
+### Changed
+
+- Updated `README.md` with lending pools API documentation reference
+- Enhanced lending pools API examples in README
+- Updated feature list to reflect 40+ total endpoints
+
+### Fixed
+
+- Corrected `getLoan()` route from `/loans/{id}` to `/loan/{id}` to match backend API
+
 ## [1.0.0] - 2024-10-27
 
 ### Added

@@ -279,6 +279,94 @@ export interface LoanLiquidationFilters {
   to_date?: string
 }
 
+// Lending Pool Contract Getters
+export interface InterestRateModel {
+  description: string
+  slope1_threshold: string
+  slope1_rate: string
+  slope2_rate: string
+}
+
+export interface InterestRates {
+  pool_id: string
+  base_rate: string
+  slope1: string
+  slope2: string
+  reserve_factor: string
+  interest_rate_model: InterestRateModel
+}
+
+export interface RiskParameters {
+  ltv: string
+  liquidation_threshold: string
+  liquidation_penalty: string
+}
+
+export interface CollateralInfo {
+  pool_id: string
+  loan_to_value: string
+  liquidation_threshold: string
+  liquidation_discount: string
+  risk_parameters: RiskParameters
+}
+
+export interface PoolMetrics {
+  total_supply: string | null
+  total_borrow: string | null
+  available_liquidity: string | null
+  utilization_rate: string | null
+  supply_apy: string | null
+  borrow_apy: string | null
+}
+
+export interface RateConfiguration {
+  base_rate: string
+  slope1: string
+  slope2: string
+}
+
+export interface PoolStatistics {
+  pool_id: string
+  pool_name: string
+  pool_address: string
+  reserve_asset: string
+  metrics: PoolMetrics
+  last_updated?: string
+  note?: string
+  rate_configuration: RateConfiguration
+}
+
+export interface LoanDetail {
+  loan_id: string
+  principal_amount: string
+  status: string
+  created_at: string
+}
+
+export interface BorrowPosition {
+  active_loans_count: number
+  total_borrow_amount: string
+  loans: LoanDetail[]
+}
+
+export interface RecentRepayment {
+  repayment_amount: string
+  repayment_date: string
+}
+
+export interface RepaymentHistory {
+  total_repaid: string
+  repayment_count: number
+  recent_repayments: RecentRepayment[]
+}
+
+export interface UserPositions {
+  pool_id: string
+  wallet_id: string
+  borrow_position: BorrowPosition
+  repayment_history: RepaymentHistory
+}
+
 // ============================================================================
 // MUTATION TYPES
 // ============================================================================
@@ -287,7 +375,7 @@ export interface LoanLiquidationFilters {
 export interface CreateAccountInput {
   linked_account_id: string
   account_type: CradleAccountType
-  status?: CradleAccountStatus
+  status: CradleAccountStatus
 }
 
 export interface UpdateAccountStatusInput {
@@ -649,7 +737,7 @@ export class CradleApiClient {
       )
       return response.data
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error'
+      const message = error instanceof Error ? error.message : 'Health check failed'
       throw new Error(`Health check failed: ${message}`)
     }
   }
@@ -861,7 +949,105 @@ export class CradleApiClient {
    * Get a specific loan by UUID
    */
   async getLoan(id: string): Promise<ApiResponse<Loan>> {
-    return this.request<Loan>('GET', `/loans/${id}`)
+    return this.request<Loan>('GET', `/loan/${id}`)
+  }
+
+  /**
+   * Get lending pool by name
+   */
+  async getLendingPoolByName(name: string): Promise<ApiResponse<LendingPool>> {
+    return this.request<LendingPool>('GET', `/pools/name/${encodeURIComponent(name)}`)
+  }
+
+  /**
+   * Get lending pool by contract address
+   */
+  async getLendingPoolByAddress(address: string): Promise<ApiResponse<LendingPool>> {
+    return this.request<LendingPool>('GET', `/pools/address/${address}`)
+  }
+
+  /**
+   * Get the latest snapshot (metrics) for a lending pool
+   */
+  async getPoolSnapshot(poolId: string): Promise<ApiResponse<LendingPoolSnapshot>> {
+    return this.request<LendingPoolSnapshot>('GET', `/pools/${poolId}/snapshot`)
+  }
+
+  /**
+   * Get all loans
+   */
+  async getAllLoans(): Promise<ApiResponse<Loan[]>> {
+    return this.request<Loan[]>('GET', '/loans')
+  }
+
+  /**
+   * Get loans by pool ID
+   */
+  async getLoansByPool(poolId: string): Promise<ApiResponse<Loan[]>> {
+    return this.request<Loan[]>('GET', `/loans/pool/${poolId}`)
+  }
+
+  /**
+   * Get loans by status (active, repaid, or liquidated)
+   */
+  async getLoansByStatus(status: LoanStatus): Promise<ApiResponse<Loan[]>> {
+    return this.request<Loan[]>('GET', `/loans/status/${status}`)
+  }
+
+  /**
+   * Get all loan repayments
+   */
+  async getAllRepayments(): Promise<ApiResponse<LoanRepayment[]>> {
+    return this.request<LoanRepayment[]>('GET', '/loan-repayments')
+  }
+
+  /**
+   * Get repayments for a specific loan
+   */
+  async getRepaymentsByLoan(loanId: string): Promise<ApiResponse<LoanRepayment[]>> {
+    return this.request<LoanRepayment[]>('GET', `/loan-repayments/loan/${loanId}`)
+  }
+
+  /**
+   * Get all loan liquidations
+   */
+  async getAllLiquidations(): Promise<ApiResponse<LoanLiquidation[]>> {
+    return this.request<LoanLiquidation[]>('GET', '/loan-liquidations')
+  }
+
+  /**
+   * Get liquidations for a specific loan
+   */
+  async getLiquidationsByLoan(loanId: string): Promise<ApiResponse<LoanLiquidation[]>> {
+    return this.request<LoanLiquidation[]>('GET', `/loan-liquidations/loan/${loanId}`)
+  }
+
+  /**
+   * Get interest rate configuration for a lending pool
+   */
+  async getPoolInterestRates(poolId: string): Promise<ApiResponse<InterestRates>> {
+    return this.request<InterestRates>('GET', `/pools/${poolId}/interest-rates`)
+  }
+
+  /**
+   * Get collateral configuration and risk parameters for a lending pool
+   */
+  async getPoolCollateralInfo(poolId: string): Promise<ApiResponse<CollateralInfo>> {
+    return this.request<CollateralInfo>('GET', `/pools/${poolId}/collateral-info`)
+  }
+
+  /**
+   * Get comprehensive statistics and metrics for a lending pool
+   */
+  async getPoolStatistics(poolId: string): Promise<ApiResponse<PoolStatistics>> {
+    return this.request<PoolStatistics>('GET', `/pools/${poolId}/pool-stats`)
+  }
+
+  /**
+   * Get detailed borrow position and repayment history for a user in a specific pool
+   */
+  async getUserPositions(poolId: string, walletId: string): Promise<ApiResponse<UserPositions>> {
+    return this.request<UserPositions>('GET', `/pools/${poolId}/user-positions/${walletId}`)
   }
 
   // faucet

@@ -8,6 +8,7 @@ import {
   Heading,
   HStack,
   Image,
+  Spinner,
   Text,
   useColorModeValue,
   VStack,
@@ -19,15 +20,13 @@ import Noise from '@repo/lib/shared/components/layout/Noise'
 import { RadialPattern } from '@repo/lib/shared/components/zen/RadialPattern'
 import { useAccountByLinkedId } from '@repo/lib/cradle-client-ts/hooks/accounts/useAccountByLinkedId'
 import { useWalletByAccountId } from '@repo/lib/cradle-client-ts/hooks/accounts/useWallet'
+import { useAsset } from '@repo/lib/cradle-client-ts/hooks/assets/useAsset'
 import {
-  getLendingPoolById,
-  mockAssets,
-  getTotalSuppliedToPool,
-  getTotalBorrowedFromPool,
-  getPoolUtilizationRate,
-  getLendingTransactionsByPool,
-  getLoansByPool,
-} from '@repo/lib/shared/dummy-data/cradle-data'
+  useLendingPool,
+  usePoolSnapshot,
+} from '@repo/lib/cradle-client-ts/hooks/lending/useLendingPool'
+import { useLendingTransactions } from '@repo/lib/cradle-client-ts/hooks/lending/useLendingTransactions'
+import { useLoansByPool } from '@repo/lib/cradle-client-ts/hooks/lending/useLoans'
 import {
   PoolMetricsGrid,
   PoolConfigurationCard,
@@ -54,36 +53,46 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
     accountId: linkedAccount?.id || '',
     enabled: !!linkedAccount?.id,
   })
-  // Get pool data and enrich it with additional information
+
+  // Fetch pool data
+  const { data: pool, isLoading: isLoadingPool } = useLendingPool({ poolId })
+  console.log('pool', pool)
+
+  // Fetch pool snapshot (metrics)
+  const { data: snapshot, isLoading: isLoadingSnapshot } = usePoolSnapshot({
+    poolId,
+    enabled: !!pool,
+  })
+
+  // Fetch asset details
+  const { data: asset, isLoading: isLoadingAsset } = useAsset({
+    assetId: pool?.reserve_asset || '',
+    enabled: !!pool?.reserve_asset,
+  })
+
+  // Fetch transactions and loans
+  const { data: transactions = [] } = useLendingTransactions({
+    poolId,
+    enabled: !!pool,
+  })
+
+  const { data: loans = [] } = useLoansByPool({
+    poolId,
+    enabled: !!pool,
+  })
+
+  // Combine all data
   const poolData = useMemo(() => {
-    const pool = getLendingPoolById(poolId)
     if (!pool) return null
 
-    const asset = mockAssets.find(a => a.id === pool.reserve_asset)
-    const totalSupplied = getTotalSuppliedToPool(pool.id)
-    const totalBorrowed = getTotalBorrowedFromPool(pool.id)
-    const utilization = getPoolUtilizationRate(pool.id)
-    const transactions = getLendingTransactionsByPool(pool.id)
-    const loans = getLoansByPool(pool.id)
-
-    // Calculate APYs based on utilization and pool parameters
-    const baseRate = parseFloat(pool.base_rate)
-    const slope1 = parseFloat(pool.slope1)
-    const slope2 = parseFloat(pool.slope2)
-
-    // Simple interest rate model calculation
-    let borrowAPY = baseRate
-    if (utilization <= 0.8) {
-      borrowAPY = baseRate + utilization * slope1
-    } else {
-      borrowAPY = baseRate + 0.8 * slope1 + (utilization - 0.8) * slope2
-    }
-
-    // Supply APY = Borrow APY * Utilization * (1 - Reserve Factor)
-    const reserveFactor = parseFloat(pool.reserve_factor)
-    const supplyAPY = borrowAPY * utilization * (1 - reserveFactor)
-
-    const availableLiquidity = totalSupplied - totalBorrowed
+    const totalSupplied = snapshot?.total_supply ? parseFloat(snapshot.total_supply) : 0
+    const totalBorrowed = snapshot?.total_borrow ? parseFloat(snapshot.total_borrow) : 0
+    const utilization = snapshot?.utilization_rate ? parseFloat(snapshot.utilization_rate) : 0
+    const supplyAPY = snapshot?.supply_apy ? parseFloat(snapshot.supply_apy) : 0
+    const borrowAPY = snapshot?.borrow_apy ? parseFloat(snapshot.borrow_apy) : 0
+    const availableLiquidity = snapshot?.available_liquidity
+      ? parseFloat(snapshot.available_liquidity)
+      : totalSupplied - totalBorrowed
 
     return {
       ...pool,
@@ -97,11 +106,23 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
       transactions,
       loans,
     }
-  }, [poolId])
+  }, [pool, snapshot, asset, transactions, loans])
 
   const fallbackBg = useColorModeValue('gray.100', 'gray.700')
   const fallbackColor = useColorModeValue('gray.600', 'gray.300')
 
+  // Loading state
+  if (isLoadingPool || isLoadingSnapshot || isLoadingAsset) {
+    return (
+      <DefaultPageContainer>
+        <Box alignItems="center" display="flex" justifyContent="center" minH="400px">
+          <Spinner size="xl" />
+        </Box>
+      </DefaultPageContainer>
+    )
+  }
+
+  // Error/Not found state
   if (!poolData) {
     return (
       <DefaultPageContainer>

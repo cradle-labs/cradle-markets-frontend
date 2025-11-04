@@ -96,3 +96,78 @@ export function formatBasisPointsAsPercent(value: string | number, decimals: num
   const decimalValue = fromBasisPoints(value)
   return `${(decimalValue * 100).toFixed(decimals)}%`
 }
+
+/**
+ * Token Decimal Conversion
+ *
+ * Demo tokens have 8 decimals. This means 1 token is represented as 1 * 10^8 = 100000000
+ * in the backend. Users should enter normalized values (like "1.5") which need to be
+ * converted to the decimal form before submission.
+ */
+
+/**
+ * Number of decimals for demo tokens
+ */
+export const TOKEN_DECIMALS = 8
+
+/**
+ * Convert normalized token amount to decimal form for backend submission
+ * Users enter "1.5" tokens, backend needs "150000000" (1.5 * 10^8)
+ *
+ * @param amount - The normalized amount entered by user
+ * @param decimals - Number of decimals (default: 8)
+ * @returns The amount in decimal form
+ *
+ * @example
+ * ```ts
+ * toTokenDecimals(1.5) // 150000000
+ * toTokenDecimals(10) // 1000000000
+ * toTokenDecimals(0.01) // 1000000
+ * ```
+ */
+export function toTokenDecimals(amount: number, decimals: number = TOKEN_DECIMALS): number {
+  return Math.floor(amount * Math.pow(10, decimals))
+}
+
+/**
+ * Convert decimal form amount from backend to normalized form for display
+ * Backend sends "150000000", display to user as "1.5"
+ *
+ * @param amount - The amount in decimal form from backend
+ * @param decimals - Number of decimals (default: 8)
+ * @returns The normalized amount for display
+ *
+ * @example
+ * ```ts
+ * fromTokenDecimals(150000000) // 1.5
+ * fromTokenDecimals(1000000000) // 10
+ * fromTokenDecimals(1000000) // 0.01
+ * ```
+ */
+export function fromTokenDecimals(amount: number, decimals: number = TOKEN_DECIMALS): number {
+  return amount / Math.pow(10, decimals)
+}
+
+/**
+ * Format token amount with proper decimal handling
+ *
+ * @param amount - The amount in decimal form from backend
+ * @param decimals - Number of decimals (default: 8)
+ * @param displayDecimals - Number of decimals to show (default: 2)
+ * @returns Formatted token amount string
+ *
+ * @example
+ * ```ts
+ * formatTokenAmount(150000000) // '1.50'
+ * formatTokenAmount(1000000000, 8, 0) // '10'
+ * formatTokenAmount(1234567, 8, 4) // '0.0123'
+ * ```
+ */
+export function formatTokenAmount(
+  amount: number,
+  decimals: number = TOKEN_DECIMALS,
+  displayDecimals: number = 2
+): string {
+  const normalized = fromTokenDecimals(amount, decimals)
+  return normalized.toFixed(displayDecimals)
+}

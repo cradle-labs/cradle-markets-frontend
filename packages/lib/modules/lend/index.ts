@@ -11,4 +11,12 @@ export { LendSupplyForm } from './LendSupplyForm'
 export { LendBorrowForm } from './LendBorrowForm'
 export type { LendingPoolData } from './LendingPoolTable'
 export type { PoolSortField } from './LendingPoolTableHeader'
-export { fromBasisPoints, toBasisPoints, formatBasisPointsAsPercent } from './utils'
+export {
+  fromBasisPoints,
+  toBasisPoints,
+  formatBasisPointsAsPercent,
+  toTokenDecimals,
+  fromTokenDecimals,
+  formatTokenAmount,
+  TOKEN_DECIMALS,
+} from './utils'

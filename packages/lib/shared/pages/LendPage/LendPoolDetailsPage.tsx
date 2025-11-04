@@ -34,6 +34,7 @@ import {
   PoolActivityCard,
   LendTradingPanel,
   fromBasisPoints,
+  fromTokenDecimals,
 } from '@repo/lib/modules/lend'
 
 interface LendPoolDetailsPageProps {
@@ -89,14 +90,19 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
   const poolData = useMemo(() => {
     if (!pool) return null
 
-    const totalSupplied = snapshot?.total_supply ? parseFloat(snapshot.total_supply) : 0
-    const totalBorrowed = snapshot?.total_borrow ? parseFloat(snapshot.total_borrow) : 0
+    // Convert token amounts from decimals (8 decimals) to normalized form
+    const totalSupplied = snapshot?.total_supply
+      ? fromTokenDecimals(parseFloat(snapshot.total_supply))
+      : 0
+    const totalBorrowed = snapshot?.total_borrow
+      ? fromTokenDecimals(parseFloat(snapshot.total_borrow))
+      : 0
     // Convert utilization, supply APY, and borrow APY from basis points to decimal
     const utilization = snapshot?.utilization_rate ? fromBasisPoints(snapshot.utilization_rate) : 0
     const supplyAPY = snapshot?.supply_apy ? fromBasisPoints(snapshot.supply_apy) : 0
     const borrowAPY = snapshot?.borrow_apy ? fromBasisPoints(snapshot.borrow_apy) : 0
     const availableLiquidity = snapshot?.available_liquidity
-      ? parseFloat(snapshot.available_liquidity)
+      ? fromTokenDecimals(parseFloat(snapshot.available_liquidity))
       : totalSupplied - totalBorrowed
 
     return {

@@ -2,6 +2,7 @@
 
 import { Badge, Box, Card, Heading, HStack, Text, VStack } from '@chakra-ui/react'
 import type { LendingTransaction } from '@repo/lib/cradle-client-ts/types'
+import { fromTokenDecimals } from './utils'
 
 interface PoolActivityCardProps {
   transactions: LendingTransaction[]
@@ -9,12 +10,14 @@ interface PoolActivityCardProps {
 
 export function PoolActivityCard({ transactions }: PoolActivityCardProps) {
   const formatCurrency = (amount: number) => {
+    // Convert from token decimals (8 decimals) to normalized form
+    const normalizedAmount = fromTokenDecimals(amount)
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(normalizedAmount)
   }
 
   return (

@@ -24,6 +24,7 @@ import { useLendingPools } from '@repo/lib/cradle-client-ts/hooks/lending/useLen
 import { useLoansByWallet } from '@repo/lib/cradle-client-ts/hooks/lending/useLoans'
 import { shortenAddress, copyToClipboard } from '@repo/lib/shared/utils/strings'
 import { NoisyCard } from '@repo/lib/shared/components/containers/NoisyCard'
+import { fromTokenDecimals } from '@repo/lib/modules/lend'
 import PortfolioSummary from './PortfolioSummary'
 
 export default function Portfolio() {
@@ -301,12 +302,14 @@ function ActiveLoansSection({ loans, pools, assets, isLoading }: ActiveLoansSect
   }, [loans])
 
   const formatCurrency = (amount: string) => {
+    // Convert from token decimals (8 decimals) to normalized form
+    const normalizedAmount = fromTokenDecimals(parseFloat(amount))
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }).format(parseFloat(amount))
+    }).format(normalizedAmount)
   }
 
   const formatDate = (dateString: string) => {

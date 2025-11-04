@@ -13,6 +13,7 @@ import {
   FormHelperText,
 } from '@chakra-ui/react'
 import { supplyLiquidity } from '@repo/lib/actions/lending'
+import { toTokenDecimals } from './utils'
 
 interface LendSupplyFormProps {
   poolId: string
@@ -65,10 +66,14 @@ export function LendSupplyForm({
     setIsLoading(true)
 
     try {
+      // Convert normalized amount to token decimals (8 decimals)
+      // User enters "1.5", backend needs "150000000"
+      const amountInDecimals = toTokenDecimals(parseFloat(amount))
+
       const result = await supplyLiquidity({
         wallet: walletId,
         pool: poolId,
-        amount: parseFloat(amount),
+        amount: amountInDecimals,
       })
 
       if (result.success) {

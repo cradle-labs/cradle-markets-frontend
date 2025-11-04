@@ -15,7 +15,7 @@ import {
   Badge,
 } from '@chakra-ui/react'
 import { borrowAsset } from '@repo/lib/actions/lending'
-import { fromBasisPoints } from './utils'
+import { fromBasisPoints, toTokenDecimals } from './utils'
 
 interface LendBorrowFormProps {
   poolId: string
@@ -81,10 +81,14 @@ export function LendBorrowForm({
     setIsLoading(true)
 
     try {
+      // Convert normalized amount to token decimals (8 decimals)
+      // User enters "1.5", backend needs "150000000"
+      const amountInDecimals = toTokenDecimals(parseFloat(amount))
+
       const result = await borrowAsset({
         wallet: walletId,
         pool: poolId,
-        amount: parseFloat(amount),
+        amount: amountInDecimals,
         collateral: reserveAssetId,
       })
 

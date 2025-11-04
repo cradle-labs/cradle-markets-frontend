@@ -15,6 +15,7 @@ import {
   Badge,
 } from '@chakra-ui/react'
 import { borrowAsset } from '@repo/lib/actions/lending'
+import { fromBasisPoints } from './utils'
 
 interface LendBorrowFormProps {
   poolId: string
@@ -40,13 +41,14 @@ export function LendBorrowForm({
   const toast = useToast()
 
   const formatPercentage = (value: number | string) => {
-    const numValue = typeof value === 'string' ? parseFloat(value) : value
+    const numValue = typeof value === 'string' ? fromBasisPoints(value) : value
     return `${(numValue * 100).toFixed(2)}%`
   }
 
   const calculateRequiredCollateral = () => {
     if (!amount || parseFloat(amount) <= 0) return 0
-    const ltv = parseFloat(loanToValue)
+    // Convert LTV from basis points to decimal
+    const ltv = fromBasisPoints(loanToValue)
     // Required collateral = borrow amount / LTV
     return parseFloat(amount) / ltv
   }

@@ -1,6 +1,7 @@
 'use client'
 
 import { Card, Divider, Heading, HStack, Text, VStack } from '@chakra-ui/react'
+import { formatBasisPointsAsPercent } from './utils'
 
 interface PoolConfigurationCardProps {
   loanToValue: string
@@ -18,8 +19,12 @@ export function PoolConfigurationCard({
   utilization,
 }: PoolConfigurationCardProps) {
   const formatPercentage = (value: number | string) => {
-    const numValue = typeof value === 'string' ? parseFloat(value) : value
-    return `${(numValue * 100).toFixed(2)}%`
+    // For basis point values (string), use the helper function
+    if (typeof value === 'string') {
+      return formatBasisPointsAsPercent(value)
+    }
+    // For regular decimal values (number), convert directly
+    return `${(value * 100).toFixed(2)}%`
   }
 
   return (

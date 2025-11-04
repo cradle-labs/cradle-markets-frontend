@@ -1,6 +1,7 @@
 'use client'
 
 import { Card, Divider, Heading, HStack, Text, VStack } from '@chakra-ui/react'
+import { formatBasisPointsAsPercent } from './utils'
 
 interface PoolInterestModelCardProps {
   baseRate: string
@@ -12,7 +13,7 @@ interface PoolInterestModelCardProps {
 
 export function PoolInterestModelCard({ baseRate, slope1, slope2 }: PoolInterestModelCardProps) {
   const formatPercentage = (value: string) => {
-    return `${(parseFloat(value) * 100).toFixed(2)}%`
+    return formatBasisPointsAsPercent(value)
   }
 
   return (

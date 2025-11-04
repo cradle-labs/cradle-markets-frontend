@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Box } from '@chakra-ui/react'
 import { LendingPoolTable, LendingPoolData } from './LendingPoolTable'
 import { useLendingPools, useAssets } from '@repo/lib/cradle-client-ts/hooks'
+import { fromBasisPoints } from './utils'
 
 export function LendDetails() {
   const router = useRouter()
@@ -26,9 +27,10 @@ export function LendDetails() {
       const utilization = 0
 
       // Calculate APYs based on utilization and pool parameters
-      const baseRate = parseFloat(pool.base_rate)
-      const slope1 = parseFloat(pool.slope1)
-      const slope2 = parseFloat(pool.slope2)
+      // Convert from basis points (10000 = 1.0) to decimal
+      const baseRate = fromBasisPoints(pool.base_rate)
+      const slope1 = fromBasisPoints(pool.slope1)
+      const slope2 = fromBasisPoints(pool.slope2)
 
       // Simple interest rate model calculation
       let borrowAPY = baseRate
@@ -39,7 +41,7 @@ export function LendDetails() {
       }
 
       // Supply APY = Borrow APY * Utilization * (1 - Reserve Factor)
-      const reserveFactor = parseFloat(pool.reserve_factor)
+      const reserveFactor = fromBasisPoints(pool.reserve_factor)
       const supplyAPY = borrowAPY * utilization * (1 - reserveFactor)
 
       return {

@@ -125,6 +125,7 @@ export function useLoansByWallet({
     queryFn: () => fetchLoansByWallet(walletId),
     enabled: enabled && !!walletId,
     ...userDataQueryOptions,
+    retry: false,
     ...queryOptions,
   })
 }

@@ -82,6 +82,7 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
     poolId,
     enabled: !!pool,
   })
+  console.log('loans', loans)
 
   // Combine all data
   const poolData = useMemo(() => {

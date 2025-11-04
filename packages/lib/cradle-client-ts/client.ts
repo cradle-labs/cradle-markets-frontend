@@ -55,7 +55,7 @@ export function getCradleClient(): CradleApiClient {
   const config: CradleApiConfig = {
     baseUrl,
     apiKey,
-    timeout: 30000,
+    timeout: parseInt('60000', 10),
   }
 
   clientInstance = new CradleApiClient(config)

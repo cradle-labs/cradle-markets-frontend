@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   Box,
   Heading,
@@ -16,12 +16,10 @@ import {
   Badge,
   useColorModeValue,
 } from '@chakra-ui/react'
-import { useRouter } from 'next/navigation'
 import { useUser } from '@clerk/nextjs'
 import { useAccountByLinkedId } from '@repo/lib/cradle-client-ts/hooks/accounts/useAccountByLinkedId'
 import { useWalletByAccountId } from '@repo/lib/cradle-client-ts/hooks/accounts/useWallet'
 import { useAssets } from '@repo/lib/cradle-client-ts/hooks/assets/useAssets'
-import { useLendingTransactionsByWallet } from '@repo/lib/cradle-client-ts/hooks/lending/useLendingTransactions'
 import { useLendingPools } from '@repo/lib/cradle-client-ts/hooks/lending/useLendingPools'
 import { useLoansByWallet } from '@repo/lib/cradle-client-ts/hooks/lending/useLoans'
 import { shortenAddress, copyToClipboard } from '@repo/lib/shared/utils/strings'
@@ -30,7 +28,6 @@ import PortfolioSummary from './PortfolioSummary'
 
 export default function Portfolio() {
   const { user } = useUser()
-  const router = useRouter()
   const toast = useToast()
   const [copiedAddress, setCopiedAddress] = useState(false)
 
@@ -49,41 +46,62 @@ export default function Portfolio() {
   // Fetch all assets
   const { data: assets, isLoading: isLoadingAssets } = useAssets()
 
-  // Fetch lending transactions for the wallet
-  const {
-    data: lendingTransactions = [],
-    isLoading: isLoadingTransactions,
-    error: transactionsError,
-  } = useLendingTransactionsByWallet({
-    walletId: wallet?.id || '',
-    enabled: !!wallet?.id,
-  })
-
   console.log('Wallet ID:', wallet?.id)
-  console.log('lendingTransactions', lendingTransactions)
-  console.log('transactionsError', transactionsError)
 
   // Fetch loans for the wallet
-  const { data: loans = [], isLoading: isLoadingLoans } = useLoansByWallet({
+  const {
+    data: loans,
+    isLoading: isLoadingLoans,
+    error: loansError,
+  } = useLoansByWallet({
     walletId: wallet?.id || '',
     enabled: !!wallet?.id,
   })
 
-  // Fetch all lending pools
-  const { data: allPools = [], isLoading: isLoadingPools } = useLendingPools()
+  // Use empty array if no data or error
+  const safeLoans = loans || []
 
-  // Get unique pool IDs from transactions and loans
-  const userPoolIds = useMemo(() => {
+  console.log('Loans:', safeLoans)
+  console.log('loansError', loansError)
+
+  // Fetch all lending pools for displaying loan details
+  const { data: allPools = [] } = useLendingPools()
+
+  // Get unique pool IDs from active loans
+  const activePoolIds = useMemo(() => {
     const poolIds = new Set<string>()
-    lendingTransactions.forEach(tx => poolIds.add(tx.pool))
-    loans.forEach(loan => poolIds.add(loan.pool))
+    safeLoans.forEach(loan => {
+      if (loan.status === 'active') {
+        poolIds.add(loan.pool)
+      }
+    })
     return Array.from(poolIds)
-  }, [lendingTransactions, loans])
+  }, [safeLoans])
 
-  // Filter pools to only those the user has interacted with
-  const userPools = useMemo(() => {
-    return allPools.filter(pool => userPoolIds.includes(pool.id))
-  }, [allPools, userPoolIds])
+  console.log('Active Pool IDs:', activePoolIds)
+
+  // Fetch transactions for each pool with active loans
+  useEffect(() => {
+    if (activePoolIds.length === 0) return
+
+    const fetchPoolTransactions = async () => {
+      // Import the action to fetch transactions
+      const { getLendingTransactions } = await import('@repo/lib/actions/lending')
+
+      // Fetch transactions for each pool
+      for (const poolId of activePoolIds) {
+        try {
+          const transactions = await getLendingTransactions(poolId)
+          console.log(`✅ Transactions for pool ${poolId}:`, transactions)
+          console.log(`   Total transactions: ${transactions.length}`)
+        } catch (error) {
+          console.error(`❌ Error fetching transactions for pool ${poolId}:`, error)
+        }
+      }
+    }
+
+    fetchPoolTransactions()
+  }, [activePoolIds])
 
   // Handle copy to clipboard
   const handleCopyAddress = async (address: string) => {
@@ -223,202 +241,27 @@ export default function Portfolio() {
           walletContractId={wallet?.contract_id}
         />
 
-        {/* Lending Pools Section */}
-        <LendingPoolsSection
-          isLoading={isLoadingPools || isLoadingTransactions || isLoadingLoans}
-          onPoolClick={(poolId: string) => router.push(`/lend/${poolId}`)}
-          pools={userPools}
-        />
-
-        {/* Transaction History Section */}
-        <TransactionHistorySection
+        {/* Active Loans Section */}
+        <ActiveLoansSection
           assets={assets || []}
-          isLoading={isLoadingTransactions}
+          isLoading={isLoadingLoans}
+          loans={safeLoans}
           pools={allPools}
-          transactions={lendingTransactions}
         />
       </VStack>
     </Stack>
   )
 }
 
-interface LendingPoolsSectionProps {
-  pools: Array<{
+interface ActiveLoansSectionProps {
+  loans: Array<{
     id: string
-    name?: string
-    title?: string
-    description?: string
-    reserve_asset: string
-    loan_to_value: string
-    base_rate: string
-  }>
-  isLoading: boolean
-  onPoolClick: (poolId: string) => void
-}
-
-function LendingPoolsSection({ pools, isLoading, onPoolClick }: LendingPoolsSectionProps) {
-  const cardBg = useColorModeValue('background.level1', 'background.level1')
-  const fallbackBg = useColorModeValue('background.level2', 'background.level2')
-  const fallbackColor = useColorModeValue('font.secondary', 'font.secondary')
-
-  if (isLoading) {
-    return (
-      <VStack align="start" spacing={6} w="full">
-        <Heading
-          background="font.special"
-          backgroundClip="text"
-          fontSize={{ base: 'xl', md: '2xl' }}
-          fontWeight="semibold"
-        >
-          My Lending Pools
-        </Heading>
-        <Grid
-          gap={4}
-          templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }}
-          w="full"
-        >
-          <Skeleton borderRadius="lg" h="180px" w="full" />
-          <Skeleton borderRadius="lg" h="180px" w="full" />
-          <Skeleton borderRadius="lg" h="180px" w="full" />
-        </Grid>
-      </VStack>
-    )
-  }
-
-  if (pools.length === 0) {
-    return (
-      <VStack align="start" spacing={6} w="full">
-        <Heading
-          background="font.special"
-          backgroundClip="text"
-          fontSize={{ base: 'xl', md: '2xl' }}
-          fontWeight="semibold"
-        >
-          My Lending Pools
-        </Heading>
-        <NoisyCard
-          cardProps={{
-            borderRadius: 'lg',
-            w: 'full',
-          }}
-          contentProps={{
-            p: 8,
-            position: 'relative',
-          }}
-          shadowContainerProps={{
-            shadow: 'innerXl',
-          }}
-        >
-          <VStack spacing={2}>
-            <Text color="font.secondary" fontSize="sm">
-              You haven't interacted with any lending pools yet
-            </Text>
-            <Text color="font.secondary" fontSize="xs">
-              Start by supplying liquidity or borrowing from a pool
-            </Text>
-          </VStack>
-        </NoisyCard>
-      </VStack>
-    )
-  }
-
-  return (
-    <VStack align="start" spacing={6} w="full">
-      <Heading
-        background="font.special"
-        backgroundClip="text"
-        fontSize={{ base: 'xl', md: '2xl' }}
-        fontWeight="semibold"
-      >
-        My Lending Pools
-      </Heading>
-
-      <Grid
-        gap={4}
-        templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }}
-        w="full"
-      >
-        {pools.map(pool => (
-          <Box
-            _hover={{
-              transform: 'translateY(-2px)',
-              cursor: 'pointer',
-            }}
-            bg={cardBg}
-            borderRadius="lg"
-            key={pool.id}
-            onClick={() => onPoolClick(pool.id)}
-            p={5}
-            shadow="xl"
-            transition="all 0.2s"
-          >
-            <VStack align="start" spacing={3}>
-              <HStack spacing={3}>
-                <Box borderRadius="full" flexShrink={0} h="40px" overflow="hidden" w="40px">
-                  <Box
-                    alignItems="center"
-                    bg={fallbackBg}
-                    borderRadius="full"
-                    display="flex"
-                    h="full"
-                    justifyContent="center"
-                    w="full"
-                  >
-                    <Text color={fallbackColor} fontSize="lg" fontWeight="bold">
-                      {(pool.name || pool.title || 'P').charAt(0).toUpperCase()}
-                    </Text>
-                  </Box>
-                </Box>
-                <VStack align="start" flex={1} spacing={0}>
-                  <Text fontSize="md" fontWeight="semibold" noOfLines={1}>
-                    {pool.title || pool.name || 'Unnamed Pool'}
-                  </Text>
-                  <Badge colorScheme="blue" fontSize="xs">
-                    Active
-                  </Badge>
-                </VStack>
-              </HStack>
-
-              {pool.description && (
-                <Text color="font.secondary" fontSize="xs" noOfLines={2}>
-                  {pool.description}
-                </Text>
-              )}
-
-              <VStack align="start" spacing={1} w="full">
-                <HStack justify="space-between" w="full">
-                  <Text color="font.secondary" fontSize="xs">
-                    LTV
-                  </Text>
-                  <Text fontSize="xs" fontWeight="medium">
-                    {(parseFloat(pool.loan_to_value) * 100).toFixed(0)}%
-                  </Text>
-                </HStack>
-                <HStack justify="space-between" w="full">
-                  <Text color="font.secondary" fontSize="xs">
-                    Base Rate
-                  </Text>
-                  <Text fontSize="xs" fontWeight="medium">
-                    {(parseFloat(pool.base_rate) * 100).toFixed(2)}%
-                  </Text>
-                </HStack>
-              </VStack>
-            </VStack>
-          </Box>
-        ))}
-      </Grid>
-    </VStack>
-  )
-}
-
-interface TransactionHistorySectionProps {
-  transactions: Array<{
-    id: string
-    wallet: string
+    wallet_id: string
     pool: string
-    amount: number
-    transaction_type: string
+    principal_amount: string
+    borrow_index: string
     created_at: string
+    status: string
   }>
   pools: Array<{
     id: string
@@ -435,15 +278,9 @@ interface TransactionHistorySectionProps {
   isLoading: boolean
 }
 
-function TransactionHistorySection({
-  transactions,
-  pools,
-  assets,
-  isLoading,
-}: TransactionHistorySectionProps) {
+function ActiveLoansSection({ loans, pools, assets, isLoading }: ActiveLoansSectionProps) {
   const cardBg = useColorModeValue('background.level1', 'background.level1')
   const borderColor = useColorModeValue('border.base', 'border.base')
-  console.log('transactions', transactions)
 
   // Create lookup maps for quick access
   const poolMap = useMemo(() => {
@@ -458,20 +295,18 @@ function TransactionHistorySection({
     return map
   }, [assets])
 
-  // Sort transactions by date (most recent first)
-  const sortedTransactions = useMemo(() => {
-    return [...transactions].sort((a, b) => {
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    })
-  }, [transactions])
+  // Filter for active loans only
+  const activeLoans = useMemo(() => {
+    return loans.filter(loan => loan.status === 'active')
+  }, [loans])
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: string) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }).format(amount)
+    }).format(parseFloat(amount))
   }
 
   const formatDate = (dateString: string) => {
@@ -479,24 +314,7 @@ function TransactionHistorySection({
       year: 'numeric',
       month: 'short',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
     })
-  }
-
-  const getTransactionBadgeColor = (type: string) => {
-    switch (type.toLowerCase()) {
-      case 'supply':
-        return 'green'
-      case 'borrow':
-        return 'blue'
-      case 'repay':
-        return 'purple'
-      case 'withdraw':
-        return 'orange'
-      default:
-        return 'gray'
-    }
   }
 
   if (isLoading) {
@@ -508,14 +326,14 @@ function TransactionHistorySection({
           fontSize={{ base: 'xl', md: '2xl' }}
           fontWeight="semibold"
         >
-          Transaction History
+          Active Loans
         </Heading>
         <Skeleton borderRadius="lg" h="200px" w="full" />
       </VStack>
     )
   }
 
-  if (transactions.length === 0) {
+  if (activeLoans.length === 0) {
     return (
       <VStack align="start" spacing={6} w="full">
         <Heading
@@ -524,7 +342,7 @@ function TransactionHistorySection({
           fontSize={{ base: 'xl', md: '2xl' }}
           fontWeight="semibold"
         >
-          Transaction History
+          Active Loans
         </Heading>
         <NoisyCard
           cardProps={{
@@ -541,10 +359,10 @@ function TransactionHistorySection({
         >
           <VStack spacing={2}>
             <Text color="font.secondary" fontSize="sm">
-              No transactions yet
+              No active loans yet
             </Text>
             <Text color="font.secondary" fontSize="xs">
-              Your lending transactions will appear here
+              Borrow from a lending pool to see your active loans here
             </Text>
           </VStack>
         </NoisyCard>
@@ -560,133 +378,82 @@ function TransactionHistorySection({
         fontSize={{ base: 'xl', md: '2xl' }}
         fontWeight="semibold"
       >
-        Transaction History
+        Active Loans ({activeLoans.length})
       </Heading>
 
-      <Box bg={cardBg} borderRadius="lg" overflowX="auto" shadow="xl" w="full">
-        <Box as="table" w="full">
-          <Box as="thead" bg="background.level2" borderBottom="1px solid" borderColor={borderColor}>
-            <Box as="tr">
-              <Box as="th" p={4} textAlign="left">
-                <Text
-                  color="font.secondary"
-                  fontSize="xs"
-                  fontWeight="semibold"
-                  textTransform="uppercase"
-                >
-                  Type
-                </Text>
-              </Box>
-              <Box as="th" p={4} textAlign="left">
-                <Text
-                  color="font.secondary"
-                  fontSize="xs"
-                  fontWeight="semibold"
-                  textTransform="uppercase"
-                >
-                  Pool
-                </Text>
-              </Box>
-              <Box as="th" p={4} textAlign="left">
-                <Text
-                  color="font.secondary"
-                  fontSize="xs"
-                  fontWeight="semibold"
-                  textTransform="uppercase"
-                >
-                  Asset
-                </Text>
-              </Box>
-              <Box as="th" p={4} textAlign="right">
-                <Text
-                  color="font.secondary"
-                  fontSize="xs"
-                  fontWeight="semibold"
-                  textTransform="uppercase"
-                >
-                  Amount
-                </Text>
-              </Box>
-              <Box as="th" p={4} textAlign="right">
-                <Text
-                  color="font.secondary"
-                  fontSize="xs"
-                  fontWeight="semibold"
-                  textTransform="uppercase"
-                >
-                  Date
-                </Text>
-              </Box>
-            </Box>
-          </Box>
-          <Box as="tbody">
-            {sortedTransactions.slice(0, 10).map((tx, index) => {
-              const pool = poolMap.get(tx.pool)
-              const asset = pool ? assetMap.get(pool.reserve_asset) : undefined
+      <Grid
+        gap={4}
+        templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }}
+        w="full"
+      >
+        {activeLoans.map(loan => {
+          const pool = poolMap.get(loan.pool)
+          const asset = pool ? assetMap.get(pool.reserve_asset) : undefined
 
-              return (
-                <Box
-                  _hover={{ bg: 'background.level2' }}
-                  as="tr"
-                  borderBottom={index !== sortedTransactions.length - 1 ? '1px solid' : 'none'}
-                  borderColor={borderColor}
-                  key={tx.id}
-                  transition="background 0.2s"
-                >
-                  <Box as="td" p={4}>
-                    <Badge
-                      colorScheme={getTransactionBadgeColor(tx.transaction_type)}
-                      fontSize="xs"
-                    >
-                      {tx.transaction_type}
-                    </Badge>
-                  </Box>
-                  <Box as="td" p={4}>
-                    <Text fontSize="sm" fontWeight="medium">
+          return (
+            <Box bg={cardBg} borderRadius="lg" key={loan.id} p={5} shadow="xl">
+              <VStack align="start" spacing={4}>
+                <HStack justify="space-between" w="full">
+                  <VStack align="start" spacing={1}>
+                    <Text color="font.secondary" fontSize="xs">
+                      Pool
+                    </Text>
+                    <Text fontSize="sm" fontWeight="semibold">
                       {pool?.title || pool?.name || 'Unknown Pool'}
                     </Text>
-                  </Box>
-                  <Box as="td" p={4}>
-                    <HStack spacing={2}>
-                      {asset?.icon && (
-                        <Box h="20px" w="20px">
-                          <Box
-                            alt={asset.symbol}
-                            as="img"
-                            h="full"
-                            objectFit="contain"
-                            src={asset.icon}
-                            w="full"
-                          />
-                        </Box>
-                      )}
+                  </VStack>
+                  <Badge colorScheme="green" fontSize="xs">
+                    Active
+                  </Badge>
+                </HStack>
+
+                <Box borderColor={borderColor} borderTopWidth="1px" pt={3} w="full">
+                  <VStack align="stretch" spacing={3}>
+                    <HStack justify="space-between">
+                      <Text color="font.secondary" fontSize="xs">
+                        Principal Amount
+                      </Text>
+                      <HStack spacing={2}>
+                        {asset?.icon && (
+                          <Box h="16px" w="16px">
+                            <Box
+                              alt={asset.symbol}
+                              as="img"
+                              h="full"
+                              objectFit="contain"
+                              src={asset.icon}
+                              w="full"
+                            />
+                          </Box>
+                        )}
+                        <Text fontSize="sm" fontWeight="semibold">
+                          {formatCurrency(loan.principal_amount)}
+                        </Text>
+                      </HStack>
+                    </HStack>
+
+                    <HStack justify="space-between">
+                      <Text color="font.secondary" fontSize="xs">
+                        Asset
+                      </Text>
                       <Text fontSize="sm" fontWeight="medium">
                         {asset?.symbol || 'Unknown'}
                       </Text>
                     </HStack>
-                  </Box>
-                  <Box as="td" p={4} textAlign="right">
-                    <Text fontSize="sm" fontWeight="semibold">
-                      {formatCurrency(tx.amount)}
-                    </Text>
-                  </Box>
-                  <Box as="td" p={4} textAlign="right">
-                    <Text color="font.secondary" fontSize="xs">
-                      {formatDate(tx.created_at)}
-                    </Text>
-                  </Box>
-                </Box>
-              )
-            })}
-          </Box>
-        </Box>
-      </Box>
 
-      {transactions.length > 10 && (
-        <Text color="font.secondary" fontSize="xs" textAlign="center" w="full">
-          Showing 10 of {transactions.length} transactions
-        </Text>
-      )}
+                    <HStack justify="space-between">
+                      <Text color="font.secondary" fontSize="xs">
+                        Borrowed On
+                      </Text>
+                      <Text fontSize="xs">{formatDate(loan.created_at)}</Text>
+                    </HStack>
+                  </VStack>
+                </Box>
+              </VStack>
+            </Box>
+          )
+        })}
+      </Grid>
     </VStack>
   )
 }

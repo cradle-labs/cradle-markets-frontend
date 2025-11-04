@@ -919,7 +919,12 @@ export class CradleApiClient {
    * Get lending transactions for a specific pool
    */
   async getLendingTransactions(poolId: string): Promise<ApiResponse<LendingTransaction[]>> {
-    return this.request<LendingTransaction[]>('GET', `/pools/${poolId}/transactions`)
+    console.log('[CradleAPI] Fetching transactions for pool:', poolId)
+    const endpoint = `/pools/${poolId}/transactions`
+    console.log('[CradleAPI] Endpoint:', endpoint)
+    const response = await this.request<LendingTransaction[]>('GET', endpoint)
+    console.log('[CradleAPI] Response:', response)
+    return response
   }
 
   /**
@@ -947,7 +952,12 @@ export class CradleApiClient {
    * Get loans for a specific wallet
    */
   async getLoansByWallet(walletId: string): Promise<ApiResponse<Loan[]>> {
-    return this.request<Loan[]>('GET', `/loans/wallet/${walletId}`)
+    console.log('[CradleAPI] Fetching loans for wallet:', walletId)
+    const endpoint = `/loans/wallet/${walletId}`
+    console.log('[CradleAPI] Endpoint:', endpoint)
+    const response = await this.request<Loan[]>('GET', endpoint)
+    console.log('[CradleAPI] Response:', response)
+    return response
   }
 
   /**
@@ -1182,9 +1192,24 @@ export class CradleApiClient {
    * Supply liquidity to a lending pool
    */
   async supplyLiquidity(input: SupplyLiquidityInput): Promise<ApiResponse<MutationResponse>> {
-    return this.processMutation({
+    console.log('[CradleAPI] 🔵 Supply Liquidity Called')
+    console.log('[CradleAPI] Input:', input)
+
+    const mutation = {
       Pool: { SupplyLiquidity: input },
-    })
+    }
+    console.log('[CradleAPI] Mutation:', mutation)
+
+    const response = await this.processMutation(mutation)
+    console.log('[CradleAPI] ✅ Supply Liquidity Response:', response)
+
+    if (response.success && response.data) {
+      console.log('[CradleAPI] MutationResponse Data:', JSON.stringify(response.data, null, 2))
+    } else {
+      console.log('[CradleAPI] ❌ Supply Liquidity Failed:', response.error)
+    }
+
+    return response
   }
 
   /**

@@ -25,10 +25,14 @@ export function LendingPoolTableHeader({
   return (
     <Grid p={['sm', 'md']} w="full" {...rest}>
       <GridItem>
-        <Text fontWeight="bold">#</Text>
+        <Text fontSize="xs" fontWeight="semibold">
+          #
+        </Text>
       </GridItem>
       <GridItem>
-        <Text fontWeight="bold">Pool Name</Text>
+        <Text fontSize="xs" fontWeight="semibold">
+          Pool Name
+        </Text>
       </GridItem>
       <GridItem justifySelf="end">
         <SortableHeader
@@ -37,6 +41,7 @@ export function LendingPoolTableHeader({
           label="Total Supplied"
           onSort={() => onSort('total-supplied')}
           sorting={sortDesc ? Sorting.desc : Sorting.asc}
+          textProps={{ fontSize: 'xs', fontWeight: 'semibold' }}
         />
       </GridItem>
       <GridItem justifySelf="end">
@@ -46,6 +51,7 @@ export function LendingPoolTableHeader({
           label="Total Borrowed"
           onSort={() => onSort('total-borrowed')}
           sorting={sortDesc ? Sorting.desc : Sorting.asc}
+          textProps={{ fontSize: 'xs', fontWeight: 'semibold' }}
         />
       </GridItem>
       <GridItem justifySelf="end">
@@ -55,6 +61,7 @@ export function LendingPoolTableHeader({
           label="Utilization"
           onSort={() => onSort('utilization')}
           sorting={sortDesc ? Sorting.desc : Sorting.asc}
+          textProps={{ fontSize: 'xs', fontWeight: 'semibold' }}
         />
       </GridItem>
       <GridItem justifySelf="end">
@@ -64,6 +71,7 @@ export function LendingPoolTableHeader({
           label="Supply APY"
           onSort={() => onSort('supply-apy')}
           sorting={sortDesc ? Sorting.desc : Sorting.asc}
+          textProps={{ fontSize: 'xs', fontWeight: 'semibold' }}
         />
       </GridItem>
       <GridItem justifySelf="end">
@@ -73,6 +81,7 @@ export function LendingPoolTableHeader({
           label="Borrow APY"
           onSort={() => onSort('borrow-apy')}
           sorting={sortDesc ? Sorting.desc : Sorting.asc}
+          textProps={{ fontSize: 'xs', fontWeight: 'semibold' }}
         />
       </GridItem>
     </Grid>

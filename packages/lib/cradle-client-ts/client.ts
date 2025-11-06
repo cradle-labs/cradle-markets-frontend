@@ -55,7 +55,7 @@ export function getCradleClient(): CradleApiClient {
   const config: CradleApiConfig = {
     baseUrl,
     apiKey,
-    timeout: parseInt('60000', 10),
+    timeout: parseInt('180000', 10), // 3 minutes timeout for order placement
   }
 
   clientInstance = new CradleApiClient(config)

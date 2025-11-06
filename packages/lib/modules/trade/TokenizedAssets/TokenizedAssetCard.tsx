@@ -39,6 +39,7 @@ interface TokenizedAssetCardProps {
 }
 
 export function TokenizedAssetCard({ asset, onClick }: TokenizedAssetCardProps) {
+  console.log('asset', asset)
   const isPositive = asset.dailyChange >= 0
   const changeColor = useColorModeValue(
     isPositive ? 'green.500' : 'red.500',

@@ -149,8 +149,8 @@ export function TokenizedAssetProvider({ children }: TokenizedAssetProviderProps
           interval: '15secs' as const,
         }),
       enabled: !!market.id && !!market.asset_one && assets.length > 0,
-      staleTime: 1000 * 60, // 1 minute
-      gcTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: 1000 * 60 * 30, // 30 minutes - historical data doesn't change
+      gcTime: 1000 * 60 * 60, // 1 hour
       retry: false, // Don't retry on failure, just use fallback
     })),
   })

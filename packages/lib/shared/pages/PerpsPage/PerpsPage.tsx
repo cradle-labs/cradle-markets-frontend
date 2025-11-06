@@ -7,7 +7,7 @@ import { PropsWithChildren } from 'react'
 import Noise from '@repo/lib/shared/components/layout/Noise'
 import { RadialPattern } from '@repo/lib/shared/components/zen/RadialPattern'
 import { TradingChartExample } from '@repo/lib/modules/perps/trading-chart'
-import Orderbook from '@repo/lib/modules/perps/orderbook/Orderbook'
+// import Orderbook from '@repo/lib/modules/perps/orderbook/Orderbook'
 import { PerpsTradingPanel } from '@repo/lib/modules/perps/trading-panel'
 
 type PerpsPageProps = PropsWithChildren
@@ -118,9 +118,7 @@ export function PerpsPage({ children }: PerpsPageProps) {
 
             {/* Order Book - Center Column */}
             <GridItem colSpan={{ base: 12, lg: 2 }}>
-              <Box>
-                <Orderbook />
-              </Box>
+              <Box>{/* <Orderbook /> */}</Box>
             </GridItem>
 
             {/* Trading Form - Right Column */}

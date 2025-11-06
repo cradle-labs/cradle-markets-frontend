@@ -106,8 +106,9 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
       enabled: !!market?.asset_one,
       // For REALTIME data, refetch every 15 seconds
       refetchInterval: (period === 'REALTIME' ? 15000 : false) as number | false,
-      staleTime: period === 'REALTIME' ? 0 : 1000 * 60 * 2, // No stale time for realtime, 2 minutes for others
-      gcTime: 1000 * 60 * 10, // 10 minutes
+      // Historical data doesn't change, so cache it much longer
+      staleTime: period === 'REALTIME' ? 0 : 1000 * 60 * 30, // No stale time for realtime, 30 minutes for historical data
+      gcTime: period === 'REALTIME' ? 1000 * 60 * 5 : 1000 * 60 * 60, // 5 minutes for realtime, 1 hour for historical data
       retry: false,
     })),
   })

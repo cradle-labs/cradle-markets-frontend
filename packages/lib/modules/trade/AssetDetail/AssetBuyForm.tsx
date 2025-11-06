@@ -18,7 +18,7 @@ import {
   formatTo8Decimals,
   formatToWholeNumber,
 } from '@repo/lib/shared/utils/numbers'
-import type { PlaceOrderInput } from '@repo/lib/cradle-client-ts/cradle-api-client'
+import type { PlaceOrderInput, FillMode } from '@repo/lib/cradle-client-ts/cradle-api-client'
 
 type OrderType = 'market' | 'limit'
 
@@ -34,6 +34,7 @@ export function AssetBuyForm() {
   const [payAmount, setPayAmount] = useState<HumanAmount>('0' as HumanAmount)
   const [receiveAmount, setReceiveAmount] = useState<HumanAmount>('0' as HumanAmount)
   const [orderType, setOrderType] = useState<OrderType>('market')
+  const [fillMode, setFillMode] = useState<FillMode>('good-till-cancel')
   const [limitPrice, setLimitPrice] = useState<string>(currentMarketPrice.toFixed(4))
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -176,20 +177,26 @@ export function AssetBuyForm() {
       const orderPayload: PlaceOrderInput = {
         wallet: wallet.id,
         market_id: market.id,
-        bid_asset: assetOne.id, // We want to receive asset_one (SAF)
-        ask_asset: assetTwo.id, // We're paying with asset_two (cpUSD)
-        bid_amount: formatToWholeNumber(receiveAmount), // Amount we want to receive (whole number)
-        ask_amount: formatToWholeNumber(payAmount), // Amount we're paying (whole number)
-        price: formatTo8Decimals(price), // Price (8 decimals)
-        mode: 'good-till-cancel',
+        bid_asset: assetTwo.id, // We want to pay with asset_two (cpUSD)
+        ask_asset: assetOne.id, // We're paying with asset_one (SAF)
+        bid_amount: formatToWholeNumber(payAmount), // Amount we're paying (whole number)
+        ask_amount: formatToWholeNumber(receiveAmount), // Amount we want to receive (whole number)
+        price: formatTo8Decimals(price), // Price in 8 decimal format
+        mode: fillMode,
         order_type: orderType,
       }
 
-      console.log('=== Order Placement Debug ===')
+      console.log('=== Order Placement Debug (BUY) ===')
+      console.log('User Input - Pay Amount:', payAmount)
+      console.log('User Input - Receive Amount:', receiveAmount)
+      console.log('User Input - Price:', price)
+      console.log('Formatted - bid_amount:', formatToWholeNumber(payAmount))
+      console.log('Formatted - ask_amount:', formatToWholeNumber(receiveAmount))
+      console.log('Formatted - price:', formatTo8Decimals(price))
       console.log('Wallet:', wallet)
       console.log('Market:', market)
-      console.log('Asset One (receiving):', assetOne)
-      console.log('Asset Two (paying):', assetTwo)
+      console.log('Asset One (SAF):', assetOne)
+      console.log('Asset Two (cpUSD):', assetTwo)
       console.log('Order Payload:', orderPayload)
 
       const result = await placeOrder(orderPayload)
@@ -301,6 +308,83 @@ export function AssetBuyForm() {
           Limit
         </Button>
       </HStack>
+
+      {/* Fill Mode Selector */}
+      <VStack align="start" spacing={2} w="full">
+        <Text color="font.secondary" fontSize="sm" fontWeight="medium">
+          Fill Mode
+        </Text>
+        <HStack spacing={2} w="full">
+          <Button
+            _hover={{
+              bg: fillMode === 'good-till-cancel' ? 'background.level1' : 'background.level0',
+            }}
+            bg={fillMode === 'good-till-cancel' ? 'background.level1' : 'transparent'}
+            border="1px solid"
+            borderColor={fillMode === 'good-till-cancel' ? 'border.accent' : 'border.base'}
+            flex={1}
+            onClick={() => setFillMode('good-till-cancel')}
+            size="sm"
+            variant="outline"
+          >
+            <VStack spacing={0}>
+              <Text fontSize="xs" fontWeight="semibold">
+                GTC
+              </Text>
+              <Text color="font.secondary" fontSize="2xs">
+                Good Till Cancel
+              </Text>
+            </VStack>
+          </Button>
+          <Button
+            _hover={{
+              bg: fillMode === 'immediate-or-cancel' ? 'background.level1' : 'background.level0',
+            }}
+            bg={fillMode === 'immediate-or-cancel' ? 'background.level1' : 'transparent'}
+            border="1px solid"
+            borderColor={fillMode === 'immediate-or-cancel' ? 'border.accent' : 'border.base'}
+            flex={1}
+            onClick={() => setFillMode('immediate-or-cancel')}
+            size="sm"
+            variant="outline"
+          >
+            <VStack spacing={0}>
+              <Text fontSize="xs" fontWeight="semibold">
+                IOC
+              </Text>
+              <Text color="font.secondary" fontSize="2xs">
+                Immediate or Cancel
+              </Text>
+            </VStack>
+          </Button>
+          <Button
+            _hover={{
+              bg: fillMode === 'fill-or-kill' ? 'background.level1' : 'background.level0',
+            }}
+            bg={fillMode === 'fill-or-kill' ? 'background.level1' : 'transparent'}
+            border="1px solid"
+            borderColor={fillMode === 'fill-or-kill' ? 'border.accent' : 'border.base'}
+            flex={1}
+            onClick={() => setFillMode('fill-or-kill')}
+            size="sm"
+            variant="outline"
+          >
+            <VStack spacing={0}>
+              <Text fontSize="xs" fontWeight="semibold">
+                FOK
+              </Text>
+              <Text color="font.secondary" fontSize="2xs">
+                Fill or Kill
+              </Text>
+            </VStack>
+          </Button>
+        </HStack>
+        <Text color="font.secondary" fontSize="2xs">
+          {fillMode === 'good-till-cancel' && 'Order stays active until filled or cancelled'}
+          {fillMode === 'immediate-or-cancel' && 'Fill available amount immediately, cancel rest'}
+          {fillMode === 'fill-or-kill' && 'Fill entire order immediately or cancel all'}
+        </Text>
+      </VStack>
 
       {/* Limit Price Input (only for limit orders) */}
       {orderType === 'limit' && (

@@ -177,10 +177,10 @@ export function AssetBuyForm() {
       const orderPayload: PlaceOrderInput = {
         wallet: wallet.id,
         market_id: market.id,
-        bid_asset: assetTwo.id, // We want to pay with asset_two (cpUSD)
-        ask_asset: assetOne.id, // We're paying with asset_one (SAF)
-        bid_amount: formatToWholeNumber(payAmount), // Amount we're paying (whole number)
-        ask_amount: formatToWholeNumber(receiveAmount), // Amount we want to receive (whole number)
+        bid_asset: assetOne.id, // bid asset is the one you want and are gonna be receiving.
+        ask_asset: assetTwo.id, // ask asset is the one you have and are gonna be paying with.
+        bid_amount: formatToWholeNumber(receiveAmount), // bid amount is the amount you want to receive (whole number)
+        ask_amount: formatToWholeNumber(payAmount), // ask amount is the amount you have and are gonna be paying with (whole number)
         price: formatTo8Decimals(price), // Price in 8 decimal format
         mode: fillMode,
         order_type: orderType,

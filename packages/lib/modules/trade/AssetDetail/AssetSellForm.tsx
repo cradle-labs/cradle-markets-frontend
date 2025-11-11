@@ -4,7 +4,6 @@ import { Box, Button, HStack, Input, Text, VStack, useToast } from '@chakra-ui/r
 import { ArrowDown } from 'react-feather'
 import { IconButton } from '@chakra-ui/react'
 import { TokenInput } from '@repo/lib/modules/tokens/TokenInput/TokenInput'
-import { ConnectWallet } from '@repo/lib/modules/web3/ConnectWallet'
 import { useState, useEffect } from 'react'
 import { HumanAmount } from '@balancer/sdk'
 import { useAssetDetail } from './AssetDetailProvider'
@@ -241,8 +240,6 @@ export function AssetSellForm() {
     }
   }
 
-  const isConnected = !!wallet
-
   return (
     <VStack spacing={4} w="full">
       {/* Order Type Selector */}
@@ -460,11 +457,9 @@ export function AssetSellForm() {
           <Text color="font.secondary" fontSize="sm" fontWeight="medium">
             Sell
           </Text>
-          {isConnected && (
-            <Text color="font.secondary" fontSize="xs">
-              Balance: {sellAssetBalance?.formatted || '0'} {assetOne?.symbol}
-            </Text>
-          )}
+          <Text color="font.secondary" fontSize="xs">
+            Balance: {sellAssetBalance?.formatted || '0'} {assetOne?.symbol}
+          </Text>
         </HStack>
         <Box w="full">
           <TokenInput
@@ -507,11 +502,9 @@ export function AssetSellForm() {
           <Text color="font.secondary" fontSize="sm" fontWeight="medium">
             Receive
           </Text>
-          {isConnected && (
-            <Text color="font.secondary" fontSize="xs">
-              Balance: {receiveAssetBalance?.formatted || '0'} {assetTwo?.symbol}
-            </Text>
-          )}
+          <Text color="font.secondary" fontSize="xs">
+            Balance: {receiveAssetBalance?.formatted || '0'} {assetTwo?.symbol}
+          </Text>
         </HStack>
         <Box w="full">
           <TokenInput
@@ -554,22 +547,16 @@ export function AssetSellForm() {
           </Text>
         </HStack>
       </VStack>
-
-      {/* Action Button */}
-      {!isConnected ? (
-        <ConnectWallet connectLabel="Sign In to Continue" size="lg" variant="primary" w="full" />
-      ) : (
-        <Button
-          isDisabled={!market || !assetOne || !assetTwo || Number(sellAmount) <= 0}
-          isLoading={isSubmitting}
-          onClick={handleSubmitOrder}
-          size="lg"
-          variant="primary"
-          w="full"
-        >
-          {orderType === 'market' ? 'Sell at Market' : 'Place Limit Order'}
-        </Button>
-      )}
+      <Button
+        isDisabled={!market || !assetOne || !assetTwo || Number(sellAmount) <= 0}
+        isLoading={isSubmitting}
+        onClick={handleSubmitOrder}
+        size="lg"
+        variant="primary"
+        w="full"
+      >
+        {orderType === 'market' ? 'Sell at Market' : 'Place Limit Order'}
+      </Button>
     </VStack>
   )
 }

@@ -13,11 +13,8 @@ import { useAccountByLinkedId } from '@repo/lib/cradle-client-ts/hooks/accounts/
 import { useWalletByAccountId } from '@repo/lib/cradle-client-ts/hooks/accounts/useWallet'
 import { useAsset } from '@repo/lib/cradle-client-ts/hooks/assets/useAsset'
 import { placeOrder } from '@repo/lib/actions/orders'
-import {
-  blockInvalidNumberInput,
-  formatTo8Decimals,
-  formatToWholeNumber,
-} from '@repo/lib/shared/utils/numbers'
+import { blockInvalidNumberInput, formatTo8Decimals } from '@repo/lib/shared/utils/numbers'
+import { toTokenDecimals } from '@repo/lib/modules/lend/utils'
 import type { PlaceOrderInput, FillMode } from '@repo/lib/cradle-client-ts/cradle-api-client'
 
 type OrderType = 'market' | 'limit'
@@ -174,13 +171,17 @@ export function AssetBuyForm() {
       const price = getPrice()
 
       // Format amounts: whole numbers for amounts, 8 decimals for price
+      const askAssetDecimals = assetTwo?.decimals ?? 8
+      const bidAssetDecimals = assetOne?.decimals ?? 8
+      const askAmountScaled = toTokenDecimals(Number(payAmount), askAssetDecimals)
+      const bidAmountScaled = toTokenDecimals(Number(receiveAmount), bidAssetDecimals)
       const orderPayload: PlaceOrderInput = {
         wallet: wallet.id,
         market_id: market.id,
         bid_asset: assetOne.id, // bid asset is the one you want and are gonna be receiving.
         ask_asset: assetTwo.id, // ask asset is the one you have and are gonna be paying with.
-        bid_amount: formatToWholeNumber(receiveAmount), // bid amount is the amount you want to receive (whole number)
-        ask_amount: formatToWholeNumber(payAmount), // ask amount is the amount you have and are gonna be paying with (whole number)
+        bid_amount: String(bidAmountScaled), // amount to receive in base units
+        ask_amount: String(askAmountScaled), // amount to pay in base units
         price: formatTo8Decimals(price), // Price in 8 decimal format
         mode: fillMode,
         order_type: orderType,
@@ -190,8 +191,8 @@ export function AssetBuyForm() {
       console.log('User Input - Pay Amount:', payAmount)
       console.log('User Input - Receive Amount:', receiveAmount)
       console.log('User Input - Price:', price)
-      console.log('Formatted - bid_amount:', formatToWholeNumber(payAmount))
-      console.log('Formatted - ask_amount:', formatToWholeNumber(receiveAmount))
+      console.log('Scaled - ask_amount (base units):', askAmountScaled)
+      console.log('Scaled - bid_amount (base units):', bidAmountScaled)
       console.log('Formatted - price:', formatTo8Decimals(price))
       console.log('Wallet:', wallet)
       console.log('Market:', market)

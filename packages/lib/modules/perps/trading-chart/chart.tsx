@@ -74,7 +74,6 @@ export function TradingChart({ symbol = 'SHARES/USDC', data, onCrosshairMove }: 
 
   const [activeTimeFrame, setActiveTimeFrame] = useState<TimeFrame>('1D')
   const [currentPrice, setCurrentPrice] = useState<number | null>(null)
-  const [currentTime, setCurrentTime] = useState<string | null>(null)
   const [chartData, setChartData] = useState<ChartData[]>([])
 
   // Memoize the crosshair move handler to prevent unnecessary re-renders
@@ -181,18 +180,15 @@ export function TradingChart({ symbol = 'SHARES/USDC', data, onCrosshairMove }: 
           if (seriesData && typeof seriesData === 'object' && 'close' in seriesData) {
             const candleData = seriesData as CandlestickData
             setCurrentPrice(candleData.close)
-            setCurrentTime(new Date(param.time as string).toLocaleString())
             handleCrosshairMove(candleData.close, param.time)
           }
         } else {
           setCurrentPrice(null)
-          setCurrentTime(null)
           handleCrosshairMove(null, null)
         }
       } catch (error) {
         console.warn('Chart crosshair move error:', error)
         setCurrentPrice(null)
-        setCurrentTime(null)
       }
     })
 
@@ -283,11 +279,6 @@ export function TradingChart({ symbol = 'SHARES/USDC', data, onCrosshairMove }: 
                 {priceChangePercent.toFixed(2)}%)
               </Text>
             </HStack>
-            {currentTime && (
-              <Text color="gray.500" fontSize="xs">
-                {currentTime}
-              </Text>
-            )}
           </VStack>
 
           <ButtonGroup

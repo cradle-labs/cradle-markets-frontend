@@ -30,14 +30,70 @@ const isSharedRoute = createRouteMatcher([
 ])
 
 export default clerkMiddleware(async (auth, req) => {
+  // Handle root path redirects for authenticated users
+  if (req.nextUrl.pathname === '/') {
+    const { sessionClaims, userId } = await auth()
+
+    if (userId) {
+      // User is authenticated, check role from session claims first
+      // Try both metadata and public_metadata paths
+      let userRole = ((sessionClaims?.metadata as any)?.role ||
+        (sessionClaims?.public_metadata as any)?.role) as string | undefined
+
+      // Debug logging for root path
+      console.log('Root path middleware check:', {
+        userId,
+        sessionClaimsRole: userRole,
+        hasSessionClaims: !!sessionClaims,
+        sessionClaimsMetadata: sessionClaims?.metadata,
+        sessionClaimsPublicMetadata: sessionClaims?.public_metadata,
+        allSessionClaims: sessionClaims,
+      })
+
+      // If no role in session claims, check user metadata directly (important for fresh sign-ups)
+      if (!userRole) {
+        try {
+          const { clerkClient } = await import('@clerk/nextjs/server')
+          const client = await clerkClient()
+          const user = await client.users.getUser(userId)
+          userRole = user.publicMetadata?.role as string | undefined
+
+          console.log('Fetched user metadata:', {
+            publicMetadata: user.publicMetadata,
+            userRole,
+          })
+        } catch (error) {
+          console.error('Error fetching user metadata:', error)
+        }
+      }
+
+      console.log('Final role decision:', {
+        userRole,
+        redirecting: userRole ? '/trade' : '/select-role',
+      })
+
+      if (userRole) {
+        // User has a role, redirect to trade page
+        const url = new URL('/trade', req.url)
+        return Response.redirect(url)
+      } else {
+        // User doesn't have a role, redirect to select-role
+        const url = new URL('/select-role', req.url)
+        return Response.redirect(url)
+      }
+    }
+    // If not authenticated, continue to show landing page
+  }
+
   // Protect all non-public routes
   if (!isPublicRoute(req)) {
     await auth.protect()
 
     // Get session claims and extract role from metadata (via custom JWT claims)
     const { sessionClaims, userId } = await auth()
-    // Try to get role from metadata (custom JWT claim)
-    const userRole = sessionClaims?.metadata?.role as string | undefined
+    // Try to get role from metadata (custom JWT claim) or public_metadata
+    let userRole = ((sessionClaims?.metadata as any)?.role ||
+      (sessionClaims?.public_metadata as any)?.role) as string | undefined
 
     // Debug logging
     console.log('Middleware check:', {
@@ -47,6 +103,24 @@ export default clerkMiddleware(async (auth, req) => {
       hasMetadata: !!sessionClaims?.metadata,
       metadata: sessionClaims?.metadata,
     })
+
+    // If on /select-role and role already exists (or can be fetched), redirect to /trade
+    if (req.nextUrl.pathname === '/select-role' && userId) {
+      if (!userRole) {
+        try {
+          const { clerkClient } = await import('@clerk/nextjs/server')
+          const client = await clerkClient()
+          const user = await client.users.getUser(userId)
+          userRole = user.publicMetadata?.role as string | undefined
+        } catch (error) {
+          console.error('Error fetching user metadata on /select-role:', error)
+        }
+      }
+      if (userRole === 'institutional' || userRole === 'retail') {
+        const url = new URL('/trade', req.url)
+        return Response.redirect(url)
+      }
+    }
 
     // If user is authenticated but has no role, redirect to role selection
     // BUT: Allow access to /select-role and also don't block other routes

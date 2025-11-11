@@ -80,6 +80,7 @@ interface AssetChartContextType {
 const AssetChartContext = createContext<AssetChartContextType | null>(null)
 
 export function useAssetChartLogic(asset: TokenizedAssetData): AssetChartContextType {
+  console.log('Asset:', asset)
   const candlestickData = useMemo(() => {
     // Prefer timeHistoryData with OHLC if available
     if (asset.timeHistoryData && asset.timeHistoryData.length > 0) {
@@ -92,7 +93,7 @@ export function useAssetChartLogic(asset: TokenizedAssetData): AssetChartContext
     return convertToCandlestickData(asset.priceHistory)
   }, [asset.priceHistory, asset.timeHistoryData])
 
-  const symbol = `${asset.symbol}/USDC`
+  const symbol = `${asset.symbol}/cpUSD`
 
   return {
     candlestickData,

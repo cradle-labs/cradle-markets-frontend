@@ -75,9 +75,15 @@ export default function SignUpPage() {
                   formFieldInput:
                     'bg-background.level1 border border-border.base text-font.primary focus:border-purple.500',
                   formFieldLabel: 'text-font.secondary font-medium',
-                  footerActionLink: 'text-purple.500 hover:text-purple.600',
-                  identityPreviewEditButton: 'text-purple.500 hover:text-purple.600',
-                  formResendCodeLink: 'text-purple.500 hover:text-purple.600',
+                  footerActionLink: isDark
+                    ? 'text-purple.500 hover:text-white'
+                    : 'text-purple.500 hover:text-purple.600',
+                  identityPreviewEditButton: isDark
+                    ? 'text-purple.500 hover:text-white'
+                    : 'text-purple.500 hover:text-purple.600',
+                  formResendCodeLink: isDark
+                    ? 'text-purple.500 hover:text-white'
+                    : 'text-purple.500 hover:text-purple.600',
                 },
               }}
               redirectUrl="/select-role"

@@ -109,10 +109,14 @@ export function NavBarContainer() {
                         color: isDark ? '#ffffff' : gray700,
                         '&:hover': {
                           background: isDark ? gray700 : gray50,
+                          color: isDark ? '#ffffff' : gray700,
                         },
                       },
                       userButtonPopoverActionButtonText: {
                         color: isDark ? '#ffffff' : gray700,
+                        '&:hover': {
+                          color: isDark ? '#ffffff' : gray700,
+                        },
                       },
                       userButtonPopoverActionButtonIcon: {
                         color: isDark ? gray400 : gray500,

@@ -458,11 +458,6 @@ export function AssetBuyForm() {
           <Text color="font.secondary" fontSize="sm" fontWeight="medium">
             Pay
           </Text>
-          {isConnected && (
-            <Text color="font.secondary" fontSize="xs">
-              Balance: {payAssetBalance?.formatted || '0'} {assetTwo?.symbol}
-            </Text>
-          )}
         </HStack>
         <Box w="full">
           <TokenInput

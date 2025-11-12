@@ -1,6 +1,5 @@
 export { AssetDetailPage } from './AssetDetailPage'
 export { AssetDetailProvider, useAssetDetail } from './AssetDetailProvider'
-export { AssetDetailProviders } from './AssetDetailProviders'
 export { AssetBreadcrumbs } from './AssetBreadcrumbs'
 export { AssetHeader } from './AssetHeader'
 export { AssetChart } from './AssetChart'

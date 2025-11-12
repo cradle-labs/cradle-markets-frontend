@@ -6,7 +6,6 @@ import FadeInOnView from '@repo/lib/shared/components/containers/FadeInOnView'
 import Noise from '@repo/lib/shared/components/layout/Noise'
 import { RadialPattern } from '@repo/lib/shared/components/zen/RadialPattern'
 import { AssetDetailProvider, useAssetDetail } from './AssetDetailProvider'
-import { AssetDetailProviders } from './AssetDetailProviders'
 import { AssetBreadcrumbs } from './AssetBreadcrumbs'
 import { AssetHeader } from './AssetHeader'
 import { AssetChart } from './AssetChart'
@@ -184,12 +183,10 @@ function AssetDetailError({ error }: { error: string | null }) {
 
 export function AssetDetailPage({ marketId }: AssetDetailPageProps) {
   return (
-    <AssetDetailProviders>
-      <AssetDetailProvider marketId={marketId}>
-        <FadeInOnView animateOnce={false}>
-          <AssetDetailContent />
-        </FadeInOnView>
-      </AssetDetailProvider>
-    </AssetDetailProviders>
+    <AssetDetailProvider marketId={marketId}>
+      <FadeInOnView animateOnce={false}>
+        <AssetDetailContent />
+      </FadeInOnView>
+    </AssetDetailProvider>
   )
 }

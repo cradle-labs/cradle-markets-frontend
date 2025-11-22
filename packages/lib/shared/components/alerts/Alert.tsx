@@ -1,8 +1,8 @@
 import {
-  Alert,
+  Alert as ChakraAlert,
   AlertDescription,
   AlertIcon,
-  AlertProps,
+  AlertProps as ChakraAlertProps,
   AlertStatus,
   AlertTitle,
   CloseButton,
@@ -10,10 +10,10 @@ import {
 } from '@chakra-ui/react'
 import { MouseEventHandler, ReactNode } from 'react'
 import { AlertTriangle, Check, Loader, XOctagon } from 'react-feather'
-import { BalAlertButtonLink } from './BalAlertButtonLink'
+import { AlertButtonLink } from './AlertButtonLink'
 import { LightbulbIcon } from '../icons/LightbulbIcon'
 
-export type BalAlertProps = {
+export type AlertProps = {
   content: ReactNode | string
   title?: string
   learnMoreLink?: string
@@ -23,9 +23,9 @@ export type BalAlertProps = {
   onClose?: MouseEventHandler
   ssr?: boolean
   action?: ReactNode
-} & Omit<AlertProps, 'status' | 'children' | 'content'>
+} & Omit<ChakraAlertProps, 'status' | 'children' | 'content'>
 
-export function BalAlert({
+export function Alert({
   content,
   title,
   status,
@@ -36,13 +36,13 @@ export function BalAlert({
   onClose,
   action,
   ...rest
-}: BalAlertProps) {
+}: AlertProps) {
   const iconSize = {
     h: '24px',
     w: '24px',
   }
   return (
-    <Alert rounded={isNavAlert ? 'none' : 'default'} status={status} {...rest}>
+    <ChakraAlert rounded={isNavAlert ? 'none' : 'default'} status={status} {...rest}>
       {ssr ? <AlertIcon {...iconSize} /> : <AlertIcon as={getAlertIcon(status)} {...iconSize} />}
 
       {title ? (
@@ -66,7 +66,7 @@ export function BalAlert({
         </AlertTitle>
       )}
 
-      {learnMoreLink && <BalAlertButtonLink href={learnMoreLink}>More</BalAlertButtonLink>}
+      {learnMoreLink && <AlertButtonLink href={learnMoreLink}>More</AlertButtonLink>}
       {action}
       {isSoftWarning && (
         <CloseButton
@@ -81,7 +81,7 @@ export function BalAlert({
           variant="softWarning"
         />
       )}
-    </Alert>
+    </ChakraAlert>
   )
 }
 

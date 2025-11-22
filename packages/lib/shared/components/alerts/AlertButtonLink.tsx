@@ -5,7 +5,7 @@ import { PropsWithChildren } from 'react'
 import NextLink from 'next/link'
 import { ArrowUpRight } from 'react-feather'
 
-export function BalAlertButtonLink({
+export function AlertButtonLink({
   href,
   external = true,
   children,

@@ -21,7 +21,7 @@ type AlertContentProps = {
 }
 
 // Utility component to display a title, description, optional tooltip and other nested components (buttons, links...) within an alert
-export function BalAlertContent({
+export function AlertContent({
   title,
   description,
   tooltipLabel,

@@ -9,7 +9,7 @@ import {
   InputRightElement,
   Button,
 } from '@chakra-ui/react'
-import { BalPopover } from '../popover/BalPopover'
+import { CradlePopover } from '../popover/CradlePopover'
 import { InfoIcon } from '../icons/InfoIcon'
 
 type InputWithErrorProps = {
@@ -36,9 +36,9 @@ export function InputWithError({
             {label}
           </Text>
           {tooltip && (
-            <BalPopover text={tooltip}>
+            <CradlePopover text={tooltip}>
               <InfoIcon />
-            </BalPopover>
+            </CradlePopover>
           )}
         </HStack>
       )}

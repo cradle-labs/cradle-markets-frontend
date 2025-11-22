@@ -3,7 +3,7 @@
 import { Button, ButtonProps } from '@chakra-ui/react'
 import { PropsWithChildren } from 'react'
 
-export function BalAlertButton({ onClick, children }: PropsWithChildren<ButtonProps>) {
+export function AlertButton({ onClick, children }: PropsWithChildren<ButtonProps>) {
   return (
     <Button
       _focus={{

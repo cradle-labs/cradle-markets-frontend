@@ -7,16 +7,16 @@ import {
 } from '@chakra-ui/react'
 import { PropsWithChildren } from 'react'
 
-type BalPopoverProps = {
+type CradlePopoverProps = {
   text: string
   placement?: PlacementWithLogical
 }
 
-export function BalPopover({
+export function CradlePopover({
   children,
   text,
   placement = 'right',
-}: PropsWithChildren<BalPopoverProps>) {
+}: PropsWithChildren<CradlePopoverProps>) {
   return (
     <Popover placement={placement} trigger="hover">
       <PopoverTrigger>{children}</PopoverTrigger>

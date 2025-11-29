@@ -9,8 +9,8 @@ const shouldEnableSourceMaps = isProd && process.env.VERCEL_GIT_COMMIT_REF === '
 export const sentryOptions: SentryBuildOptions = {
   // Suppresses source map uploading logs during build
   silent: true,
-  org: 'balancer-labs',
-  project: isProd ? 'frontend-web' : 'frontend-web-develop',
+  org: 'cradle-labs',
+  project: isProd ? 'frontend-web' : 'frontend-web',
 
   // For all available options, see:
   // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/

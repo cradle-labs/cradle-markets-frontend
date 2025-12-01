@@ -200,14 +200,14 @@ export function LendSupplyForm({
         )}
 
         <Button
-          isDisabled={!walletId || !amount || parseFloat(amount) <= 0}
+          isDisabled={!amount || parseFloat(amount) <= 0}
           isLoading={isLoading}
           size="lg"
           type="submit"
           variant="primary"
           w="full"
         >
-          {walletId ? 'Supply' : 'Connect Wallet'}
+          Supply
         </Button>
       </VStack>
     </Box>

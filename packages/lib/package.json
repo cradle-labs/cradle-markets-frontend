@@ -47,7 +47,7 @@
     "@vercel/speed-insights": "1.1.0",
     "axios": "^1.13.0",
     "bignumber.js": "9.3.1",
-    "chakra-react-select": "5.0.5",
+    "chakra-react-select": "6.1.0",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.18",
     "deepmerge": "^4.3.1",

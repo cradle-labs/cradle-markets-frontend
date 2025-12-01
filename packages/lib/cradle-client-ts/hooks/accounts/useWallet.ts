@@ -10,7 +10,7 @@ import { useQuery, type UseQueryOptions } from '@tanstack/react-query'
 import { cradleQueryKeys } from '../../queryKeys'
 import { fetchWallet, fetchWalletByAccountId } from '../../services/fetchers'
 import { userDataQueryOptions } from '../../utils/query-options'
-import type { CradleWallet } from '../../cradle-api-client'
+import type { CradleWallet } from '../../types'
 
 export interface UseWalletByIdOptions {
   /**
@@ -41,7 +41,7 @@ export interface UseWalletByAccountIdOptions {
   /**
    * Custom query options
    */
-  queryOptions?: Omit<UseQueryOptions<CradleWallet>, 'queryKey' | 'queryFn'>
+  queryOptions?: Omit<UseQueryOptions<CradleWallet | null>, 'queryKey' | 'queryFn'>
 }
 
 /**
@@ -90,6 +90,17 @@ export function useWalletByAccountId({
     queryFn: () => fetchWalletByAccountId(accountId),
     enabled: enabled && !!accountId,
     ...userDataQueryOptions,
+    retry: (failureCount, error) => {
+      // Don't retry on 404 errors (wallet not found)
+      if (
+        error instanceof Error &&
+        (error.message.includes('404') || error.message.includes('not found'))
+      ) {
+        return false
+      }
+      // Retry other errors up to 3 times
+      return failureCount < 3
+    },
     ...queryOptions,
   })
 }

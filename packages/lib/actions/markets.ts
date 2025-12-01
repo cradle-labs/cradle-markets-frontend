@@ -10,12 +10,11 @@
 import { revalidatePath } from 'next/cache'
 import { getCradleClient } from '../cradle-client-ts/client'
 import { executeCradleOperation } from '../cradle-client-ts/services/api.service'
-import { MutationResponseHelpers } from '../cradle-client-ts/cradle-api-client'
+import type { Market, MarketStatus, MarketType, MarketRegulation } from '../cradle-client-ts/types'
 import type {
-  Market,
-  MarketFilters,
-  CreateMarketInput,
-  UpdateMarketStatusInput,
+  ActionRouterInput,
+  ActionRouterOutput,
+  UUID,
 } from '../cradle-client-ts/cradle-api-client'
 
 // =============================================================================
@@ -33,9 +32,9 @@ export async function getMarket(id: string): Promise<Market> {
 /**
  * Get all markets with optional filters
  */
-export async function getMarkets(filters?: MarketFilters): Promise<Market[]> {
+export async function getMarkets(): Promise<Market[]> {
   const client = getCradleClient()
-  return executeCradleOperation(() => client.getMarkets(filters))
+  return executeCradleOperation(() => client.listMarkets())
 }
 
 // =============================================================================
@@ -48,14 +47,37 @@ export async function getMarkets(filters?: MarketFilters): Promise<Market[]> {
  * @param input - Market creation input
  * @returns The created market ID
  */
-export async function createMarket(input: CreateMarketInput): Promise<{
+export async function createMarket(input: {
+  name: string
+  description?: string | null
+  icon?: string | null
+  asset_one: string
+  asset_two: string
+  market_type?: MarketType
+  market_status?: MarketStatus
+  market_regulation?: MarketRegulation
+}): Promise<{
   success: boolean
   marketId?: string
   error?: string
 }> {
   try {
     const client = getCradleClient()
-    const response = await client.createMarket(input)
+    const action: ActionRouterInput = {
+      Markets: {
+        CreateMarket: {
+          name: input.name,
+          description: input.description,
+          icon: input.icon,
+          asset_one: input.asset_one as UUID,
+          asset_two: input.asset_two as UUID,
+          market_type: input.market_type,
+          market_status: input.market_status,
+          market_regulation: input.market_regulation,
+        },
+      },
+    }
+    const response = await client.process(action)
 
     if (!response.success || !response.data) {
       return {
@@ -64,22 +86,23 @@ export async function createMarket(input: CreateMarketInput): Promise<{
       }
     }
 
-    if (!MutationResponseHelpers.isCreateMarket(response.data)) {
+    const output = response.data as ActionRouterOutput
+    if ('Markets' in output && 'CreateMarket' in output.Markets) {
+      const marketId = output.Markets.CreateMarket
+
+      // Revalidate market pages
+      revalidatePath('/trade')
+      revalidatePath('/perps')
+
       return {
-        success: false,
-        error: 'Unexpected response format from API',
+        success: true,
+        marketId,
       }
     }
 
-    const marketId = response.data.Markets.CreateMarket
-
-    // Revalidate market pages
-    revalidatePath('/trade')
-    revalidatePath('/perps')
-
     return {
-      success: true,
-      marketId,
+      success: false,
+      error: 'Unexpected response format from API',
     }
   } catch (error) {
     console.error('Error creating market:', error)
@@ -96,13 +119,24 @@ export async function createMarket(input: CreateMarketInput): Promise<{
  * @param input - Market status update input
  * @returns Success status
  */
-export async function updateMarketStatus(input: UpdateMarketStatusInput): Promise<{
+export async function updateMarketStatus(input: {
+  market_id: string
+  status: MarketStatus
+}): Promise<{
   success: boolean
   error?: string
 }> {
   try {
     const client = getCradleClient()
-    const response = await client.updateMarketStatus(input)
+    const action: ActionRouterInput = {
+      Markets: {
+        UpdateMarketStatus: {
+          market_id: input.market_id as UUID,
+          status: input.status,
+        },
+      },
+    }
+    const response = await client.process(action)
 
     if (!response.success) {
       return {

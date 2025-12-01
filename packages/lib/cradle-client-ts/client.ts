@@ -1,7 +1,7 @@
 /**
  * Global Cradle API Client Instance
  *
- * This file provides a singleton instance of the CradleApiClient
+ * This file provides a singleton instance of the CradleClient
  * configured with environment variables for server-side use.
  *
  * @example Server Action
@@ -17,20 +17,21 @@
  * ```
  */
 
-import { CradleApiClient, CradleApiConfig } from './cradle-api-client'
+import { CradleClient, type CradleClientOptions } from './cradle-api-client'
+import type { CradleApiConfig } from './types'
 
-let clientInstance: CradleApiClient | null = null
+let clientInstance: CradleClient | null = null
 
 /**
  * Get the global Cradle API client instance
  *
- * This function creates a singleton instance of the CradleApiClient
+ * This function creates a singleton instance of the CradleClient
  * configured with server-side environment variables.
  *
  * @throws {Error} If required environment variables are missing
- * @returns {CradleApiClient} The configured API client instance
+ * @returns {CradleClient} The configured API client instance
  */
-export function getCradleClient(): CradleApiClient {
+export function getCradleClient(): CradleClient {
   if (clientInstance) {
     return clientInstance
   }
@@ -52,13 +53,13 @@ export function getCradleClient(): CradleApiClient {
     )
   }
 
-  const config: CradleApiConfig = {
+  const config: CradleClientOptions = {
     baseUrl,
     apiKey,
-    timeout: parseInt('180000', 10), // 3 minutes timeout for order placement
+    timeoutMs: parseInt('180000', 10), // 3 minutes timeout for order placement
   }
 
-  clientInstance = new CradleApiClient(config)
+  clientInstance = new CradleClient(config)
   return clientInstance
 }
 
@@ -74,9 +75,15 @@ export function resetCradleClient(): void {
  *
  * Use this when you need a client with different settings than the global instance.
  *
- * @param config - Custom client configuration
- * @returns {CradleApiClient} A new API client instance
+ * @param config - Custom client configuration (CradleApiConfig for backward compatibility)
+ * @returns {CradleClient} A new API client instance
  */
-export function createCradleClient(config: CradleApiConfig): CradleApiClient {
-  return new CradleApiClient(config)
+export function createCradleClient(config: CradleApiConfig | CradleClientOptions): CradleClient {
+  const clientOptions: CradleClientOptions = {
+    baseUrl: config.baseUrl,
+    apiKey: config.apiKey,
+    timeoutMs:
+      'timeoutMs' in config ? config.timeoutMs : 'timeout' in config ? config.timeout : undefined,
+  }
+  return new CradleClient(clientOptions)
 }

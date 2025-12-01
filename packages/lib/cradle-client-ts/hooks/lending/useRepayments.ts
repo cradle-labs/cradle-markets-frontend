@@ -8,23 +8,12 @@
 
 import { useQuery, type UseQueryOptions } from '@tanstack/react-query'
 import { cradleQueryKeys } from '../../queryKeys'
-import { fetchAllRepayments, fetchRepaymentsByLoan } from '../../services/fetchers'
-import { standardQueryOptions, userDataQueryOptions } from '../../utils/query-options'
-import type { LoanRepayment } from '../../cradle-api-client'
+import { fetchLoanRepayments, fetchRepaymentAmount } from '../../services/fetchers'
+import { userDataQueryOptions } from '../../utils/query-options'
+import type { LoanRepayment } from '../../types'
+import type { RepaymentAmount } from '../../cradle-api-client'
 
-export interface UseAllRepaymentsOptions {
-  /**
-   * Whether the query is enabled
-   * @default true
-   */
-  enabled?: boolean
-  /**
-   * Custom query options
-   */
-  queryOptions?: Omit<UseQueryOptions<LoanRepayment[]>, 'queryKey' | 'queryFn'>
-}
-
-export interface UseRepaymentsByLoanOptions {
+export interface UseLoanRepaymentsOptions {
   /**
    * Loan ID to fetch repayments for
    */
@@ -41,41 +30,12 @@ export interface UseRepaymentsByLoanOptions {
 }
 
 /**
- * Hook to fetch all loan repayments
- *
- * @example
- * ```tsx
- * function AllRepayments() {
- *   const { data: repayments, isLoading } = useAllRepayments()
- *
- *   if (isLoading) return <Spinner />
- *   return (
- *     <div>
- *       {repayments?.map(repayment => (
- *         <RepaymentCard key={repayment.id} repayment={repayment} />
- *       ))}
- *     </div>
- *   )
- * }
- * ```
- */
-export function useAllRepayments({ enabled = true, queryOptions }: UseAllRepaymentsOptions = {}) {
-  return useQuery({
-    queryKey: cradleQueryKeys.repayments.listAll(),
-    queryFn: () => fetchAllRepayments(),
-    enabled,
-    ...standardQueryOptions,
-    ...queryOptions,
-  })
-}
-
-/**
  * Hook to fetch repayments for a specific loan
  *
  * @example
  * ```tsx
  * function LoanRepayments({ loanId }: { loanId: string }) {
- *   const { data: repayments } = useRepaymentsByLoan({ loanId })
+ *   const { data: repayments } = useLoanRepayments({ loanId })
  *
  *   return (
  *     <div>
@@ -91,14 +51,47 @@ export function useAllRepayments({ enabled = true, queryOptions }: UseAllRepayme
  * }
  * ```
  */
-export function useRepaymentsByLoan({
+export function useLoanRepayments({
   loanId,
   enabled = true,
   queryOptions,
-}: UseRepaymentsByLoanOptions) {
+}: UseLoanRepaymentsOptions) {
   return useQuery({
     queryKey: cradleQueryKeys.repayments.listByLoan(loanId),
-    queryFn: () => fetchRepaymentsByLoan(loanId),
+    queryFn: () => fetchLoanRepayments(loanId),
+    enabled: enabled && !!loanId,
+    ...userDataQueryOptions,
+    ...queryOptions,
+  })
+}
+
+export interface UseRepaymentAmountOptions {
+  /**
+   * Loan ID to fetch repayment amount for
+   */
+  loanId: string
+  /**
+   * Whether the query is enabled
+   * @default true
+   */
+  enabled?: boolean
+  /**
+   * Custom query options
+   */
+  queryOptions?: Omit<UseQueryOptions<RepaymentAmount>, 'queryKey' | 'queryFn'>
+}
+
+/**
+ * Hook to fetch repayment amount for a loan
+ */
+export function useRepaymentAmount({
+  loanId,
+  enabled = true,
+  queryOptions,
+}: UseRepaymentAmountOptions) {
+  return useQuery({
+    queryKey: [...cradleQueryKeys.loans.byId(loanId), 'repayment-amount'],
+    queryFn: () => fetchRepaymentAmount(loanId),
     enabled: enabled && !!loanId,
     ...userDataQueryOptions,
     ...queryOptions,

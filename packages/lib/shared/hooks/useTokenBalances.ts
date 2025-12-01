@@ -4,8 +4,8 @@
 
 'use client'
 
+import { Asset } from '@repo/lib/cradle-client-ts/types'
 import { useQueries } from '@tanstack/react-query'
-import type { Asset } from '@repo/lib/cradle-client-ts/cradle-api-client'
 
 interface UseTokenBalancesParams {
   walletContractId: string | undefined // Hedera contract ID (e.g., "0.0.7163140")

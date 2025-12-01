@@ -23,10 +23,12 @@ import { useWalletByAccountId } from '@repo/lib/cradle-client-ts/hooks/accounts/
 import { useAsset } from '@repo/lib/cradle-client-ts/hooks/assets/useAsset'
 import {
   useLendingPool,
-  usePoolSnapshot,
+  usePoolStats,
 } from '@repo/lib/cradle-client-ts/hooks/lending/useLendingPool'
-import { useLendingTransactions } from '@repo/lib/cradle-client-ts/hooks/lending/useLendingTransactions'
-import { useLoansByPool } from '@repo/lib/cradle-client-ts/hooks/lending/useLoans'
+import { useQuery } from '@tanstack/react-query'
+import { cradleQueryKeys } from '@repo/lib/cradle-client-ts/queryKeys'
+import type { Loan } from '@repo/lib/cradle-client-ts/types'
+import type { PoolTransactionType } from '@repo/lib/cradle-client-ts/types'
 import {
   PoolMetricsGrid,
   PoolConfigurationCard,
@@ -60,8 +62,8 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
   const { data: pool, isLoading: isLoadingPool } = useLendingPool({ poolId })
   console.log('pool', pool)
 
-  // Fetch pool snapshot (metrics)
-  const { data: snapshot, isLoading: isLoadingSnapshot } = usePoolSnapshot({
+  // Fetch pool stats (metrics)
+  const { data: snapshot, isLoading: isLoadingSnapshot } = usePoolStats({
     poolId,
     enabled: !!pool,
   })
@@ -73,15 +75,30 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
     enabled: !!pool?.reserve_asset,
   })
 
-  // Fetch transactions and loans
-  const { data: transactions = [], refetch: refetchTransactions } = useLendingTransactions({
-    poolId,
+  // Fetch transactions (stubbed for now - hook doesn't exist)
+  interface LendingTransaction {
+    id: string
+    transaction_type: PoolTransactionType
+    amount: number
+    created_at: string
+  }
+  const { data: transactions = [], refetch: refetchTransactions } = useQuery<LendingTransaction[]>({
+    queryKey: cradleQueryKeys.lendingPools.transactions(poolId),
+    queryFn: async () => {
+      // TODO: Implement when getLendingTransactions action is available
+      return []
+    },
     enabled: !!pool,
   })
   console.log('transactions', transactions)
 
-  const { data: loans = [] } = useLoansByPool({
-    poolId,
+  // Fetch loans by pool (stubbed for now - hook doesn't exist)
+  const { data: loans = [] } = useQuery<Loan[]>({
+    queryKey: cradleQueryKeys.loans.listByPool(poolId),
+    queryFn: async () => {
+      // TODO: Implement when getLoansByPool action is available
+      return []
+    },
     enabled: !!pool,
   })
   console.log('loans', loans)
@@ -91,19 +108,36 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
     if (!pool) return null
 
     // Convert token amounts from decimals (8 decimals) to normalized form
-    const totalSupplied = snapshot?.total_supply
-      ? fromTokenDecimals(parseFloat(snapshot.total_supply))
-      : 0
-    const totalBorrowed = snapshot?.total_borrow
-      ? fromTokenDecimals(parseFloat(snapshot.total_borrow))
-      : 0
+    // GetPoolStatsOutput is Record<string, unknown>, so we need to safely access properties
+    const totalSupplied =
+      snapshot && typeof snapshot.total_supply === 'string'
+        ? fromTokenDecimals(parseFloat(snapshot.total_supply))
+        : 0
+    const totalBorrowed =
+      snapshot && typeof snapshot.total_borrow === 'string'
+        ? fromTokenDecimals(parseFloat(snapshot.total_borrow))
+        : 0
     // Convert utilization, supply APY, and borrow APY from basis points to decimal
-    const utilization = snapshot?.utilization_rate ? fromBasisPoints(snapshot.utilization_rate) : 0
-    const supplyAPY = snapshot?.supply_apy ? fromBasisPoints(snapshot.supply_apy) : 0
-    const borrowAPY = snapshot?.borrow_apy ? fromBasisPoints(snapshot.borrow_apy) : 0
-    const availableLiquidity = snapshot?.available_liquidity
-      ? fromTokenDecimals(parseFloat(snapshot.available_liquidity))
-      : totalSupplied - totalBorrowed
+    const utilization =
+      snapshot &&
+      (typeof snapshot.utilization_rate === 'string' ||
+        typeof snapshot.utilization_rate === 'number')
+        ? fromBasisPoints(snapshot.utilization_rate)
+        : 0
+    const supplyAPY =
+      snapshot &&
+      (typeof snapshot.supply_apy === 'string' || typeof snapshot.supply_apy === 'number')
+        ? fromBasisPoints(snapshot.supply_apy)
+        : 0
+    const borrowAPY =
+      snapshot &&
+      (typeof snapshot.borrow_apy === 'string' || typeof snapshot.borrow_apy === 'number')
+        ? fromBasisPoints(snapshot.borrow_apy)
+        : 0
+    const availableLiquidity =
+      snapshot && typeof snapshot.available_liquidity === 'string'
+        ? fromTokenDecimals(parseFloat(snapshot.available_liquidity))
+        : totalSupplied - totalBorrowed
 
     return {
       ...pool,
@@ -232,7 +266,7 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
                         }
                         h="full"
                         objectFit="contain"
-                        src={poolData.asset.icon}
+                        src={poolData.asset.icon ?? undefined}
                         w="full"
                       />
                     ) : (
@@ -281,7 +315,7 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
       >
         {/* Key Metrics Grid */}
         <PoolMetricsGrid
-          activeLoansCount={poolData.loans.filter(l => l.status === 'active').length}
+          activeLoansCount={poolData.loans.filter((l: Loan) => l.status === 'active').length}
           availableLiquidity={poolData.availableLiquidity}
           borrowAPY={poolData.borrowAPY}
           supplyAPY={poolData.supplyAPY}

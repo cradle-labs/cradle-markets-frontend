@@ -14,8 +14,8 @@ import {
   VStack,
 } from '@chakra-ui/react'
 import { NoisyCard } from '@repo/lib/shared/components/containers/NoisyCard'
-import type { Asset } from '@repo/lib/cradle-client-ts/cradle-api-client'
-import { useTokenBalances } from '@repo/lib/shared/hooks/useTokenBalances'
+import { Asset } from '@repo/lib/cradle-client-ts/types'
+import { fNum } from '@repo/lib/shared/utils/numbers'
 
 // Types for asset balances
 interface AssetBalance {
@@ -30,9 +30,10 @@ interface AssetBalance {
 }
 
 interface PortfolioSummaryProps {
-  walletContractId: string | undefined // Hedera contract ID (e.g., "0.0.7163140")
   assets: Asset[] | undefined
   isLoadingAssets: boolean
+  balances?: Array<{ token: string; balance: string }> | undefined
+  isLoadingBalances?: boolean
 }
 
 interface AssetCardProps {
@@ -133,59 +134,120 @@ function AssetCard({ asset }: AssetCardProps) {
   )
 }
 
-const PortfolioSummary = ({ walletContractId, assets, isLoadingAssets }: PortfolioSummaryProps) => {
-  // Fetch balances for all assets
-  const { balances } = useTokenBalances({
-    walletContractId,
-    assets,
-    enabled: !!walletContractId && !!assets && assets.length > 0,
-  })
+const PortfolioSummary = ({
+  assets,
+  isLoadingAssets,
+  balances: apiBalances,
+  isLoadingBalances,
+}: PortfolioSummaryProps) => {
+  // Note: Now using useAssetBalances from Portfolio component instead of Hedera fallback
+
+  // Create a map of token -> balance from API balances
+  const balanceMap = React.useMemo(() => {
+    if (!apiBalances) return new Map<string, string>()
+    const map = new Map<string, string>()
+    apiBalances.forEach(({ token, balance }) => {
+      map.set(token, balance)
+    })
+    return map
+  }, [apiBalances])
 
   // Group assets by type
   const nativeAssets = assets?.filter(asset => asset.asset_type === 'native') || []
-  // Handle both yield_bearing and yield_breaking types (API inconsistency)
-  const yieldAssets =
-    assets?.filter(
-      asset =>
-        asset.asset_type === 'yield_breaking' || (asset.asset_type as string).includes('yield')
-    ) || []
+  // Filter for yield_bearing assets
+  const yieldAssets = assets?.filter(asset => asset.asset_type === 'yield_bearing') || []
   const bridgedAssets = assets?.filter(asset => asset.asset_type === 'bridged') || []
+  const stableAssets = assets?.filter(asset => asset.asset_type === 'stablecoin') || []
 
   // Combine bridged assets with native assets for display
   const tokenizedAssets = [...bridgedAssets, ...nativeAssets]
 
+  // Helper function to format balance from Big number string with commas
+  const formatBalance = (balance: string, decimals: number): string => {
+    try {
+      const balanceBigInt = BigInt(balance)
+      const divisor = BigInt(10 ** decimals)
+      const wholePart = balanceBigInt / divisor
+      const fractionalPart = balanceBigInt % divisor
+
+      let rawValue: string
+      if (fractionalPart === BigInt(0)) {
+        rawValue = wholePart.toString()
+      } else {
+        const fractionalStr = fractionalPart.toString().padStart(decimals, '0')
+        const trimmedFractional = fractionalStr.replace(/0+$/, '')
+        rawValue = `${wholePart}.${trimmedFractional}`
+      }
+
+      // Use the existing number formatting utility for comma separation
+      return fNum('token', rawValue, { abbreviated: false })
+    } catch {
+      return '0'
+    }
+  }
+
   // Map assets to AssetBalance format
   const mapToAssetBalance = (asset: Asset): AssetBalance => {
-    const balance = balances[asset.id]
+    // Get balance from API balances (by token ID)
+    const apiBalance = asset.token ? balanceMap.get(asset.token) : undefined
+
+    // Use API balance or default to '0'
+    const balance = apiBalance || '0'
+    const formatted = apiBalance ? formatBalance(apiBalance, asset.decimals) : '0'
+    const isLoading = isLoadingBalances || false
+
     return {
       id: asset.id,
       name: asset.name,
       symbol: asset.symbol,
       icon: asset.icon || '',
-      balance: balance?.balance || '0',
-      formatted: balance?.formatted || '0',
-      isLoading: balance?.isLoading || false,
+      balance,
+      formatted,
+      isLoading,
       value: 0, // TODO: Add price data to calculate USD value
     }
   }
 
+  // Only show assets with confirmed non-zero balances (no loading assets)
+  const stableAssetBalances = stableAssets.map(mapToAssetBalance).filter(asset => {
+    // Only show assets that are not loading and have non-zero balance
+    if (asset.isLoading) return false
+    return BigInt(asset.balance || '0') > BigInt(0)
+  })
+
   const tokenizedAssetBalances = tokenizedAssets.map(mapToAssetBalance).filter(asset => {
-    // Only show assets with non-zero balance
-    // Don't filter while loading so user sees the loading state
-    if (asset.isLoading) return true
-    // Check raw balance for more accurate comparison with 8 decimal places
-    // balance is stored as string representation of the smallest unit (e.g., "10000000" for 0.1 tokens with 8 decimals)
+    // Only show assets that are not loading and have non-zero balance
+    if (asset.isLoading) return false
     return BigInt(asset.balance || '0') > BigInt(0)
   })
 
   const yieldAssetBalances = yieldAssets.map(mapToAssetBalance).filter(asset => {
-    // Only show assets with non-zero balance
-    // Don't filter while loading so user sees the loading state
-    if (asset.isLoading) return true
-    // Check raw balance for more accurate comparison with 8 decimal places
-    // balance is stored as string representation of the smallest unit (e.g., "10000000" for 0.1 tokens with 8 decimals)
+    // Only show assets that are not loading and have non-zero balance
+    if (asset.isLoading) return false
     return BigInt(asset.balance || '0') > BigInt(0)
   })
+
+  // Determine if we should show loading skeletons
+  const isLoadingStableAssets =
+    isLoadingBalances ||
+    stableAssets.some(asset => {
+      const mappedAsset = mapToAssetBalance(asset)
+      return mappedAsset.isLoading
+    })
+
+  const isLoadingTokenizedAssets =
+    isLoadingBalances ||
+    tokenizedAssets.some(asset => {
+      const mappedAsset = mapToAssetBalance(asset)
+      return mappedAsset.isLoading
+    })
+
+  const isLoadingYieldAssets =
+    isLoadingBalances ||
+    yieldAssets.some(asset => {
+      const mappedAsset = mapToAssetBalance(asset)
+      return mappedAsset.isLoading
+    })
 
   // Show loading state
   if (isLoadingAssets) {
@@ -240,7 +302,7 @@ const PortfolioSummary = ({ walletContractId, assets, isLoadingAssets }: Portfol
 
       {/* Two-column layout */}
       <Grid gap={6} templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} w="full">
-        {/* Tokenized Assets Column */}
+        {/* Stable & Tokenized Assets Column */}
         <NoisyCard
           cardProps={{
             borderRadius: 'lg',
@@ -253,21 +315,51 @@ const PortfolioSummary = ({ walletContractId, assets, isLoadingAssets }: Portfol
             shadow: 'innerXl',
           }}
         >
-          <VStack align="start" spacing={4}>
-            <Text color="font.secondary" fontSize="sm" fontWeight="medium">
-              Tokenized Assets
-            </Text>
-            {tokenizedAssetBalances.length > 0 ? (
-              <VStack spacing={3} w="full">
-                {tokenizedAssetBalances.map(asset => (
-                  <AssetCard asset={asset} key={asset.id} />
-                ))}
-              </VStack>
-            ) : (
-              <Text color="font.secondary" fontSize="xs">
-                No tokenized assets
+          <VStack align="start" spacing={6} w="full">
+            {/* Stable Assets Section */}
+            <VStack align="start" spacing={4} w="full">
+              <Text color="font.secondary" fontSize="sm" fontWeight="medium">
+                Stable Assets
               </Text>
-            )}
+              {isLoadingStableAssets ? (
+                <VStack spacing={3} w="full">
+                  <Skeleton borderRadius="lg" h="60px" w="full" />
+                </VStack>
+              ) : stableAssetBalances.length > 0 ? (
+                <VStack spacing={3} w="full">
+                  {stableAssetBalances.map(asset => (
+                    <AssetCard asset={asset} key={asset.id} />
+                  ))}
+                </VStack>
+              ) : (
+                <Text color="font.secondary" fontSize="xs">
+                  No stable assets
+                </Text>
+              )}
+            </VStack>
+
+            {/* Tokenized Assets Section */}
+            <VStack align="start" spacing={4} w="full">
+              <Text color="font.secondary" fontSize="sm" fontWeight="medium">
+                Tokenized Assets
+              </Text>
+              {isLoadingTokenizedAssets ? (
+                <VStack spacing={3} w="full">
+                  <Skeleton borderRadius="lg" h="60px" w="full" />
+                  <Skeleton borderRadius="lg" h="60px" w="full" />
+                </VStack>
+              ) : tokenizedAssetBalances.length > 0 ? (
+                <VStack spacing={3} w="full">
+                  {tokenizedAssetBalances.map(asset => (
+                    <AssetCard asset={asset} key={asset.id} />
+                  ))}
+                </VStack>
+              ) : (
+                <Text color="font.secondary" fontSize="xs">
+                  No tokenized assets
+                </Text>
+              )}
+            </VStack>
           </VStack>
         </NoisyCard>
 
@@ -288,7 +380,13 @@ const PortfolioSummary = ({ walletContractId, assets, isLoadingAssets }: Portfol
             <Text color="font.secondary" fontSize="sm" fontWeight="medium">
               Yield Assets
             </Text>
-            {yieldAssetBalances.length > 0 ? (
+            {isLoadingYieldAssets ? (
+              <VStack spacing={3} w="full">
+                <Skeleton borderRadius="lg" h="60px" w="full" />
+                <Skeleton borderRadius="lg" h="60px" w="full" />
+                <Skeleton borderRadius="lg" h="60px" w="full" />
+              </VStack>
+            ) : yieldAssetBalances.length > 0 ? (
               <VStack spacing={3} w="full">
                 {yieldAssetBalances.map(asset => (
                   <AssetCard asset={asset} key={asset.id} />

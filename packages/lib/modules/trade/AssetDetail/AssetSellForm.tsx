@@ -18,9 +18,21 @@ import {
   formatTo8Decimals,
   formatToWholeNumber,
 } from '@repo/lib/shared/utils/numbers'
-import type { PlaceOrderInput, FillMode } from '@repo/lib/cradle-client-ts/cradle-api-client'
+import type { FillMode } from '@repo/lib/cradle-client-ts/cradle-api-client'
 
 type OrderType = 'market' | 'limit'
+
+interface PlaceOrderInput {
+  wallet: string
+  market_id: string
+  bid_asset: string
+  ask_asset: string
+  bid_amount: string
+  ask_amount: string
+  price: string
+  mode: FillMode
+  order_type: OrderType
+}
 
 export function AssetSellForm() {
   const { user } = useUser()

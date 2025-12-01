@@ -10,23 +10,16 @@
 import { revalidatePath } from 'next/cache'
 import { getCradleClient } from '../cradle-client-ts/client'
 import { executeCradleOperation } from '../cradle-client-ts/services/api.service'
-import { MutationResponseHelpers } from '../cradle-client-ts/cradle-api-client'
+import type { LendingPool, Loan, LoanRepayment } from '../cradle-client-ts/types'
 import type {
-  LendingPool,
-  LendingPoolSnapshot,
-  LendingTransaction,
-  Loan,
-  LoanRepayment,
-  LoanLiquidation,
-  InterestRates,
-  CollateralInfo,
-  PoolStatistics,
-  UserPositions,
-  LoanStatus,
-  CreateLendingPoolInput,
-  SupplyLiquidityInput,
-  BorrowAssetInput,
-  RepayBorrowInput,
+  ActionRouterInput,
+  ActionRouterOutput,
+  UUID,
+  Big,
+  GetPoolStatsOutput,
+  GetUserBorrowPositionOutput,
+  GetUserDepositPositonOutput,
+  RepaymentAmount,
 } from '../cradle-client-ts/cradle-api-client'
 
 // =============================================================================
@@ -38,7 +31,7 @@ import type {
  */
 export async function getLendingPool(id: string): Promise<LendingPool> {
   const client = getCradleClient()
-  return executeCradleOperation(() => client.getLendingPool(id))
+  return executeCradleOperation(() => client.getPool(id))
 }
 
 /**
@@ -46,33 +39,7 @@ export async function getLendingPool(id: string): Promise<LendingPool> {
  */
 export async function getLendingPools(): Promise<LendingPool[]> {
   const client = getCradleClient()
-  return executeCradleOperation(() => client.getLendingPools())
-}
-
-/**
- * Get lending transactions for a specific pool
- */
-export async function getLendingTransactions(poolId: string): Promise<LendingTransaction[]> {
-  const client = getCradleClient()
-  return executeCradleOperation(() => client.getLendingTransactions(poolId))
-}
-
-/**
- * Get lending transactions for a specific wallet
- */
-export async function getLendingTransactionsByWallet(
-  walletId: string
-): Promise<LendingTransaction[]> {
-  const client = getCradleClient()
-  return executeCradleOperation(() => client.getLendingTransactionsByWallet(walletId))
-}
-
-/**
- * Get loans for a specific pool
- */
-export async function getLoans(poolId: string): Promise<Loan[]> {
-  const client = getCradleClient()
-  return executeCradleOperation(() => client.getLoans(poolId))
+  return executeCradleOperation(() => client.listPools())
 }
 
 /**
@@ -80,127 +47,50 @@ export async function getLoans(poolId: string): Promise<Loan[]> {
  */
 export async function getLoansByWallet(walletId: string): Promise<Loan[]> {
   const client = getCradleClient()
-  return executeCradleOperation(() => client.getLoansByWallet(walletId))
+  return executeCradleOperation(() => client.getLoans(walletId))
 }
 
 /**
- * Get a specific loan by UUID
+ * Get pool statistics
  */
-export async function getLoan(id: string): Promise<Loan> {
+export async function getPoolStats(poolId: string): Promise<GetPoolStatsOutput> {
   const client = getCradleClient()
-  return executeCradleOperation(() => client.getLoan(id))
+  return executeCradleOperation(() => client.getPoolStats(poolId))
 }
 
 /**
- * Get lending pool by name
+ * Get loan position
  */
-export async function getLendingPoolByName(name: string): Promise<LendingPool> {
+export async function getLoanPosition(loanId: string): Promise<GetUserBorrowPositionOutput> {
   const client = getCradleClient()
-  return executeCradleOperation(() => client.getLendingPoolByName(name))
+  return executeCradleOperation(() => client.getLoanPosition(loanId))
 }
 
 /**
- * Get lending pool by contract address
+ * Get deposit position
  */
-export async function getLendingPoolByAddress(address: string): Promise<LendingPool> {
+export async function getDepositPosition(
+  poolId: string,
+  walletId: string
+): Promise<GetUserDepositPositonOutput> {
   const client = getCradleClient()
-  return executeCradleOperation(() => client.getLendingPoolByAddress(address))
+  return executeCradleOperation(() => client.getDepositPosition(poolId, walletId))
 }
 
 /**
- * Get the latest snapshot (metrics) for a lending pool
+ * Get loan repayments
  */
-export async function getPoolSnapshot(poolId: string): Promise<LendingPoolSnapshot> {
+export async function getLoanRepayments(loanId: string): Promise<LoanRepayment[]> {
   const client = getCradleClient()
-  return executeCradleOperation(() => client.getPoolSnapshot(poolId))
+  return executeCradleOperation(() => client.getLoanRepayments(loanId))
 }
 
 /**
- * Get all loans
+ * Get repayment amount
  */
-export async function getAllLoans(): Promise<Loan[]> {
+export async function getRepaymentAmount(loanId: string): Promise<RepaymentAmount> {
   const client = getCradleClient()
-  return executeCradleOperation(() => client.getAllLoans())
-}
-
-/**
- * Get loans by pool ID
- */
-export async function getLoansByPool(poolId: string): Promise<Loan[]> {
-  const client = getCradleClient()
-  return executeCradleOperation(() => client.getLoansByPool(poolId))
-}
-
-/**
- * Get loans by status (active, repaid, or liquidated)
- */
-export async function getLoansByStatus(status: LoanStatus): Promise<Loan[]> {
-  const client = getCradleClient()
-  return executeCradleOperation(() => client.getLoansByStatus(status))
-}
-
-/**
- * Get all loan repayments
- */
-export async function getAllRepayments(): Promise<LoanRepayment[]> {
-  const client = getCradleClient()
-  return executeCradleOperation(() => client.getAllRepayments())
-}
-
-/**
- * Get repayments for a specific loan
- */
-export async function getRepaymentsByLoan(loanId: string): Promise<LoanRepayment[]> {
-  const client = getCradleClient()
-  return executeCradleOperation(() => client.getRepaymentsByLoan(loanId))
-}
-
-/**
- * Get all loan liquidations
- */
-export async function getAllLiquidations(): Promise<LoanLiquidation[]> {
-  const client = getCradleClient()
-  return executeCradleOperation(() => client.getAllLiquidations())
-}
-
-/**
- * Get liquidations for a specific loan
- */
-export async function getLiquidationsByLoan(loanId: string): Promise<LoanLiquidation[]> {
-  const client = getCradleClient()
-  return executeCradleOperation(() => client.getLiquidationsByLoan(loanId))
-}
-
-/**
- * Get interest rate configuration for a lending pool
- */
-export async function getPoolInterestRates(poolId: string): Promise<InterestRates> {
-  const client = getCradleClient()
-  return executeCradleOperation(() => client.getPoolInterestRates(poolId))
-}
-
-/**
- * Get collateral configuration and risk parameters for a lending pool
- */
-export async function getPoolCollateralInfo(poolId: string): Promise<CollateralInfo> {
-  const client = getCradleClient()
-  return executeCradleOperation(() => client.getPoolCollateralInfo(poolId))
-}
-
-/**
- * Get comprehensive statistics and metrics for a lending pool
- */
-export async function getPoolStatistics(poolId: string): Promise<PoolStatistics> {
-  const client = getCradleClient()
-  return executeCradleOperation(() => client.getPoolStatistics(poolId))
-}
-
-/**
- * Get detailed borrow position and repayment history for a user in a specific pool
- */
-export async function getUserPositions(poolId: string, walletId: string): Promise<UserPositions> {
-  const client = getCradleClient()
-  return executeCradleOperation(() => client.getUserPositions(poolId, walletId))
+  return executeCradleOperation(() => client.getRepaymentAmount(loanId))
 }
 
 // =============================================================================
@@ -213,14 +103,55 @@ export async function getUserPositions(poolId: string, walletId: string): Promis
  * @param input - Lending pool creation input
  * @returns The created pool ID
  */
-export async function createLendingPool(input: CreateLendingPoolInput): Promise<{
+export async function createLendingPool(input: {
+  pool_address: string
+  pool_contract_id: string
+  reserve_asset: string
+  loan_to_value: string
+  base_rate: string
+  slope1: string
+  slope2: string
+  liquidation_threshold: string
+  liquidation_discount: string
+  reserve_factor: string
+  name?: string | null
+  title?: string | null
+  description?: string | null
+  yield_asset: string
+  treasury_wallet: string
+  reserve_wallet: string
+  pool_account_id: string
+}): Promise<{
   success: boolean
   poolId?: string
   error?: string
 }> {
   try {
     const client = getCradleClient()
-    const response = await client.createLendingPool(input)
+    const action: ActionRouterInput = {
+      Pool: {
+        CreateLendingPool: {
+          pool_address: input.pool_address,
+          pool_contract_id: input.pool_contract_id,
+          reserve_asset: input.reserve_asset as UUID,
+          loan_to_value: input.loan_to_value as Big,
+          base_rate: input.base_rate as Big,
+          slope1: input.slope1 as Big,
+          slope2: input.slope2 as Big,
+          liquidation_threshold: input.liquidation_threshold as Big,
+          liquidation_discount: input.liquidation_discount as Big,
+          reserve_factor: input.reserve_factor as Big,
+          name: input.name,
+          title: input.title,
+          description: input.description,
+          yield_asset: input.yield_asset as UUID,
+          treasury_wallet: input.treasury_wallet as UUID,
+          reserve_wallet: input.reserve_wallet as UUID,
+          pool_account_id: input.pool_account_id as UUID,
+        },
+      },
+    }
+    const response = await client.process(action)
 
     if (!response.success || !response.data) {
       return {
@@ -229,21 +160,22 @@ export async function createLendingPool(input: CreateLendingPoolInput): Promise<
       }
     }
 
-    if (!MutationResponseHelpers.isCreateLendingPool(response.data)) {
+    const output = response.data as ActionRouterOutput
+    if ('Pool' in output && 'CreateLendingPool' in output.Pool) {
+      const poolId = output.Pool.CreateLendingPool
+
+      // Revalidate lending pages
+      revalidatePath('/lend')
+
       return {
-        success: false,
-        error: 'Unexpected response format from API',
+        success: true,
+        poolId,
       }
     }
 
-    const poolId = response.data.Pool.CreateLendingPool
-
-    // Revalidate lending pages
-    revalidatePath('/lend')
-
     return {
-      success: true,
-      poolId,
+      success: false,
+      error: 'Unexpected response format from API',
     }
   } catch (error) {
     console.error('Error creating lending pool:', error)
@@ -260,14 +192,27 @@ export async function createLendingPool(input: CreateLendingPoolInput): Promise<
  * @param input - Supply liquidity input
  * @returns The transaction ID
  */
-export async function supplyLiquidity(input: SupplyLiquidityInput): Promise<{
+export async function supplyLiquidity(input: {
+  wallet: string
+  pool: string
+  amount: number
+}): Promise<{
   success: boolean
   transactionId?: string
   error?: string
 }> {
   try {
     const client = getCradleClient()
-    const response = await client.supplyLiquidity(input)
+    const action: ActionRouterInput = {
+      Pool: {
+        SupplyLiquidity: {
+          wallet: input.wallet as UUID,
+          pool: input.pool as UUID,
+          amount: input.amount,
+        },
+      },
+    }
+    const response = await client.process(action)
 
     if (!response.success || !response.data) {
       return {
@@ -276,23 +221,24 @@ export async function supplyLiquidity(input: SupplyLiquidityInput): Promise<{
       }
     }
 
-    if (!MutationResponseHelpers.isSupplyLiquidity(response.data)) {
+    const output = response.data as ActionRouterOutput
+    if ('Pool' in output && 'SupplyLiquidity' in output.Pool) {
+      const transactionId = output.Pool.SupplyLiquidity
+
+      // Revalidate lending pages
+      revalidatePath('/lend')
+      revalidatePath('/portfolio')
+      revalidatePath(`/pool/${input.pool}`)
+
       return {
-        success: false,
-        error: 'Unexpected response format from API',
+        success: true,
+        transactionId,
       }
     }
 
-    const transactionId = response.data.Pool.SupplyLiquidity
-
-    // Revalidate lending pages
-    revalidatePath('/lend')
-    revalidatePath('/portfolio')
-    revalidatePath(`/pool/${input.pool}`)
-
     return {
-      success: true,
-      transactionId,
+      success: false,
+      error: 'Unexpected response format from API',
     }
   } catch (error) {
     console.error('Error supplying liquidity:', error)
@@ -309,14 +255,29 @@ export async function supplyLiquidity(input: SupplyLiquidityInput): Promise<{
  * @param input - Borrow asset input
  * @returns The loan ID
  */
-export async function borrowAsset(input: BorrowAssetInput): Promise<{
+export async function borrowAsset(input: {
+  wallet: string
+  pool: string
+  amount: number
+  collateral: string
+}): Promise<{
   success: boolean
   loanId?: string
   error?: string
 }> {
   try {
     const client = getCradleClient()
-    const response = await client.borrowAsset(input)
+    const action: ActionRouterInput = {
+      Pool: {
+        BorrowAsset: {
+          wallet: input.wallet as UUID,
+          pool: input.pool as UUID,
+          amount: input.amount,
+          collateral: input.collateral as UUID,
+        },
+      },
+    }
+    const response = await client.process(action)
 
     if (!response.success || !response.data) {
       return {
@@ -325,23 +286,24 @@ export async function borrowAsset(input: BorrowAssetInput): Promise<{
       }
     }
 
-    if (!MutationResponseHelpers.isBorrowAsset(response.data)) {
+    const output = response.data as ActionRouterOutput
+    if ('Pool' in output && 'BorrowAsset' in output.Pool) {
+      const loanId = output.Pool.BorrowAsset
+
+      // Revalidate lending pages
+      revalidatePath('/lend')
+      revalidatePath('/portfolio')
+      revalidatePath(`/lend/${input.pool}`)
+
       return {
-        success: false,
-        error: 'Unexpected response format from API',
+        success: true,
+        loanId,
       }
     }
 
-    const loanId = response.data.Pool.BorrowAsset
-
-    // Revalidate lending pages
-    revalidatePath('/lend')
-    revalidatePath('/portfolio')
-    revalidatePath(`/lend/${input.pool}`)
-
     return {
-      success: true,
-      loanId,
+      success: false,
+      error: 'Unexpected response format from API',
     }
   } catch (error) {
     console.error('Error borrowing asset:', error)
@@ -358,13 +320,26 @@ export async function borrowAsset(input: BorrowAssetInput): Promise<{
  * @param input - Repay borrow input
  * @returns Success status
  */
-export async function repayBorrow(input: RepayBorrowInput): Promise<{
+export async function repayBorrow(input: {
+  wallet: string
+  loan: string
+  amount: number
+}): Promise<{
   success: boolean
   error?: string
 }> {
   try {
     const client = getCradleClient()
-    const response = await client.repayBorrow(input)
+    const action: ActionRouterInput = {
+      Pool: {
+        RepayBorrow: {
+          wallet: input.wallet as UUID,
+          loan: input.loan as UUID,
+          amount: input.amount,
+        },
+      },
+    }
+    const response = await client.process(action)
 
     if (!response.success) {
       return {

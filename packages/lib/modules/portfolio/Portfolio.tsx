@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import {
   Box,
   Heading,
@@ -19,6 +19,7 @@ import {
 import { useUser } from '@clerk/nextjs'
 import { useAccountByLinkedId } from '@repo/lib/cradle-client-ts/hooks/accounts/useAccountByLinkedId'
 import { useWalletByAccountId } from '@repo/lib/cradle-client-ts/hooks/accounts/useWallet'
+import { useAssetBalances } from '@repo/lib/cradle-client-ts/hooks/accounts/useAssetBalances'
 import { useAssets } from '@repo/lib/cradle-client-ts/hooks/assets/useAssets'
 import { useLendingPools } from '@repo/lib/cradle-client-ts/hooks/lending/useLendingPools'
 import { useLoansByWallet } from '@repo/lib/cradle-client-ts/hooks/lending/useLoans'
@@ -27,27 +28,76 @@ import { NoisyCard } from '@repo/lib/shared/components/containers/NoisyCard'
 import { fromTokenDecimals } from '@repo/lib/modules/lend'
 import PortfolioSummary from './PortfolioSummary'
 
+// Helper function to format numbers with commas for thousands
+const formatNumberWithCommas = (value: string | number): string => {
+  const num = typeof value === 'string' ? parseFloat(value) : value
+  if (isNaN(num)) return '0'
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 8,
+  }).format(num)
+}
+
 export default function Portfolio() {
   const { user } = useUser()
   const toast = useToast()
   const [copiedAddress, setCopiedAddress] = useState(false)
+  console.log('User in Portfolio:', user?.id)
 
   // First get the account ID using the Clerk user ID
   const { data: linkedAccount } = useAccountByLinkedId({
     enabled: !!user?.id,
     linkedAccountId: user?.id || '',
   })
+  console.log('Linked Account:', linkedAccount)
 
-  // Fetch wallet for the account
+  // Fetch wallet for the account using getWalletByAccount
   const { data: wallet, isLoading: isLoadingWallet } = useWalletByAccountId({
     accountId: linkedAccount?.id || '',
     enabled: !!linkedAccount?.id,
   })
+  console.log('Wallet ID:', wallet?.id)
 
   // Fetch all assets
   const { data: assets, isLoading: isLoadingAssets } = useAssets()
+  console.log('Assets:', assets)
 
-  console.log('Wallet ID:', wallet?.id)
+  // Fetch balances for all assets using the wallet
+  const assetBalances = useAssetBalances({
+    walletId: wallet?.id || '',
+    assetIds: assets?.map(asset => asset.id) || [],
+    enabled: !!wallet?.id && !!assets && assets.length > 0,
+  })
+
+  // Transform asset balances to the format expected by PortfolioSummary
+  const balances = assetBalances
+    .filter(balance => balance.data)
+    .map(balance => ({
+      token: assets?.find(asset => asset.id === balance.assetId)?.token || balance.assetId,
+      balance: balance.data?.balance.toString() || '0',
+    }))
+
+  const isLoadingBalances = assetBalances.some(balance => balance.isLoading)
+
+  console.log('Asset Balances:', assetBalances)
+  console.log('Transformed Balances:', balances)
+
+  // Console log assets the user actually has in their wallet (with non-zero balances)
+  const userWalletAssets = balances
+    .filter(balance => balance.balance !== '0')
+    .map(balance => {
+      const asset = assets?.find(a => a.token === balance.token || a.id === balance.token)
+      return {
+        symbol: asset?.symbol || 'Unknown',
+        name: asset?.name || 'Unknown Asset',
+        balance: balance.balance,
+        assetType: asset?.asset_type || 'unknown',
+        token: balance.token,
+        assetId: asset?.id,
+      }
+    })
+
+  console.log('🪙 User Wallet Assets (non-zero balances):', userWalletAssets)
 
   // Fetch loans for the wallet
   const {
@@ -59,6 +109,8 @@ export default function Portfolio() {
     enabled: !!wallet?.id,
   })
 
+  console.log('Loans:', loans)
+
   // Use empty array if no data or error
   const safeLoans = loans || []
 
@@ -67,42 +119,6 @@ export default function Portfolio() {
 
   // Fetch all lending pools for displaying loan details
   const { data: allPools = [] } = useLendingPools()
-
-  // Get unique pool IDs from active loans
-  const activePoolIds = useMemo(() => {
-    const poolIds = new Set<string>()
-    safeLoans.forEach(loan => {
-      if (loan.status === 'active') {
-        poolIds.add(loan.pool)
-      }
-    })
-    return Array.from(poolIds)
-  }, [safeLoans])
-
-  console.log('Active Pool IDs:', activePoolIds)
-
-  // Fetch transactions for each pool with active loans
-  useEffect(() => {
-    if (activePoolIds.length === 0) return
-
-    const fetchPoolTransactions = async () => {
-      // Import the action to fetch transactions
-      const { getLendingTransactions } = await import('@repo/lib/actions/lending')
-
-      // Fetch transactions for each pool
-      for (const poolId of activePoolIds) {
-        try {
-          const transactions = await getLendingTransactions(poolId)
-          console.log(`✅ Transactions for pool ${poolId}:`, transactions)
-          console.log(`   Total transactions: ${transactions.length}`)
-        } catch (error) {
-          console.error(`❌ Error fetching transactions for pool ${poolId}:`, error)
-        }
-      }
-    }
-
-    fetchPoolTransactions()
-  }, [activePoolIds])
 
   // Handle copy to clipboard
   const handleCopyAddress = async (address: string) => {
@@ -146,10 +162,23 @@ export default function Portfolio() {
           {isLoadingWallet ? (
             <Skeleton borderRadius="md" h="80px" w="full" />
           ) : wallet ? (
-            <Box bg="bg.muted" borderRadius="lg" p={4} shadow="xl" transition="all 0.2s" w="25%">
+            <Box
+              bg="bg.muted"
+              borderRadius="lg"
+              maxW="500px"
+              p={4}
+              shadow="xl"
+              transition="all 0.2s"
+              w={{ base: 'full', sm: '100%', md: '75%', lg: '50%', xl: '40%' }}
+            >
               <VStack align="start" gap={3}>
-                <HStack justify="space-between" w="full">
-                  <VStack align="start" gap={1} spacing={0}>
+                <HStack
+                  flexWrap={{ base: 'wrap', sm: 'nowrap' }}
+                  gap={{ base: 3, sm: 0 }}
+                  justify="space-between"
+                  w="full"
+                >
+                  <VStack align="start" flex="1" gap={1} minW="0" spacing={0}>
                     <Text
                       color="font.secondary"
                       fontSize="xs"
@@ -170,8 +199,10 @@ export default function Portfolio() {
                       <Text
                         color="font.primary"
                         fontFamily="mono"
-                        fontSize="sm"
+                        fontSize={{ base: 'xs', sm: 'sm' }}
                         fontWeight="medium"
+                        noOfLines={1}
+                        wordBreak="break-all"
                       >
                         {shortenAddress(wallet.address, 6, 6)}
                       </Text>
@@ -185,6 +216,7 @@ export default function Portfolio() {
                     <IconButton
                       aria-label="Copy wallet address"
                       colorScheme={copiedAddress ? 'green' : 'gray'}
+                      flexShrink={0}
                       icon={
                         <svg
                           fill="none"
@@ -237,9 +269,10 @@ export default function Portfolio() {
 
         {/* Asset Balances Section */}
         <PortfolioSummary
-          assets={assets}
+          assets={assets || []}
+          balances={balances}
           isLoadingAssets={isLoadingAssets}
-          walletContractId={wallet?.contract_id}
+          isLoadingBalances={isLoadingBalances}
         />
 
         {/* Active Loans Section */}
@@ -247,7 +280,7 @@ export default function Portfolio() {
           assets={assets || []}
           isLoading={isLoadingLoans}
           loans={safeLoans}
-          pools={allPools}
+          pools={allPools || []}
         />
       </VStack>
     </Stack>
@@ -266,15 +299,15 @@ interface ActiveLoansSectionProps {
   }>
   pools: Array<{
     id: string
-    name?: string
-    title?: string
+    name?: string | null
+    title?: string | null
     reserve_asset: string
   }>
   assets: Array<{
     id: string
     name: string
     symbol: string
-    icon?: string
+    icon?: string | null
   }>
   isLoading: boolean
 }
@@ -304,12 +337,9 @@ function ActiveLoansSection({ loans, pools, assets, isLoading }: ActiveLoansSect
   const formatCurrency = (amount: string) => {
     // Convert from token decimals (8 decimals) to normalized form
     const normalizedAmount = fromTokenDecimals(parseFloat(amount))
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(normalizedAmount)
+    // Use our custom formatter for better number formatting with commas
+    const formattedNumber = formatNumberWithCommas(normalizedAmount)
+    return `$${formattedNumber}`
   }
 
   const formatDate = (dateString: string) => {
@@ -402,7 +432,7 @@ function ActiveLoansSection({ loans, pools, assets, isLoading }: ActiveLoansSect
                       Pool
                     </Text>
                     <Text fontSize="sm" fontWeight="semibold">
-                      {pool?.title || pool?.name || 'Unknown Pool'}
+                      {pool?.title ?? pool?.name ?? 'Unknown Pool'}
                     </Text>
                   </VStack>
                   <Badge colorScheme="green" fontSize="xs">

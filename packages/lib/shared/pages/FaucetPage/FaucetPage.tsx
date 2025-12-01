@@ -34,8 +34,12 @@ export function FaucetPage() {
     linkedAccountId: user?.id || '',
   })
 
-  // Fetch wallet for the account to enable balance refetching
-  const { refetch: refetchWallet } = useWalletByAccountId({
+  // Fetch wallet for the account to get wallet address and enable balance refetching
+  const {
+    data: wallet,
+    isLoading: isLoadingWallet,
+    refetch: refetchWallet,
+  } = useWalletByAccountId({
     accountId: linkedAccount?.id || '',
     enabled: !!linkedAccount?.id,
   })
@@ -69,6 +73,17 @@ export function FaucetPage() {
       return
     }
 
+    if (!wallet?.id || !wallet?.address) {
+      toast({
+        title: 'Wallet not found',
+        description: 'Please ensure your account has a wallet set up',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+      return
+    }
+
     setIsRequesting(true)
     try {
       const result = await requestFaucetTokens({
@@ -82,7 +97,7 @@ export function FaucetPage() {
 
         toast({
           title: 'Success!',
-          description: 'cpUSD tokens have been added to your account',
+          description: `cpUSD tokens have been airdropped to wallet ${wallet.address.slice(0, 8)}...${wallet.address.slice(-8)}`,
           status: 'success',
           duration: 5000,
           isClosable: true,
@@ -110,7 +125,7 @@ export function FaucetPage() {
     }
   }
 
-  const isLoading = isLoadingAccount || isLoadingAssets
+  const isLoading = isLoadingAccount || isLoadingAssets || isLoadingWallet
 
   return (
     <DefaultPageContainer>
@@ -135,9 +150,22 @@ export function FaucetPage() {
               <VStack py={8}>
                 <Text>Please log in to use the faucet</Text>
               </VStack>
+            ) : !wallet ? (
+              <VStack py={8}>
+                <Text>Wallet not found. Please ensure your account has a wallet set up.</Text>
+              </VStack>
             ) : (
               <VStack align="stretch" gap={4}>
-                <Box></Box>
+                {wallet.address && (
+                  <Box bg="gray.800" borderRadius="md" p={3}>
+                    <Text color="gray.400" fontSize="sm" mb={1}>
+                      Wallet Address (tokens will be sent here):
+                    </Text>
+                    <Text color="white" fontFamily="mono" fontSize="sm">
+                      {wallet.address}
+                    </Text>
+                  </Box>
+                )}
 
                 <FormControl isRequired>
                   <FormLabel>Asset</FormLabel>

@@ -16,27 +16,28 @@ import type {
   Order,
   TimeSeriesRecord,
   LendingPool,
-  LendingPoolSnapshot,
-  LendingTransaction,
   Loan,
   LoanRepayment,
-  LoanLiquidation,
-  InterestRates,
-  CollateralInfo,
-  PoolStatistics,
-  UserPositions,
-  LoanStatus,
-  MarketFilters,
-  OrderFilters,
-  TimeSeriesFilters,
-  HealthResponse,
+  TimeSeriesInterval,
+  ListingStatus,
+  OrderStatus,
+  OrderType,
+  FillMode,
+} from '../types'
+import type {
+  GetPoolStatsOutput,
+  GetUserBorrowPositionOutput,
+  GetUserDepositPositonOutput,
+  RepaymentAmount,
+  CradleNativeListingRow,
+  ListingStats,
 } from '../cradle-api-client'
 
 // =============================================================================
 // HEALTH
 // =============================================================================
 
-export async function fetchHealth(): Promise<HealthResponse> {
+export async function fetchHealth(): Promise<{ status: 'ok' }> {
   const { checkHealth } = await import('../../actions/health')
   return checkHealth()
 }
@@ -69,9 +70,24 @@ export async function fetchWallet(id: string): Promise<CradleWallet> {
   return getWallet(id)
 }
 
-export async function fetchWalletByAccountId(accountId: string): Promise<CradleWallet> {
+export async function fetchWalletByAccountId(accountId: string): Promise<CradleWallet | null> {
   const { getWalletByAccountId } = await import('../../actions/wallets')
   return getWalletByAccountId(accountId)
+}
+
+export async function fetchBalances(
+  accountId: string
+): Promise<Array<{ token: string; balance: string }>> {
+  const { getBalances } = await import('../../actions/accounts')
+  return getBalances(accountId)
+}
+
+export async function fetchBalance(
+  walletId: string,
+  assetId: string
+): Promise<{ balance: number; before_deductions: number; deductions: number; decimals: number }> {
+  const { getBalance } = await import('../../actions/wallets')
+  return getBalance(walletId, assetId)
 }
 
 // =============================================================================
@@ -107,9 +123,9 @@ export async function fetchMarket(id: string): Promise<Market> {
   return getMarket(id)
 }
 
-export async function fetchMarkets(filters?: MarketFilters): Promise<Market[]> {
+export async function fetchMarkets(): Promise<Market[]> {
   const { getMarkets } = await import('../../actions/markets')
-  return getMarkets(filters)
+  return getMarkets()
 }
 
 // =============================================================================
@@ -121,7 +137,13 @@ export async function fetchOrder(id: string): Promise<Order> {
   return getOrder(id)
 }
 
-export async function fetchOrders(filters?: OrderFilters): Promise<Order[]> {
+export async function fetchOrders(filters?: {
+  wallet?: string
+  market_id?: string
+  status?: OrderStatus
+  order_type?: OrderType
+  mode?: FillMode
+}): Promise<Order[]> {
   const { getOrders } = await import('../../actions/orders')
   return getOrders(filters)
 }
@@ -130,16 +152,14 @@ export async function fetchOrders(filters?: OrderFilters): Promise<Order[]> {
 // TIME SERIES
 // =============================================================================
 
-export async function fetchTimeSeriesRecord(id: string): Promise<TimeSeriesRecord> {
-  const { getTimeSeriesRecord } = await import('../../actions/time-series')
-  return getTimeSeriesRecord(id)
-}
-
-export async function fetchTimeSeriesRecords(
-  filters?: TimeSeriesFilters
-): Promise<TimeSeriesRecord[]> {
-  const { getTimeSeriesRecords } = await import('../../actions/time-series')
-  return getTimeSeriesRecords(filters)
+export async function fetchTimeSeriesHistory(params: {
+  market: string
+  duration_secs: string | number
+  interval: TimeSeriesInterval
+  asset_id: string
+}): Promise<TimeSeriesRecord[]> {
+  const { getTimeSeriesHistory } = await import('../../actions/time-series')
+  return getTimeSeriesHistory(params)
 }
 
 // =============================================================================
@@ -156,115 +176,71 @@ export async function fetchLendingPools(): Promise<LendingPool[]> {
   return getLendingPools()
 }
 
-export async function fetchLendingTransactions(poolId: string): Promise<LendingTransaction[]> {
-  const { getLendingTransactions } = await import('../../actions/lending')
-  return getLendingTransactions(poolId)
-}
-
-export async function fetchLendingTransactionsByWallet(
-  walletId: string
-): Promise<LendingTransaction[]> {
-  const { getLendingTransactionsByWallet } = await import('../../actions/lending')
-  return getLendingTransactionsByWallet(walletId)
-}
-
 // =============================================================================
 // LOANS
 // =============================================================================
-
-export async function fetchLoans(poolId: string): Promise<Loan[]> {
-  const { getLoans } = await import('../../actions/lending')
-  return getLoans(poolId)
-}
 
 export async function fetchLoansByWallet(walletId: string): Promise<Loan[]> {
   const { getLoansByWallet } = await import('../../actions/lending')
   return getLoansByWallet(walletId)
 }
 
-export async function fetchLoan(id: string): Promise<Loan> {
-  const { getLoan } = await import('../../actions/lending')
-  return getLoan(id)
+export async function fetchPoolStats(poolId: string): Promise<GetPoolStatsOutput> {
+  const { getPoolStats } = await import('../../actions/lending')
+  return getPoolStats(poolId)
 }
 
-export async function fetchLendingPoolByName(name: string): Promise<LendingPool> {
-  const { getLendingPoolByName } = await import('../../actions/lending')
-  return getLendingPoolByName(name)
+export async function fetchLoanPosition(loanId: string): Promise<GetUserBorrowPositionOutput> {
+  const { getLoanPosition } = await import('../../actions/lending')
+  return getLoanPosition(loanId)
 }
 
-export async function fetchLendingPoolByAddress(address: string): Promise<LendingPool> {
-  const { getLendingPoolByAddress } = await import('../../actions/lending')
-  return getLendingPoolByAddress(address)
+export async function fetchDepositPosition(
+  poolId: string,
+  walletId: string
+): Promise<GetUserDepositPositonOutput> {
+  const { getDepositPosition } = await import('../../actions/lending')
+  return getDepositPosition(poolId, walletId)
 }
 
-export async function fetchPoolSnapshot(poolId: string): Promise<LendingPoolSnapshot> {
-  const { getPoolSnapshot } = await import('../../actions/lending')
-  return getPoolSnapshot(poolId)
+export async function fetchLoanRepayments(loanId: string): Promise<LoanRepayment[]> {
+  const { getLoanRepayments } = await import('../../actions/lending')
+  return getLoanRepayments(loanId)
 }
 
-export async function fetchAllLoans(): Promise<Loan[]> {
-  const { getAllLoans } = await import('../../actions/lending')
-  return getAllLoans()
-}
-
-export async function fetchLoansByPool(poolId: string): Promise<Loan[]> {
-  const { getLoansByPool } = await import('../../actions/lending')
-  return getLoansByPool(poolId)
-}
-
-export async function fetchLoansByStatus(status: LoanStatus): Promise<Loan[]> {
-  const { getLoansByStatus } = await import('../../actions/lending')
-  return getLoansByStatus(status)
+export async function fetchRepaymentAmount(loanId: string): Promise<RepaymentAmount> {
+  const { getRepaymentAmount } = await import('../../actions/lending')
+  return getRepaymentAmount(loanId)
 }
 
 // =============================================================================
-// LOAN REPAYMENTS
+// LISTINGS
 // =============================================================================
 
-export async function fetchAllRepayments(): Promise<LoanRepayment[]> {
-  const { getAllRepayments } = await import('../../actions/lending')
-  return getAllRepayments()
+export async function fetchListing(id: string): Promise<CradleNativeListingRow> {
+  const { getListing } = await import('../../actions/listings')
+  return getListing(id)
 }
 
-export async function fetchRepaymentsByLoan(loanId: string): Promise<LoanRepayment[]> {
-  const { getRepaymentsByLoan } = await import('../../actions/lending')
-  return getRepaymentsByLoan(loanId)
+export async function fetchListings(filters?: {
+  company?: string
+  listed_asset?: string
+  purchase_asset?: string
+  status?: ListingStatus
+}): Promise<CradleNativeListingRow[]> {
+  const { getListings } = await import('../../actions/listings')
+  return getListings(filters)
 }
 
-// =============================================================================
-// LOAN LIQUIDATIONS
-// =============================================================================
-
-export async function fetchAllLiquidations(): Promise<LoanLiquidation[]> {
-  const { getAllLiquidations } = await import('../../actions/lending')
-  return getAllLiquidations()
+export async function fetchListingStats(listingId: string): Promise<ListingStats> {
+  const { getListingStats } = await import('../../actions/listings')
+  return getListingStats(listingId)
 }
 
-export async function fetchLiquidationsByLoan(loanId: string): Promise<LoanLiquidation[]> {
-  const { getLiquidationsByLoan } = await import('../../actions/lending')
-  return getLiquidationsByLoan(loanId)
-}
-
-// =============================================================================
-// POOL CONTRACT GETTERS
-// =============================================================================
-
-export async function fetchPoolInterestRates(poolId: string): Promise<InterestRates> {
-  const { getPoolInterestRates } = await import('../../actions/lending')
-  return getPoolInterestRates(poolId)
-}
-
-export async function fetchPoolCollateralInfo(poolId: string): Promise<CollateralInfo> {
-  const { getPoolCollateralInfo } = await import('../../actions/lending')
-  return getPoolCollateralInfo(poolId)
-}
-
-export async function fetchPoolStatistics(poolId: string): Promise<PoolStatistics> {
-  const { getPoolStatistics } = await import('../../actions/lending')
-  return getPoolStatistics(poolId)
-}
-
-export async function fetchUserPositions(poolId: string, walletId: string): Promise<UserPositions> {
-  const { getUserPositions } = await import('../../actions/lending')
-  return getUserPositions(poolId, walletId)
+export async function fetchListingFee(input: {
+  listing_id: string
+  amount: string
+}): Promise<number> {
+  const { getListingFee } = await import('../../actions/listings')
+  return getListingFee(input)
 }

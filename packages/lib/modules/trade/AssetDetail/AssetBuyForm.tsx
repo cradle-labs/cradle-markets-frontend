@@ -15,9 +15,21 @@ import { useAsset } from '@repo/lib/cradle-client-ts/hooks/assets/useAsset'
 import { placeOrder } from '@repo/lib/actions/orders'
 import { blockInvalidNumberInput, formatTo8Decimals } from '@repo/lib/shared/utils/numbers'
 import { toTokenDecimals } from '@repo/lib/modules/lend/utils'
-import type { PlaceOrderInput, FillMode } from '@repo/lib/cradle-client-ts/cradle-api-client'
+import type { FillMode } from '@repo/lib/cradle-client-ts/cradle-api-client'
 
 type OrderType = 'market' | 'limit'
+
+interface PlaceOrderInput {
+  wallet: string
+  market_id: string
+  bid_asset: string
+  ask_asset: string
+  bid_amount: string
+  ask_amount: string
+  price: string
+  mode: FillMode
+  order_type: OrderType
+}
 
 export function AssetBuyForm() {
   const { user } = useUser()

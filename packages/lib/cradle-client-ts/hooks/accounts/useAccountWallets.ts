@@ -10,7 +10,7 @@ import { useQuery, type UseQueryOptions } from '@tanstack/react-query'
 import { cradleQueryKeys } from '../../queryKeys'
 import { fetchAccountWallets } from '../../services/fetchers'
 import { userDataQueryOptions } from '../../utils/query-options'
-import type { CradleWallet } from '../../cradle-api-client'
+import type { CradleWallet } from '../../types'
 
 export interface UseAccountWalletsOptions {
   /**

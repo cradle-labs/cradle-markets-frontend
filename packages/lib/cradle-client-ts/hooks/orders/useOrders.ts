@@ -10,13 +10,19 @@ import { useQuery, type UseQueryOptions } from '@tanstack/react-query'
 import { cradleQueryKeys } from '../../queryKeys'
 import { fetchOrders } from '../../services/fetchers'
 import { marketDataQueryOptions } from '../../utils/query-options'
-import type { Order, OrderFilters } from '../../cradle-api-client'
+import type { Order, OrderStatus, OrderType, FillMode } from '../../types'
 
 export interface UseOrdersOptions {
   /**
    * Optional filters for orders
    */
-  filters?: OrderFilters
+  filters?: {
+    wallet?: string
+    market_id?: string
+    status?: OrderStatus
+    order_type?: OrderType
+    mode?: FillMode
+  }
   /**
    * Whether the query is enabled
    * @default true

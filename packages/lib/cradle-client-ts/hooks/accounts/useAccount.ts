@@ -10,7 +10,7 @@ import { useQuery, type UseQueryOptions } from '@tanstack/react-query'
 import { cradleQueryKeys } from '../../queryKeys'
 import { fetchAccount } from '../../services/fetchers'
 import { userDataQueryOptions } from '../../utils/query-options'
-import type { CradleAccount } from '../../cradle-api-client'
+import type { CradleAccount } from '../../types'
 
 export interface UseAccountOptions {
   /**

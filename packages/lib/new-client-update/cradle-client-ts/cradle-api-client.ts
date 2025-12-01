@@ -190,17 +190,6 @@ interface LoanRepaymentsRecord {
   transaction?: string | null
 }
 
-// CompanyRow interface - kept for potential future use
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-interface CompanyRow {
-  id: UUID
-  name: string
-  description: string
-  listed_at?: string | null
-  legal_documents: string
-  beneficiary_wallet: UUID
-}
-
 interface CradleNativeListingRow {
   id: UUID
   listing_contract_id: string
@@ -493,7 +482,7 @@ type ActionRouterOutput =
   | { Pool: LendingPoolFunctionsOutput }
   | { Listing: CradleNativeListingFunctionsOutput }
 
-export interface CradleClientOptions {
+interface CradleClientOptions {
   baseUrl: string
   apiKey?: string
   axiosInstance?: AxiosInstance
@@ -728,24 +717,10 @@ class CradleClient {
       })
       const payload = response.data
 
-      // If payload has success field, it's already in ApiResponse format
-      if (payload && typeof payload === 'object' && 'success' in payload) {
-        if (payload.success === false) {
-          throw new Error((payload as ApiResponse<unknown>).error ?? 'Request failed')
-        }
-        return payload as unknown as T
+      if (payload?.success === false) {
+        throw new Error(payload.error ?? 'Request failed')
       }
 
-      // If payload doesn't have success field but HTTP status is 200, wrap it
-      // This handles endpoints like /health that return data directly
-      if (response.status >= 200 && response.status < 300) {
-        return {
-          success: true,
-          data: payload,
-        } as unknown as T
-      }
-
-      // If we get here, something unexpected happened
       return payload as unknown as T
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -774,10 +749,6 @@ class CradleClient {
     return query ? `?${query}` : ''
   }
 }
-
-// Export the client class (not a type)
-export { CradleClient }
-export default CradleClient
 
 // Export types using 'export type' for isolatedModules compatibility
 export type {
@@ -821,3 +792,7 @@ export type {
   RepaymentAmount,
   PoolTransactionType,
 }
+
+// Export the class (value, not type)
+export { CradleClient }
+export default CradleClient

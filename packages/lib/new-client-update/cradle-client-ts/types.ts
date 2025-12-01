@@ -57,6 +57,10 @@ export type {
   ActionRouterInput,
   ActionRouterOutput,
 
+  // Processor types
+  MarketTimeSeriesProcessorInput,
+  MarketTimeSeriesProcessorOutput,
+
   // Other types
   GetPoolStatsOutput,
   GetUserBorrowPositionOutput,
@@ -79,6 +83,7 @@ import type {
   LoanRecord,
   LoanRepaymentsRecord,
   CradleNativeListingRow,
+  PoolTransactionType,
 } from './cradle-api-client'
 
 // Type aliases for backward compatibility
@@ -94,9 +99,25 @@ export type Loan = LoanRecord
 export type LoanRepayment = LoanRepaymentsRecord
 export type Listing = CradleNativeListingRow
 
+// LendingTransaction type (not exported from client, so define it here)
+export interface LendingTransaction {
+  id: string
+  transaction_type: PoolTransactionType
+  amount: number
+  created_at: string
+}
+
 // Re-export the client class
 export { CradleClient } from './cradle-api-client'
-export type { CradleClientOptions } from './cradle-api-client'
+
+// CradleClientOptions interface (not exported from client, so define it here)
+export interface CradleClientOptions {
+  baseUrl: string
+  apiKey?: string
+  axiosInstance?: import('axios').AxiosInstance
+  timeoutMs?: number
+  userAgent?: string
+}
 
 // Legacy config type alias
 export interface CradleApiConfig {

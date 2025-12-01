@@ -10,13 +10,17 @@ import { useQuery, type UseQueryOptions } from '@tanstack/react-query'
 import { cradleQueryKeys } from '../../queryKeys'
 import { fetchMarkets } from '../../services/fetchers'
 import { standardQueryOptions } from '../../utils/query-options'
-import type { Market, MarketFilters } from '../../cradle-api-client'
+import type { Market, MarketType, MarketStatus, MarketRegulation } from '../../types'
 
 export interface UseMarketsOptions {
   /**
    * Optional filters for markets
    */
-  filters?: MarketFilters
+  filters?: {
+    market_type?: MarketType
+    status?: MarketStatus
+    regulation?: MarketRegulation
+  }
   /**
    * Whether the query is enabled
    * @default true
@@ -70,7 +74,7 @@ export interface UseMarketsOptions {
 export function useMarkets({ filters, enabled = true, queryOptions }: UseMarketsOptions = {}) {
   return useQuery({
     queryKey: cradleQueryKeys.markets.list(filters),
-    queryFn: () => fetchMarkets(filters),
+    queryFn: () => fetchMarkets(),
     enabled,
     ...standardQueryOptions,
     ...queryOptions,

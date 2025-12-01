@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   Box,
   Button,
@@ -11,14 +11,17 @@ import {
   VStack,
   useToast,
   FormHelperText,
+  HStack,
 } from '@chakra-ui/react'
 import { supplyLiquidity } from '@repo/lib/actions/lending'
-import { toTokenDecimals } from './utils'
+import { useAssetBalances } from '@repo/lib/cradle-client-ts/hooks/accounts/useAssetBalances'
+import { toTokenDecimals, fromTokenDecimals } from './utils'
 
 interface LendSupplyFormProps {
   poolId: string
   walletId?: string
   assetSymbol?: string
+  reserveAssetId?: string
   supplyAPY: number
   onSuccess?: () => void
 }
@@ -27,6 +30,7 @@ export function LendSupplyForm({
   poolId,
   walletId,
   assetSymbol,
+  reserveAssetId,
   supplyAPY,
   onSuccess,
 }: LendSupplyFormProps) {
@@ -34,8 +38,42 @@ export function LendSupplyForm({
   const [isLoading, setIsLoading] = useState(false)
   const toast = useToast()
 
+  // Fetch balance for the reserve asset using useAssetBalances
+  const assetIds = useMemo(() => {
+    return reserveAssetId ? [reserveAssetId] : []
+  }, [reserveAssetId])
+
+  const assetBalances = useAssetBalances({
+    walletId: walletId || '',
+    assetIds,
+    enabled: !!walletId && assetIds.length > 0,
+  })
+
+  // Extract and format balance for the reserve asset
+  const balanceData = useMemo(() => {
+    const balance = assetBalances.find(b => b.assetId === reserveAssetId)
+    if (!balance?.data) return null
+    const normalized = fromTokenDecimals(balance.data.balance, balance.data.decimals)
+    return {
+      formatted: new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(normalized),
+      balance: normalized,
+      decimals: balance.data.decimals,
+    }
+  }, [assetBalances, reserveAssetId])
+
+  const balance = balanceData?.balance ?? 0
+
   const formatPercentage = (value: number) => {
     return `${(value * 100).toFixed(2)}%`
+  }
+
+  const handleMaxClick = () => {
+    if (balance > 0) {
+      setAmount(balance.toFixed(4))
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -66,9 +104,10 @@ export function LendSupplyForm({
     setIsLoading(true)
 
     try {
-      // Convert normalized amount to token decimals (8 decimals)
-      // User enters "1.5", backend needs "150000000"
-      const amountInDecimals = toTokenDecimals(parseFloat(amount))
+      // Convert normalized amount to token decimals using actual asset decimals
+      // User enters "1.5", backend needs the scaled amount
+      const assetDecimals = balanceData?.decimals ?? 8
+      const amountInDecimals = toTokenDecimals(parseFloat(amount), assetDecimals)
 
       const result = await supplyLiquidity({
         wallet: walletId,
@@ -85,6 +124,8 @@ export function LendSupplyForm({
           isClosable: true,
         })
         setAmount('')
+        // Refetch asset balances after successful supply
+        assetBalances.forEach(balance => balance.refetch())
         // Refetch transactions after successful supply
         onSuccess?.()
       } else {
@@ -113,9 +154,23 @@ export function LendSupplyForm({
     <Box as="form" onSubmit={handleSubmit} w="full">
       <VStack spacing={4} w="full">
         <FormControl isRequired>
-          <FormLabel color="font.secondary" fontSize="sm" fontWeight="medium">
-            Amount to Supply
-          </FormLabel>
+          <HStack justify="space-between" mb={2}>
+            <FormLabel color="font.secondary" fontSize="sm" fontWeight="medium" mb={0}>
+              Amount to Supply
+            </FormLabel>
+            {walletId && reserveAssetId && (
+              <HStack spacing={2}>
+                <Text color="text.tertiary" fontSize="xs">
+                  Balance: {balanceData?.formatted || '0.00'} {assetSymbol || ''}
+                </Text>
+                {balance > 0 && (
+                  <Button colorScheme="blue" onClick={handleMaxClick} size="xs" variant="ghost">
+                    Max
+                  </Button>
+                )}
+              </HStack>
+            )}
+          </HStack>
           <Input
             onChange={e => setAmount(e.target.value)}
             placeholder="0.00"

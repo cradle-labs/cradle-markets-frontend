@@ -65,6 +65,7 @@ export function LendTradingPanel({
               assetSymbol={assetSymbol}
               onSuccess={onTransactionSuccess}
               poolId={poolId}
+              reserveAssetId={reserveAssetId}
               supplyAPY={supplyAPY}
               walletId={walletId}
             />

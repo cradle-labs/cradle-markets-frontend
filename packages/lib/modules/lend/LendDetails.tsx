@@ -14,9 +14,7 @@ import { fromBasisPoints, fromTokenDecimals } from './utils'
 export function LendDetails() {
   const router = useRouter()
   const { data: lendingPools, isLoading: isLoadingLendingPools } = useLendingPools()
-  console.log('lendingPools', lendingPools)
   const { data: assets, isLoading: isLoadingAssets } = useAssets()
-  console.log('assets', assets)
 
   // Fetch stats for all pools
   const snapshotQueries = useQueries({
@@ -30,10 +28,6 @@ export function LendDetails() {
 
   // Check if any snapshot is still loading
   const isLoadingSnapshots = snapshotQueries.some(query => query.isLoading)
-  console.log(
-    'snapshots',
-    snapshotQueries.map(q => q.data)
-  )
 
   // Enrich lending pool data with asset info and snapshot values
   const enrichedPools: LendingPoolData[] = useMemo(() => {
@@ -41,46 +35,30 @@ export function LendDetails() {
 
     return lendingPools.map((pool, index) => {
       const asset = assets.find(a => a.id === pool.reserve_asset)
-      const snapshot = snapshotQueries[index]?.data
+      const poolStats = snapshotQueries[index]?.data
 
-      // Get metrics from snapshot or use defaults
+      // Get metrics from poolStats or use defaults
       // Convert token amounts from decimals (8 decimals) to normalized form
+      // Note: poolStats uses 'utilization', 'supply_rate', 'borrow_rate' (not 'utilization_rate', 'supply_apy', 'borrow_apy')
       const totalSupplied =
-        snapshot &&
-        typeof snapshot === 'object' &&
-        'total_supply' in snapshot &&
-        typeof snapshot.total_supply === 'string'
-          ? fromTokenDecimals(parseFloat(snapshot.total_supply))
+        poolStats?.total_supplied != null
+          ? fromTokenDecimals(Number(poolStats.total_supplied as string | number))
           : 0
       const totalBorrowed =
-        snapshot &&
-        typeof snapshot === 'object' &&
-        'total_borrow' in snapshot &&
-        typeof snapshot.total_borrow === 'string'
-          ? fromTokenDecimals(parseFloat(snapshot.total_borrow))
+        poolStats?.total_borrowed != null
+          ? fromTokenDecimals(Number(poolStats.total_borrowed as string | number))
           : 0
-
-      // Convert utilization and APYs from basis points to decimal
       const utilization =
-        snapshot &&
-        typeof snapshot === 'object' &&
-        'utilization_rate' in snapshot &&
-        typeof snapshot.utilization_rate === 'string'
-          ? fromBasisPoints(snapshot.utilization_rate)
+        poolStats?.utilization != null
+          ? fromBasisPoints(poolStats.utilization as string | number)
           : 0
       const supplyAPY =
-        snapshot &&
-        typeof snapshot === 'object' &&
-        'supply_apy' in snapshot &&
-        typeof snapshot.supply_apy === 'string'
-          ? fromBasisPoints(snapshot.supply_apy)
+        poolStats?.supply_rate != null
+          ? fromBasisPoints(poolStats.supply_rate as string | number)
           : 0
       const borrowAPY =
-        snapshot &&
-        typeof snapshot === 'object' &&
-        'borrow_apy' in snapshot &&
-        typeof snapshot.borrow_apy === 'string'
-          ? fromBasisPoints(snapshot.borrow_apy)
+        poolStats?.borrow_rate != null
+          ? fromBasisPoints(poolStats.borrow_rate as string | number)
           : 0
 
       return {

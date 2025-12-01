@@ -4,17 +4,17 @@ import { Box, Button, HStack, Input, Text, VStack, useToast } from '@chakra-ui/r
 import { ArrowDown } from 'react-feather'
 import { IconButton } from '@chakra-ui/react'
 import { TokenInput } from '@repo/lib/modules/tokens/TokenInput/TokenInput'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { HumanAmount } from '@balancer/sdk'
 import { useAssetDetail } from './AssetDetailProvider'
-import { useHederaBalance } from '@repo/lib/shared/hooks/useHederaBalance'
 import { useUser } from '@clerk/nextjs'
 import { useAccountByLinkedId } from '@repo/lib/cradle-client-ts/hooks/accounts/useAccountByLinkedId'
 import { useWalletByAccountId } from '@repo/lib/cradle-client-ts/hooks/accounts/useWallet'
+import { useAssetBalances } from '@repo/lib/cradle-client-ts/hooks/accounts/useAssetBalances'
 import { useAsset } from '@repo/lib/cradle-client-ts/hooks/assets/useAsset'
 import { placeOrder } from '@repo/lib/actions/orders'
 import { blockInvalidNumberInput, formatTo8Decimals } from '@repo/lib/shared/utils/numbers'
-import { toTokenDecimals } from '@repo/lib/modules/lend/utils'
+import { toTokenDecimals, fromTokenDecimals } from '@repo/lib/modules/lend/utils'
 import type { FillMode } from '@repo/lib/cradle-client-ts/cradle-api-client'
 
 type OrderType = 'market' | 'limit'
@@ -85,19 +85,48 @@ export function AssetBuyForm() {
       : (`0x${address}` as `0x${string}`)
   }
 
-  // Fetch balance for asset_two (the asset we're paying with, e.g., cpUSD)
-  const { data: payAssetBalance } = useHederaBalance({
-    accountId: wallet?.contract_id, // Use contract_id which is in Hedera format (0.0.XXXXX)
-    tokenId: assetTwo?.token, // Token ID in hex format
-    enabled: !!wallet?.contract_id && !!assetTwo?.token,
+  // Fetch balances for both assets using useAssetBalances
+  const assetIds = useMemo(() => {
+    const ids: string[] = []
+    if (assetOne?.id) ids.push(assetOne.id)
+    if (assetTwo?.id) ids.push(assetTwo.id)
+    return ids
+  }, [assetOne?.id, assetTwo?.id])
+
+  const assetBalances = useAssetBalances({
+    walletId: wallet?.id || '',
+    assetIds,
+    enabled: !!wallet?.id && assetIds.length > 0,
   })
 
-  // Fetch balance for asset_one (the asset we're receiving, e.g., SAF)
-  const { data: receiveAssetBalance } = useHederaBalance({
-    accountId: wallet?.contract_id, // Use contract_id which is in Hedera format (0.0.XXXXX)
-    tokenId: assetOne?.token, // Token ID in hex format
-    enabled: !!wallet?.contract_id && !!assetOne?.token,
-  })
+  // Extract balances for each asset
+  const payAssetBalanceData = useMemo(() => {
+    const balance = assetBalances.find(b => b.assetId === assetTwo?.id)
+    if (!balance?.data) return null
+    const normalized = fromTokenDecimals(balance.data.balance, balance.data.decimals)
+    return {
+      formatted: new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(normalized),
+      balance: balance.data.balance.toString(),
+      decimals: balance.data.decimals,
+    }
+  }, [assetBalances, assetTwo?.id])
+
+  const receiveAssetBalanceData = useMemo(() => {
+    const balance = assetBalances.find(b => b.assetId === assetOne?.id)
+    if (!balance?.data) return null
+    const normalized = fromTokenDecimals(balance.data.balance, balance.data.decimals)
+    return {
+      formatted: new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(normalized),
+      balance: balance.data.balance.toString(),
+      decimals: balance.data.decimals,
+    }
+  }, [assetBalances, assetOne?.id])
   // Calculate price based on order type
   const getPrice = () => {
     if (orderType === 'limit' && limitPrice) {
@@ -199,19 +228,6 @@ export function AssetBuyForm() {
         order_type: orderType,
       }
 
-      console.log('=== Order Placement Debug (BUY) ===')
-      console.log('User Input - Pay Amount:', payAmount)
-      console.log('User Input - Receive Amount:', receiveAmount)
-      console.log('User Input - Price:', price)
-      console.log('Scaled - ask_amount (base units):', askAmountScaled)
-      console.log('Scaled - bid_amount (base units):', bidAmountScaled)
-      console.log('Formatted - price:', formatTo8Decimals(price))
-      console.log('Wallet:', wallet)
-      console.log('Market:', market)
-      console.log('Asset One (SAF):', assetOne)
-      console.log('Asset Two (cpUSD):', assetTwo)
-      console.log('Order Payload:', orderPayload)
-
       const result = await placeOrder(orderPayload)
 
       console.log('Order Result:', result)
@@ -231,6 +247,9 @@ export function AssetBuyForm() {
 
         // Refetch data
         refetch()
+
+        // Refetch asset balances
+        assetBalances.forEach(balance => balance.refetch())
       } else {
         toast({
           title: 'Order Failed',
@@ -485,7 +504,7 @@ export function AssetBuyForm() {
             }}
             chain="ETHEREUM"
             customUsdPrice={1} // Assuming stable coin, adjust if needed
-            customUserBalance={payAssetBalance?.formatted}
+            customUserBalance={payAssetBalanceData?.formatted}
             onChange={handlePayAmountChange}
             placeholder="0.00"
             value={payAmount}
@@ -515,7 +534,7 @@ export function AssetBuyForm() {
           </Text>
           {isConnected && (
             <Text color="font.secondary" fontSize="xs">
-              Balance: {receiveAssetBalance?.formatted || '0'} {assetOne?.symbol}
+              Balance: {receiveAssetBalanceData?.formatted || '0'} {assetOne?.symbol}
             </Text>
           )}
         </HStack>
@@ -532,7 +551,7 @@ export function AssetBuyForm() {
             }}
             chain="ETHEREUM"
             customUsdPrice={currentMarketPrice}
-            customUserBalance={receiveAssetBalance?.formatted}
+            customUserBalance={receiveAssetBalanceData?.formatted}
             onChange={handleReceiveAmountChange}
             placeholder="0.00"
             value={receiveAmount}

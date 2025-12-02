@@ -12,9 +12,15 @@ import {
   Tooltip,
   VStack,
   useToast,
-  Grid,
   Badge,
   useColorModeValue,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  TableContainer,
 } from '@chakra-ui/react'
 import { useUser } from '@clerk/nextjs'
 import { useAccountByLinkedId } from '@repo/lib/cradle-client-ts/hooks/accounts/useAccountByLinkedId'
@@ -57,6 +63,19 @@ export default function Portfolio() {
     enabled: !!linkedAccount?.id,
   })
   console.log('Wallet ID:', wallet?.id)
+  console.log('wallet id', wallet?.id)
+
+  // Fetch loans for the wallet
+  const {
+    data: loans,
+    isLoading: isLoadingLoans,
+    error: loansError,
+  } = useLoansByWallet({
+    walletId: wallet?.id || '',
+    enabled: !!wallet?.id,
+  })
+
+  console.log('Loans:', loans)
 
   // Fetch all assets
   const { data: assets, isLoading: isLoadingAssets } = useAssets()
@@ -98,18 +117,6 @@ export default function Portfolio() {
     })
 
   console.log('🪙 User Wallet Assets (non-zero balances):', userWalletAssets)
-
-  // Fetch loans for the wallet
-  const {
-    data: loans,
-    isLoading: isLoadingLoans,
-    error: loansError,
-  } = useLoansByWallet({
-    walletId: wallet?.id || '',
-    enabled: !!wallet?.id,
-  })
-
-  console.log('Loans:', loans)
 
   // Use empty array if no data or error
   const safeLoans = loans || []
@@ -314,7 +321,6 @@ interface ActiveLoansSectionProps {
 
 function ActiveLoansSection({ loans, pools, assets, isLoading }: ActiveLoansSectionProps) {
   const cardBg = useColorModeValue('background.level1', 'background.level1')
-  const borderColor = useColorModeValue('border.base', 'border.base')
 
   // Create lookup maps for quick access
   const poolMap = useMemo(() => {
@@ -329,9 +335,12 @@ function ActiveLoansSection({ loans, pools, assets, isLoading }: ActiveLoansSect
     return map
   }, [assets])
 
-  // Filter for active loans only
+  // Filter for active loans only with principal amount > 0
   const activeLoans = useMemo(() => {
-    return loans.filter(loan => loan.status === 'active')
+    return loans.filter(loan => {
+      const principalAmount = parseFloat(loan.principal_amount)
+      return loan.status === 'active' && principalAmount > 0
+    })
   }, [loans])
 
   const formatCurrency = (amount: string) => {
@@ -414,79 +423,67 @@ function ActiveLoansSection({ loans, pools, assets, isLoading }: ActiveLoansSect
         Active Loans ({activeLoans.length})
       </Heading>
 
-      <Grid
-        gap={4}
-        templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }}
-        w="full"
-      >
-        {activeLoans.map(loan => {
-          const pool = poolMap.get(loan.pool)
-          const asset = pool ? assetMap.get(pool.reserve_asset) : undefined
+      <TableContainer bg={cardBg} borderRadius="lg" shadow="xl" w="full">
+        <Table variant="simple">
+          <Thead>
+            <Tr>
+              <Th>Pool</Th>
+              <Th>Asset</Th>
+              <Th isNumeric>Principal Amount</Th>
+              <Th>Borrowed On</Th>
+              <Th>Status</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {activeLoans.map(loan => {
+              const pool = poolMap.get(loan.pool)
+              const asset = pool ? assetMap.get(pool.reserve_asset) : undefined
 
-          return (
-            <Box bg={cardBg} borderRadius="lg" key={loan.id} p={5} shadow="xl">
-              <VStack align="start" spacing={4}>
-                <HStack justify="space-between" w="full">
-                  <VStack align="start" spacing={1}>
-                    <Text color="font.secondary" fontSize="xs">
-                      Pool
-                    </Text>
+              return (
+                <Tr key={loan.id}>
+                  <Td>
                     <Text fontSize="sm" fontWeight="semibold">
                       {pool?.title ?? pool?.name ?? 'Unknown Pool'}
                     </Text>
-                  </VStack>
-                  <Badge colorScheme="green" fontSize="xs">
-                    Active
-                  </Badge>
-                </HStack>
-
-                <Box borderColor={borderColor} borderTopWidth="1px" pt={3} w="full">
-                  <VStack align="stretch" spacing={3}>
-                    <HStack justify="space-between">
-                      <Text color="font.secondary" fontSize="xs">
-                        Principal Amount
-                      </Text>
-                      <HStack spacing={2}>
-                        {asset?.icon && (
-                          <Box h="16px" w="16px">
-                            <Box
-                              alt={asset.symbol}
-                              as="img"
-                              h="full"
-                              objectFit="contain"
-                              src={asset.icon}
-                              w="full"
-                            />
-                          </Box>
-                        )}
-                        <Text fontSize="sm" fontWeight="semibold">
-                          {formatCurrency(loan.principal_amount)}
-                        </Text>
-                      </HStack>
-                    </HStack>
-
-                    <HStack justify="space-between">
-                      <Text color="font.secondary" fontSize="xs">
-                        Asset
-                      </Text>
+                  </Td>
+                  <Td>
+                    <HStack spacing={2}>
+                      {asset?.icon && (
+                        <Box h="20px" w="20px">
+                          <Box
+                            alt={asset.symbol}
+                            as="img"
+                            h="full"
+                            objectFit="contain"
+                            src={asset.icon}
+                            w="full"
+                          />
+                        </Box>
+                      )}
                       <Text fontSize="sm" fontWeight="medium">
                         {asset?.symbol || 'Unknown'}
                       </Text>
                     </HStack>
-
-                    <HStack justify="space-between">
-                      <Text color="font.secondary" fontSize="xs">
-                        Borrowed On
-                      </Text>
-                      <Text fontSize="xs">{formatDate(loan.created_at)}</Text>
-                    </HStack>
-                  </VStack>
-                </Box>
-              </VStack>
-            </Box>
-          )
-        })}
-      </Grid>
+                  </Td>
+                  <Td isNumeric>
+                    <Text fontSize="sm" fontWeight="semibold">
+                      {formatCurrency(loan.principal_amount)}
+                    </Text>
+                  </Td>
+                  <Td>
+                    <Text fontSize="sm">{formatDate(loan.created_at)}</Text>
+                  </Td>
+                  <Td>
+                    <Badge colorScheme="green" fontSize="xs">
+                      Active
+                    </Badge>
+                  </Td>
+                </Tr>
+              )
+            })}
+          </Tbody>
+        </Table>
+      </TableContainer>
     </VStack>
   )
 }

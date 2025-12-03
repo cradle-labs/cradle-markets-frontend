@@ -163,7 +163,7 @@ const PortfolioSummary = ({
   const tokenizedAssets = [...bridgedAssets, ...nativeAssets]
 
   // Helper function to format balance from Big number string with commas
-  const formatBalance = (balance: string, decimals: number): string => {
+  const formatBalance = (balance: string, decimals: number, decimalPlaces?: number): string => {
     try {
       const balanceBigInt = BigInt(balance)
       const divisor = BigInt(10 ** decimals)
@@ -179,6 +179,12 @@ const PortfolioSummary = ({
         rawValue = `${wholePart}.${trimmedFractional}`
       }
 
+      // If decimalPlaces is specified, format to that precision
+      if (decimalPlaces !== undefined) {
+        const numValue = parseFloat(rawValue)
+        return fNum('token', numValue.toFixed(decimalPlaces), { abbreviated: false })
+      }
+
       // Use the existing number formatting utility for comma separation
       return fNum('token', rawValue, { abbreviated: false })
     } catch {
@@ -187,13 +193,13 @@ const PortfolioSummary = ({
   }
 
   // Map assets to AssetBalance format
-  const mapToAssetBalance = (asset: Asset): AssetBalance => {
+  const mapToAssetBalance = (asset: Asset, decimalPlaces?: number): AssetBalance => {
     // Get balance from API balances (by token ID)
     const apiBalance = asset.token ? balanceMap.get(asset.token) : undefined
 
     // Use API balance or default to '0'
     const balance = apiBalance || '0'
-    const formatted = apiBalance ? formatBalance(apiBalance, asset.decimals) : '0'
+    const formatted = apiBalance ? formatBalance(apiBalance, asset.decimals, decimalPlaces) : '0'
     const isLoading = isLoadingBalances || false
 
     return {
@@ -209,11 +215,13 @@ const PortfolioSummary = ({
   }
 
   // Only show assets with confirmed non-zero balances (no loading assets)
-  const stableAssetBalances = stableAssets.map(mapToAssetBalance).filter(asset => {
-    // Only show assets that are not loading and have non-zero balance
-    if (asset.isLoading) return false
-    return BigInt(asset.balance || '0') > BigInt(0)
-  })
+  const stableAssetBalances = stableAssets
+    .map(asset => mapToAssetBalance(asset, 2))
+    .filter(asset => {
+      // Only show assets that are not loading and have non-zero balance
+      if (asset.isLoading) return false
+      return BigInt(asset.balance || '0') > BigInt(0)
+    })
 
   const tokenizedAssetBalances = tokenizedAssets.map(mapToAssetBalance).filter(asset => {
     // Only show assets that are not loading and have non-zero balance
@@ -231,7 +239,7 @@ const PortfolioSummary = ({
   const isLoadingStableAssets =
     isLoadingBalances ||
     stableAssets.some(asset => {
-      const mappedAsset = mapToAssetBalance(asset)
+      const mappedAsset = mapToAssetBalance(asset, 2)
       return mappedAsset.isLoading
     })
 

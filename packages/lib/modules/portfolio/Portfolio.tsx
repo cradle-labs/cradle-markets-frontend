@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import {
   Box,
   Heading,
@@ -12,15 +12,6 @@ import {
   Tooltip,
   VStack,
   useToast,
-  Badge,
-  useColorModeValue,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
-  TableContainer,
 } from '@chakra-ui/react'
 import { useUser } from '@clerk/nextjs'
 import { useAccountByLinkedId } from '@repo/lib/cradle-client-ts/hooks/accounts/useAccountByLinkedId'
@@ -30,19 +21,8 @@ import { useAssets } from '@repo/lib/cradle-client-ts/hooks/assets/useAssets'
 import { useLendingPools } from '@repo/lib/cradle-client-ts/hooks/lending/useLendingPools'
 import { useLoansByWallet } from '@repo/lib/cradle-client-ts/hooks/lending/useLoans'
 import { shortenAddress, copyToClipboard } from '@repo/lib/shared/utils/strings'
-import { NoisyCard } from '@repo/lib/shared/components/containers/NoisyCard'
-import { fromTokenDecimals } from '@repo/lib/modules/lend'
 import PortfolioSummary from './PortfolioSummary'
-
-// Helper function to format numbers with commas for thousands
-const formatNumberWithCommas = (value: string | number): string => {
-  const num = typeof value === 'string' ? parseFloat(value) : value
-  if (isNaN(num)) return '0'
-  return new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 8,
-  }).format(num)
-}
+import { ActiveLoansSection } from './ActiveLoansTable'
 
 export default function Portfolio() {
   const { user } = useUser()
@@ -288,202 +268,9 @@ export default function Portfolio() {
           isLoading={isLoadingLoans}
           loans={safeLoans}
           pools={allPools || []}
+          walletId={wallet?.id || ''}
         />
       </VStack>
     </Stack>
-  )
-}
-
-interface ActiveLoansSectionProps {
-  loans: Array<{
-    id: string
-    wallet_id: string
-    pool: string
-    principal_amount: string
-    borrow_index: string
-    created_at: string
-    status: string
-  }>
-  pools: Array<{
-    id: string
-    name?: string | null
-    title?: string | null
-    reserve_asset: string
-  }>
-  assets: Array<{
-    id: string
-    name: string
-    symbol: string
-    icon?: string | null
-  }>
-  isLoading: boolean
-}
-
-function ActiveLoansSection({ loans, pools, assets, isLoading }: ActiveLoansSectionProps) {
-  const cardBg = useColorModeValue('background.level1', 'background.level1')
-
-  // Create lookup maps for quick access
-  const poolMap = useMemo(() => {
-    const map = new Map()
-    pools.forEach(pool => map.set(pool.id, pool))
-    return map
-  }, [pools])
-
-  const assetMap = useMemo(() => {
-    const map = new Map()
-    assets.forEach(asset => map.set(asset.id, asset))
-    return map
-  }, [assets])
-
-  // Filter for active loans only with principal amount > 0
-  const activeLoans = useMemo(() => {
-    return loans.filter(loan => {
-      const principalAmount = parseFloat(loan.principal_amount)
-      return loan.status === 'active' && principalAmount > 0
-    })
-  }, [loans])
-
-  const formatCurrency = (amount: string) => {
-    // Convert from token decimals (8 decimals) to normalized form
-    const normalizedAmount = fromTokenDecimals(parseFloat(amount))
-    // Use our custom formatter for better number formatting with commas
-    const formattedNumber = formatNumberWithCommas(normalizedAmount)
-    return `$${formattedNumber}`
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    })
-  }
-
-  if (isLoading) {
-    return (
-      <VStack align="start" spacing={6} w="full">
-        <Heading
-          background="font.special"
-          backgroundClip="text"
-          fontSize={{ base: 'xl', md: '2xl' }}
-          fontWeight="semibold"
-        >
-          Active Loans
-        </Heading>
-        <Skeleton borderRadius="lg" h="200px" w="full" />
-      </VStack>
-    )
-  }
-
-  if (activeLoans.length === 0) {
-    return (
-      <VStack align="start" spacing={6} w="full">
-        <Heading
-          background="font.special"
-          backgroundClip="text"
-          fontSize={{ base: 'xl', md: '2xl' }}
-          fontWeight="semibold"
-        >
-          Active Loans
-        </Heading>
-        <NoisyCard
-          cardProps={{
-            borderRadius: 'lg',
-            w: 'full',
-          }}
-          contentProps={{
-            p: 8,
-            position: 'relative',
-          }}
-          shadowContainerProps={{
-            shadow: 'innerXl',
-          }}
-        >
-          <VStack spacing={2}>
-            <Text color="font.secondary" fontSize="sm">
-              No active loans yet
-            </Text>
-            <Text color="font.secondary" fontSize="xs">
-              Borrow from a lending pool to see your active loans here
-            </Text>
-          </VStack>
-        </NoisyCard>
-      </VStack>
-    )
-  }
-
-  return (
-    <VStack align="start" spacing={6} w="full">
-      <Heading
-        background="font.special"
-        backgroundClip="text"
-        fontSize={{ base: 'xl', md: '2xl' }}
-        fontWeight="semibold"
-      >
-        Active Loans ({activeLoans.length})
-      </Heading>
-
-      <TableContainer bg={cardBg} borderRadius="lg" shadow="xl" w="full">
-        <Table variant="simple">
-          <Thead>
-            <Tr>
-              <Th>Pool</Th>
-              <Th>Asset</Th>
-              <Th isNumeric>Principal Amount</Th>
-              <Th>Borrowed On</Th>
-              <Th>Status</Th>
-            </Tr>
-          </Thead>
-          <Tbody>
-            {activeLoans.map(loan => {
-              const pool = poolMap.get(loan.pool)
-              const asset = pool ? assetMap.get(pool.reserve_asset) : undefined
-
-              return (
-                <Tr key={loan.id}>
-                  <Td>
-                    <Text fontSize="sm" fontWeight="semibold">
-                      {pool?.title ?? pool?.name ?? 'Unknown Pool'}
-                    </Text>
-                  </Td>
-                  <Td>
-                    <HStack spacing={2}>
-                      {asset?.icon && (
-                        <Box h="20px" w="20px">
-                          <Box
-                            alt={asset.symbol}
-                            as="img"
-                            h="full"
-                            objectFit="contain"
-                            src={asset.icon}
-                            w="full"
-                          />
-                        </Box>
-                      )}
-                      <Text fontSize="sm" fontWeight="medium">
-                        {asset?.symbol || 'Unknown'}
-                      </Text>
-                    </HStack>
-                  </Td>
-                  <Td isNumeric>
-                    <Text fontSize="sm" fontWeight="semibold">
-                      {formatCurrency(loan.principal_amount)}
-                    </Text>
-                  </Td>
-                  <Td>
-                    <Text fontSize="sm">{formatDate(loan.created_at)}</Text>
-                  </Td>
-                  <Td>
-                    <Badge colorScheme="green" fontSize="xs">
-                      Active
-                    </Badge>
-                  </Td>
-                </Tr>
-              )
-            })}
-          </Tbody>
-        </Table>
-      </TableContainer>
-    </VStack>
   )
 }

@@ -1,0 +1,214 @@
+'use client'
+
+import { useMemo } from 'react'
+import {
+  Box,
+  HStack,
+  Skeleton,
+  Table,
+  TableContainer,
+  Tbody,
+  Td,
+  Text,
+  Th,
+  Thead,
+  Tooltip,
+  Tr,
+  VStack,
+  useColorModeValue,
+} from '@chakra-ui/react'
+import { useLoanRepayments } from '@repo/lib/cradle-client-ts/hooks/lending/useRepayments'
+import { fromTokenDecimals } from '@repo/lib/modules/lend'
+import { NoisyCard } from '@repo/lib/shared/components/containers/NoisyCard'
+
+export interface LoanRepaymentsTableProps {
+  loans: Array<{
+    id: string
+    wallet_id: string
+    pool: string
+    principal_amount: string
+    borrow_index: string
+    created_at: string
+    status: string
+    collateral_asset: string
+  }>
+  pools: Array<{
+    id: string
+    name?: string | null
+    title?: string | null
+    reserve_asset: string
+  }>
+  assets: Array<{
+    id: string
+    name: string
+    symbol: string
+    icon?: string | null
+  }>
+}
+
+export function LoanRepaymentsTable({ loans, pools, assets }: LoanRepaymentsTableProps) {
+  // Create lookup maps
+  const poolMap = useMemo(() => {
+    const map = new Map()
+    pools.forEach(pool => map.set(pool.id, pool))
+    return map
+  }, [pools])
+
+  const assetMap = useMemo(() => {
+    const map = new Map()
+    assets.forEach(asset => map.set(asset.id, asset))
+    return map
+  }, [assets])
+
+  // Get all loans (not just active, to show all historical repayments)
+  const allLoans = useMemo(() => {
+    return loans
+  }, [loans])
+
+  if (allLoans.length === 0) {
+    return (
+      <NoisyCard
+        cardProps={{
+          borderRadius: 'lg',
+          w: 'full',
+        }}
+        contentProps={{
+          p: 8,
+          position: 'relative',
+        }}
+        shadowContainerProps={{
+          shadow: 'innerXl',
+        }}
+      >
+        <VStack spacing={2}>
+          <Text color="font.secondary" fontSize="sm">
+            No loans yet
+          </Text>
+          <Text color="font.secondary" fontSize="xs">
+            Loan repayment history will appear here
+          </Text>
+        </VStack>
+      </NoisyCard>
+    )
+  }
+
+  return (
+    <VStack align="stretch" spacing={4} w="full">
+      {allLoans.map(loan => (
+        <LoanRepaymentRows assetMap={assetMap} key={loan.id} loan={loan} poolMap={poolMap} />
+      ))}
+    </VStack>
+  )
+}
+
+interface LoanRepaymentRowsProps {
+  loan: LoanRepaymentsTableProps['loans'][0]
+  poolMap: Map<string, LoanRepaymentsTableProps['pools'][0]>
+  assetMap: Map<string, LoanRepaymentsTableProps['assets'][0]>
+}
+
+function LoanRepaymentRows({ loan, poolMap, assetMap }: LoanRepaymentRowsProps) {
+  const cardBg = useColorModeValue('background.level1', 'background.level1')
+  console.log('loan', loan)
+
+  // Fetch repayments for this loan
+  const { data: repayments, isLoading } = useLoanRepayments({
+    loanId: loan.id,
+    enabled: true,
+  })
+
+  console.log('repayments', repayments)
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
+
+  if (isLoading) {
+    return <Skeleton borderRadius="lg" h="100px" w="full" />
+  }
+
+  if (!repayments || repayments.length === 0) {
+    return null // Don't show loans with no repayments
+  }
+
+  const pool = poolMap.get(loan.pool)
+  const borrowedAsset = pool ? assetMap.get(pool.reserve_asset) : undefined
+
+  return (
+    <TableContainer bg={cardBg} borderRadius="lg" shadow="xl" w="full">
+      <Table size="sm" variant="simple">
+        <Thead>
+          <Tr>
+            <Th>Pool</Th>
+            <Th>Borrowed Asset</Th>
+            <Th isNumeric>Repayment Amount</Th>
+            <Th>Repayment Date</Th>
+            <Th>Transaction</Th>
+          </Tr>
+        </Thead>
+        <Tbody>
+          {repayments.map(repayment => (
+            <Tr key={repayment.id}>
+              <Td>
+                <Text fontSize="sm" fontWeight="semibold">
+                  {pool?.title ?? pool?.name ?? 'Unknown Pool'}
+                </Text>
+              </Td>
+              <Td>
+                <HStack spacing={2}>
+                  {borrowedAsset?.icon && (
+                    <Box h="20px" w="20px">
+                      <Box
+                        alt={borrowedAsset.symbol}
+                        as="img"
+                        h="full"
+                        objectFit="contain"
+                        src={borrowedAsset.icon}
+                        w="full"
+                      />
+                    </Box>
+                  )}
+                  <Text fontSize="sm" fontWeight="medium">
+                    {borrowedAsset?.symbol || 'Unknown'}
+                  </Text>
+                </HStack>
+              </Td>
+              <Td isNumeric>
+                <Text fontSize="sm" fontWeight="semibold">
+                  {fromTokenDecimals(parseFloat(repayment.repayment_amount)).toFixed(2)}
+                </Text>
+              </Td>
+              <Td>
+                <Text fontSize="sm">{formatDate(repayment.repayment_date)}</Text>
+              </Td>
+              <Td>
+                {repayment.transaction ? (
+                  <Tooltip label={repayment.transaction}>
+                    <Text
+                      color="font.link"
+                      cursor="pointer"
+                      fontSize="sm"
+                      maxW="150px"
+                      noOfLines={1}
+                    >
+                      {repayment.transaction.slice(0, 8)}...{repayment.transaction.slice(-6)}
+                    </Text>
+                  </Tooltip>
+                ) : (
+                  <Text color="font.secondary" fontSize="sm">
+                    —
+                  </Text>
+                )}
+              </Td>
+            </Tr>
+          ))}
+        </Tbody>
+      </Table>
+    </TableContainer>
+  )
+}

@@ -12,7 +12,6 @@ import {
   Text,
   Th,
   Thead,
-  Tooltip,
   Tr,
   VStack,
   useColorModeValue,
@@ -118,6 +117,21 @@ function LoanRepaymentRows({ loan, poolMap, assetMap }: LoanRepaymentRowsProps) 
   })
 
   console.log('repayments', repayments)
+
+  // Deduplicate repayments by transaction ID
+  const uniqueRepayments = useMemo(() => {
+    if (!repayments) return []
+
+    const seen = new Set<string>()
+    return repayments.filter(repayment => {
+      if (!repayment.transaction || seen.has(repayment.transaction)) {
+        return false
+      }
+      seen.add(repayment.transaction)
+      return true
+    })
+  }, [repayments])
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -132,7 +146,7 @@ function LoanRepaymentRows({ loan, poolMap, assetMap }: LoanRepaymentRowsProps) 
     return <Skeleton borderRadius="lg" h="100px" w="full" />
   }
 
-  if (!repayments || repayments.length === 0) {
+  if (!uniqueRepayments || uniqueRepayments.length === 0) {
     return null // Don't show loans with no repayments
   }
 
@@ -141,18 +155,17 @@ function LoanRepaymentRows({ loan, poolMap, assetMap }: LoanRepaymentRowsProps) 
 
   return (
     <TableContainer bg={cardBg} borderRadius="lg" shadow="xl" w="full">
-      <Table size="sm" variant="simple">
+      <Table variant="simple">
         <Thead>
           <Tr>
             <Th>Pool</Th>
             <Th>Borrowed Asset</Th>
             <Th isNumeric>Repayment Amount</Th>
             <Th>Repayment Date</Th>
-            <Th>Transaction</Th>
           </Tr>
         </Thead>
         <Tbody>
-          {repayments.map(repayment => (
+          {uniqueRepayments.map(repayment => (
             <Tr key={repayment.id}>
               <Td>
                 <Text fontSize="sm" fontWeight="semibold">
@@ -180,30 +193,11 @@ function LoanRepaymentRows({ loan, poolMap, assetMap }: LoanRepaymentRowsProps) 
               </Td>
               <Td isNumeric>
                 <Text fontSize="sm" fontWeight="semibold">
-                  {fromTokenDecimals(parseFloat(repayment.repayment_amount)).toFixed(2)}
+                  ${fromTokenDecimals(parseFloat(repayment.repayment_amount)).toFixed(2)}
                 </Text>
               </Td>
               <Td>
                 <Text fontSize="sm">{formatDate(repayment.repayment_date)}</Text>
-              </Td>
-              <Td>
-                {repayment.transaction ? (
-                  <Tooltip label={repayment.transaction}>
-                    <Text
-                      color="font.link"
-                      cursor="pointer"
-                      fontSize="sm"
-                      maxW="150px"
-                      noOfLines={1}
-                    >
-                      {repayment.transaction.slice(0, 8)}...{repayment.transaction.slice(-6)}
-                    </Text>
-                  </Tooltip>
-                ) : (
-                  <Text color="font.secondary" fontSize="sm">
-                    —
-                  </Text>
-                )}
               </Td>
             </Tr>
           ))}

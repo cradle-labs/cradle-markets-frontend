@@ -38,7 +38,7 @@ import {
   PoolMetricsGrid,
   PoolConfigurationCard,
   PoolInterestModelCard,
-  PoolActivityCard,
+  // PoolActivityCard,
   LendTradingPanel,
   fromBasisPoints,
   fromTokenDecimals,
@@ -67,7 +67,11 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
   const { data: pool, isLoading: isLoadingPool } = useLendingPool({ poolId })
 
   // Fetch pool stats (metrics)
-  const { data: poolStats, isLoading: isLoadingSnapshot } = usePoolStats({
+  const {
+    data: poolStats,
+    isLoading: isLoadingSnapshot,
+    refetch: refetchPoolStats,
+  } = usePoolStats({
     poolId,
     enabled: !!pool,
   })
@@ -371,7 +375,10 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
             assetSymbol={poolData.asset?.symbol}
             borrowAPY={poolData.borrowAPY}
             loanToValue={poolData.loan_to_value}
-            onTransactionSuccess={refetchTransactions}
+            onTransactionSuccess={() => {
+              refetchTransactions()
+              refetchPoolStats()
+            }}
             poolId={poolData.id}
             reserveAssetId={poolData.reserve_asset}
             supplyAPY={poolData.supplyAPY}
@@ -380,7 +387,7 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
         </Grid>
 
         {/* Recent Activity */}
-        <PoolActivityCard transactions={poolData.transactions} />
+        {/* <PoolActivityCard transactions={poolData.transactions} /> */}
       </DefaultPageContainer>
     </>
   )

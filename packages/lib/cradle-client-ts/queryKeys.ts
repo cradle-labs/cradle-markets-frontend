@@ -21,12 +21,14 @@
  */
 
 import type {
-  MarketFilters,
-  OrderFilters,
-  TimeSeriesFilters,
-  LendingPoolFilters,
   AssetType,
-} from './cradle-api-client'
+  MarketType,
+  MarketStatus,
+  MarketRegulation,
+  OrderStatus,
+  OrderType,
+  FillMode,
+} from './types'
 
 /**
  * Query key factory for Cradle API queries
@@ -67,6 +69,16 @@ export const cradleQueryKeys = {
       [...cradleQueryKeys.wallets.details(), 'account', accountId] as const,
   },
 
+  // Balances
+  balances: {
+    all: ['cradle', 'balances'] as const,
+    lists: () => [...cradleQueryKeys.balances.all, 'list'] as const,
+    byAccountId: (accountId: string) =>
+      [...cradleQueryKeys.balances.lists(), 'account', accountId] as const,
+    byWalletAndAsset: (walletId: string, assetId: string) =>
+      [...cradleQueryKeys.balances.all, 'wallet', walletId, 'asset', assetId] as const,
+  },
+
   // Assets
   assets: {
     all: ['cradle', 'assets'] as const,
@@ -84,7 +96,11 @@ export const cradleQueryKeys = {
   markets: {
     all: ['cradle', 'markets'] as const,
     lists: () => [...cradleQueryKeys.markets.all, 'list'] as const,
-    list: (filters?: MarketFilters) => [...cradleQueryKeys.markets.lists(), filters] as const,
+    list: (filters?: {
+      market_type?: MarketType
+      status?: MarketStatus
+      regulation?: MarketRegulation
+    }) => [...cradleQueryKeys.markets.lists(), filters] as const,
     details: () => [...cradleQueryKeys.markets.all, 'detail'] as const,
     byId: (id: string) => [...cradleQueryKeys.markets.details(), id] as const,
   },
@@ -93,7 +109,13 @@ export const cradleQueryKeys = {
   orders: {
     all: ['cradle', 'orders'] as const,
     lists: () => [...cradleQueryKeys.orders.all, 'list'] as const,
-    list: (filters?: OrderFilters) => [...cradleQueryKeys.orders.lists(), filters] as const,
+    list: (filters?: {
+      wallet?: string
+      market_id?: string
+      status?: OrderStatus
+      order_type?: OrderType
+      mode?: FillMode
+    }) => [...cradleQueryKeys.orders.lists(), filters] as const,
     details: () => [...cradleQueryKeys.orders.all, 'detail'] as const,
     byId: (id: string) => [...cradleQueryKeys.orders.details(), id] as const,
   },
@@ -102,8 +124,12 @@ export const cradleQueryKeys = {
   timeSeries: {
     all: ['cradle', 'time-series'] as const,
     lists: () => [...cradleQueryKeys.timeSeries.all, 'list'] as const,
-    list: (filters?: TimeSeriesFilters) =>
-      [...cradleQueryKeys.timeSeries.lists(), filters] as const,
+    list: (filters?: {
+      market?: string
+      duration_secs?: string | number
+      interval?: string
+      asset_id?: string
+    }) => [...cradleQueryKeys.timeSeries.lists(), filters] as const,
     details: () => [...cradleQueryKeys.timeSeries.all, 'detail'] as const,
     byId: (id: string) => [...cradleQueryKeys.timeSeries.details(), id] as const,
   },
@@ -112,8 +138,11 @@ export const cradleQueryKeys = {
   lendingPools: {
     all: ['cradle', 'lending-pools'] as const,
     lists: () => [...cradleQueryKeys.lendingPools.all, 'list'] as const,
-    list: (filters?: LendingPoolFilters) =>
-      [...cradleQueryKeys.lendingPools.lists(), filters] as const,
+    list: (filters?: {
+      reserve_asset?: string
+      min_loan_to_value?: number
+      max_loan_to_value?: number
+    }) => [...cradleQueryKeys.lendingPools.lists(), filters] as const,
     details: () => [...cradleQueryKeys.lendingPools.all, 'detail'] as const,
     byId: (id: string) => [...cradleQueryKeys.lendingPools.details(), id] as const,
     byName: (name: string) => [...cradleQueryKeys.lendingPools.details(), 'name', name] as const,

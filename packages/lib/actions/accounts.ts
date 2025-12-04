@@ -10,14 +10,11 @@
 import { revalidatePath } from 'next/cache'
 import { getCradleClient } from '../cradle-client-ts/client'
 import { executeCradleOperation } from '../cradle-client-ts/services/api.service'
-import { MutationResponseHelpers } from '../cradle-client-ts/cradle-api-client'
+import type { CradleAccount, CradleWallet, CradleAccountStatus } from '../cradle-client-ts/types'
 import type {
-  CradleAccount,
-  CradleWallet,
-  CreateAccountInput,
-  UpdateAccountStatusInput,
-  CreateWalletInput,
-  CradleAccountStatus,
+  ActionRouterInput,
+  ActionRouterOutput,
+  CradleAccountType,
 } from '../cradle-client-ts/cradle-api-client'
 
 // =============================================================================
@@ -37,7 +34,7 @@ export async function getAccount(id: string): Promise<CradleAccount> {
  */
 export async function getAccountByLinkedId(linkedId: string): Promise<CradleAccount> {
   const client = getCradleClient()
-  return executeCradleOperation(() => client.getAccountByLinkedId(linkedId))
+  return executeCradleOperation(() => client.getAccountByLinked(linkedId))
 }
 
 /**
@@ -45,7 +42,21 @@ export async function getAccountByLinkedId(linkedId: string): Promise<CradleAcco
  */
 export async function getAccountWallets(accountId: string): Promise<CradleWallet[]> {
   const client = getCradleClient()
-  return executeCradleOperation(() => client.getAccountWallets(accountId))
+  return executeCradleOperation(() => client.getWalletsForAccount(accountId)).then(wallet => {
+    // The new API returns a single wallet, wrap it in an array for backward compatibility
+    return [wallet]
+  })
+}
+
+/**
+ * Get balances for an account
+ * Returns an array of token balances with token ID and balance
+ */
+export async function getBalances(
+  accountId: string
+): Promise<Array<{ token: string; balance: string }>> {
+  const client = getCradleClient()
+  return executeCradleOperation(() => client.getBalances(accountId))
 }
 
 // =============================================================================
@@ -53,36 +64,101 @@ export async function getAccountWallets(accountId: string): Promise<CradleWallet
 // =============================================================================
 
 /**
- * Create a new Cradle account
+ * Create a new Cradle account and its associated wallet
  *
  * @param input - Account creation input
- * @returns The created account ID
+ * @returns The created account ID and wallet ID
  */
-export async function createAccount(input: CreateAccountInput): Promise<{
+export async function createAccount(input: {
+  linked_account_id: string
+  account_type?: CradleAccountType
+  status?: CradleAccountStatus
+}): Promise<{
   success: boolean
   accountId?: string
+  walletId?: string
   status?: CradleAccountStatus
   error?: string
 }> {
   try {
     const client = getCradleClient()
-    const response = await client.createAccount(input)
 
-    if (!response.success || !response.data) {
+    // Step 1: Create the account
+    const createAccountAction: ActionRouterInput = {
+      Accounts: {
+        CreateAccount: {
+          linked_account_id: input.linked_account_id,
+          account_type: input.account_type,
+          status: input.status,
+        },
+      },
+    }
+    const accountResponse = await client.process(createAccountAction)
+
+    if (!accountResponse.success || !accountResponse.data) {
       return {
         success: false,
-        error: response.error || 'Failed to create account',
+        error: accountResponse.error || 'Failed to create account',
       }
     }
 
-    if (!MutationResponseHelpers.isCreateAccount(response.data)) {
+    const accountOutput = accountResponse.data as ActionRouterOutput
+    if (!('Accounts' in accountOutput) || !('CreateAccount' in accountOutput.Accounts)) {
       return {
         success: false,
-        error: 'Unexpected response format from API',
+        error: 'Unexpected response format from API when creating account',
       }
     }
 
-    const accountId = response.data.Accounts.CreateAccount
+    const accountResult = accountOutput.Accounts.CreateAccount
+    const accountId = accountResult.id
+    let walletId = accountResult.wallet_id
+
+    // Step 2: Create wallet for the account (if not already created)
+    // Even if CreateAccount returns a wallet_id, we explicitly create the wallet
+    // to ensure it exists and get the wallet details
+    if (accountId) {
+      try {
+        const createWalletAction: ActionRouterInput = {
+          Accounts: {
+            CreateAccountWallet: {
+              cradle_account_id: accountId,
+            },
+          },
+        }
+        const walletResponse = await client.process(createWalletAction)
+
+        if (walletResponse.success && walletResponse.data) {
+          const walletOutput = walletResponse.data as ActionRouterOutput
+          if ('Accounts' in walletOutput && 'CreateAccountWallet' in walletOutput.Accounts) {
+            // Use the newly created wallet ID, or fall back to the one from CreateAccount
+            walletId = walletOutput.Accounts.CreateAccountWallet.id || walletId
+          }
+        } else {
+          // If wallet creation fails but account was created, log warning but don't fail
+          console.warn('Account created but wallet creation failed:', walletResponse.error)
+          // If we don't have a wallet_id from CreateAccount, this is an error
+          if (!walletId) {
+            return {
+              success: false,
+              error: walletResponse.error || 'Account created but failed to create wallet',
+            }
+          }
+        }
+      } catch (walletError) {
+        // If wallet creation throws an error, log it but continue if we have wallet_id from CreateAccount
+        console.warn('Error creating wallet:', walletError)
+        if (!walletId) {
+          return {
+            success: false,
+            error:
+              walletError instanceof Error
+                ? walletError.message
+                : 'Account created but failed to create wallet',
+          }
+        }
+      }
+    }
 
     // Revalidate any account-related pages
     revalidatePath('/portfolio')
@@ -91,6 +167,7 @@ export async function createAccount(input: CreateAccountInput): Promise<{
     return {
       success: true,
       accountId,
+      walletId,
     }
   } catch (error) {
     console.error('Error creating account:', error)
@@ -107,13 +184,24 @@ export async function createAccount(input: CreateAccountInput): Promise<{
  * @param input - Account status update input
  * @returns Success status
  */
-export async function updateAccountStatus(input: UpdateAccountStatusInput): Promise<{
+export async function updateAccountStatus(input: {
+  account_id: string
+  status: CradleAccountStatus
+}): Promise<{
   success: boolean
   error?: string
 }> {
   try {
     const client = getCradleClient()
-    const response = await client.updateAccountStatus(input)
+    const action: ActionRouterInput = {
+      Accounts: {
+        UpdateAccountStatus: {
+          cradle_account_id: input.account_id,
+          status: input.status,
+        },
+      },
+    }
+    const response = await client.process(action)
 
     if (!response.success) {
       return {
@@ -142,14 +230,25 @@ export async function updateAccountStatus(input: UpdateAccountStatusInput): Prom
  * @param input - Wallet creation input
  * @returns The created wallet ID
  */
-export async function createWallet(input: CreateWalletInput): Promise<{
+export async function createWallet(input: {
+  cradle_account_id: string
+  address?: string
+  contract_id?: string
+}): Promise<{
   success: boolean
   walletId?: string
   error?: string
 }> {
   try {
     const client = getCradleClient()
-    const response = await client.createWallet(input)
+    const action: ActionRouterInput = {
+      Accounts: {
+        CreateAccountWallet: {
+          cradle_account_id: input.cradle_account_id,
+        },
+      },
+    }
+    const response = await client.process(action)
 
     if (!response.success || !response.data) {
       return {
@@ -158,22 +257,23 @@ export async function createWallet(input: CreateWalletInput): Promise<{
       }
     }
 
-    if (!MutationResponseHelpers.isCreateWallet(response.data)) {
+    const output = response.data as ActionRouterOutput
+    if ('Accounts' in output && 'CreateAccountWallet' in output.Accounts) {
+      const walletId = output.Accounts.CreateAccountWallet.id
+
+      // Revalidate wallet-related pages
+      revalidatePath('/portfolio')
+      revalidatePath(`/account/${input.cradle_account_id}`)
+
       return {
-        success: false,
-        error: 'Unexpected response format from API',
+        success: true,
+        walletId,
       }
     }
 
-    const walletId = response.data.Accounts.CreateWallet
-
-    // Revalidate wallet-related pages
-    revalidatePath('/portfolio')
-    revalidatePath(`/account/${input.cradle_account_id}`)
-
     return {
-      success: true,
-      walletId,
+      success: false,
+      error: 'Unexpected response format from API',
     }
   } catch (error) {
     console.error('Error creating wallet:', error)

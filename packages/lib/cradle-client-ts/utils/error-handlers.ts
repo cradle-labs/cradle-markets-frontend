@@ -29,10 +29,39 @@ export function throwIfError<T>(
   context?: string
 ): asserts response is ApiResponse<T> & { success: true } {
   if (!response.success) {
-    const errorMessage = context
-      ? `${context}: ${response.error || 'Unknown API error'}`
-      : response.error || 'Unknown API error'
-    throw new CradleApiError(errorMessage, undefined, response)
+    // Try to extract error message from various possible locations
+    let errorMessage = response.error
+
+    // If no error message, try to extract from response object
+    if (!errorMessage && response && typeof response === 'object') {
+      // Check for common error fields
+      const responseObj = response as unknown as Record<string, unknown>
+      errorMessage =
+        (responseObj.message as string | undefined) ||
+        (responseObj.error as string | undefined) ||
+        (responseObj.detail as string | undefined) ||
+        (responseObj.reason as string | undefined) ||
+        undefined
+
+      // If still no message, try to stringify the response for debugging
+      if (!errorMessage) {
+        try {
+          const responseStr = JSON.stringify(response, null, 2)
+          errorMessage = `API request failed. Response: ${responseStr.substring(0, 200)}`
+        } catch {
+          errorMessage = 'API request failed with no error message provided'
+        }
+      }
+    }
+
+    // Fallback to generic message
+    if (!errorMessage) {
+      errorMessage = 'Unknown API error'
+    }
+
+    const finalMessage = context ? `${context}: ${errorMessage}` : errorMessage
+
+    throw new CradleApiError(finalMessage, undefined, response)
   }
 }
 

@@ -4,6 +4,10 @@ import { useMemo } from 'react'
 import {
   Badge,
   Box,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  Button,
   Grid,
   Heading,
   HStack,
@@ -13,6 +17,7 @@ import {
   useColorModeValue,
   VStack,
 } from '@chakra-ui/react'
+import { ChevronRight, Home } from 'react-feather'
 import { useUser } from '@clerk/nextjs'
 import { DefaultPageContainer } from '@repo/lib/shared/components/containers/DefaultPageContainer'
 import FadeInOnView from '@repo/lib/shared/components/containers/FadeInOnView'
@@ -23,10 +28,12 @@ import { useWalletByAccountId } from '@repo/lib/cradle-client-ts/hooks/accounts/
 import { useAsset } from '@repo/lib/cradle-client-ts/hooks/assets/useAsset'
 import {
   useLendingPool,
-  usePoolSnapshot,
+  usePoolStats,
 } from '@repo/lib/cradle-client-ts/hooks/lending/useLendingPool'
-import { useLendingTransactions } from '@repo/lib/cradle-client-ts/hooks/lending/useLendingTransactions'
-import { useLoansByPool } from '@repo/lib/cradle-client-ts/hooks/lending/useLoans'
+import { useQuery } from '@tanstack/react-query'
+import { cradleQueryKeys } from '@repo/lib/cradle-client-ts/queryKeys'
+import type { Loan } from '@repo/lib/cradle-client-ts/types'
+import type { PoolTransactionType } from '@repo/lib/cradle-client-ts/types'
 import {
   PoolMetricsGrid,
   PoolConfigurationCard,
@@ -58,14 +65,12 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
 
   // Fetch pool data
   const { data: pool, isLoading: isLoadingPool } = useLendingPool({ poolId })
-  console.log('pool', pool)
 
-  // Fetch pool snapshot (metrics)
-  const { data: snapshot, isLoading: isLoadingSnapshot } = usePoolSnapshot({
+  // Fetch pool stats (metrics)
+  const { data: poolStats, isLoading: isLoadingSnapshot } = usePoolStats({
     poolId,
     enabled: !!pool,
   })
-  console.log('snapshot', snapshot)
 
   // Fetch asset details
   const { data: asset, isLoading: isLoadingAsset } = useAsset({
@@ -73,37 +78,56 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
     enabled: !!pool?.reserve_asset,
   })
 
-  // Fetch transactions and loans
-  const { data: transactions = [], refetch: refetchTransactions } = useLendingTransactions({
-    poolId,
+  // Fetch transactions (stubbed for now - hook doesn't exist)
+  interface LendingTransaction {
+    id: string
+    transaction_type: PoolTransactionType
+    amount: number
+    created_at: string
+  }
+  const { data: transactions = [], refetch: refetchTransactions } = useQuery<LendingTransaction[]>({
+    queryKey: cradleQueryKeys.lendingPools.transactions(poolId),
+    queryFn: async () => {
+      // TODO: Implement when getLendingTransactions action is available
+      return []
+    },
     enabled: !!pool,
   })
-  console.log('transactions', transactions)
 
-  const { data: loans = [] } = useLoansByPool({
-    poolId,
+  // Fetch loans by pool (stubbed for now - hook doesn't exist)
+  const { data: loans = [] } = useQuery<Loan[]>({
+    queryKey: cradleQueryKeys.loans.listByPool(poolId),
+    queryFn: async () => {
+      // TODO: Implement when getLoansByPool action is available
+      return []
+    },
     enabled: !!pool,
   })
-  console.log('loans', loans)
 
   // Combine all data
   const poolData = useMemo(() => {
     if (!pool) return null
 
     // Convert token amounts from decimals (8 decimals) to normalized form
-    const totalSupplied = snapshot?.total_supply
-      ? fromTokenDecimals(parseFloat(snapshot.total_supply))
-      : 0
-    const totalBorrowed = snapshot?.total_borrow
-      ? fromTokenDecimals(parseFloat(snapshot.total_borrow))
-      : 0
-    // Convert utilization, supply APY, and borrow APY from basis points to decimal
-    const utilization = snapshot?.utilization_rate ? fromBasisPoints(snapshot.utilization_rate) : 0
-    const supplyAPY = snapshot?.supply_apy ? fromBasisPoints(snapshot.supply_apy) : 0
-    const borrowAPY = snapshot?.borrow_apy ? fromBasisPoints(snapshot.borrow_apy) : 0
-    const availableLiquidity = snapshot?.available_liquidity
-      ? fromTokenDecimals(parseFloat(snapshot.available_liquidity))
-      : totalSupplied - totalBorrowed
+    // Note: poolStats uses 'utilization', 'supply_rate', 'borrow_rate' (not 'utilization_rate', 'supply_apy', 'borrow_apy')
+    const totalSupplied =
+      poolStats?.total_supplied != null
+        ? fromTokenDecimals(Number(poolStats.total_supplied as string | number))
+        : 0
+    const totalBorrowed =
+      poolStats?.total_borrowed != null
+        ? fromTokenDecimals(Number(poolStats.total_borrowed as string | number))
+        : 0
+    const utilization =
+      poolStats?.utilization != null ? fromBasisPoints(poolStats.utilization as string | number) : 0
+    const supplyAPY =
+      poolStats?.supply_rate != null ? fromBasisPoints(poolStats.supply_rate as string | number) : 0
+    const borrowAPY =
+      poolStats?.borrow_rate != null ? fromBasisPoints(poolStats.borrow_rate as string | number) : 0
+    const availableLiquidity =
+      poolStats?.liquidity != null
+        ? fromTokenDecimals(Number(poolStats.liquidity as string | number))
+        : totalSupplied - totalBorrowed
 
     return {
       ...pool,
@@ -117,7 +141,7 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
       transactions,
       loans,
     }
-  }, [pool, snapshot, asset, transactions, loans])
+  }, [pool, poolStats, asset, transactions, loans])
 
   const fallbackBg = useColorModeValue('gray.100', 'gray.700')
   const fallbackColor = useColorModeValue('gray.600', 'gray.300')
@@ -210,6 +234,37 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
             />
             <FadeInOnView animateOnce={false}>
               <VStack align="stretch" mb="8" spacing="4">
+                {poolData && (
+                  <Breadcrumb
+                    color="grayText"
+                    fontSize="sm"
+                    pb="ms"
+                    separator={
+                      <Box color="border.base">
+                        <ChevronRight size={16} />
+                      </Box>
+                    }
+                    spacing="sm"
+                  >
+                    <BreadcrumbItem>
+                      <BreadcrumbLink href="/">
+                        <Button color="grayText" size="xs" variant="link">
+                          <Home size={16} />
+                        </Button>
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbItem>
+                      <BreadcrumbLink fontWeight="medium" href="/lend">
+                        Lend
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbItem isCurrentPage>
+                      <BreadcrumbLink href="#">
+                        {poolData.title || poolData.name} ({poolData.asset?.symbol})
+                      </BreadcrumbLink>
+                    </BreadcrumbItem>
+                  </Breadcrumb>
+                )}
                 <HStack spacing="4">
                   <Box borderRadius="full" flexShrink={0} h="50px" overflow="hidden" w="50px">
                     {poolData.asset?.icon ? (
@@ -232,7 +287,7 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
                         }
                         h="full"
                         objectFit="contain"
-                        src={poolData.asset.icon}
+                        src={poolData.asset.icon ?? undefined}
                         w="full"
                       />
                     ) : (
@@ -281,7 +336,7 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
       >
         {/* Key Metrics Grid */}
         <PoolMetricsGrid
-          activeLoansCount={poolData.loans.filter(l => l.status === 'active').length}
+          activeLoansCount={poolData.loans.filter((l: Loan) => l.status === 'active').length}
           availableLiquidity={poolData.availableLiquidity}
           borrowAPY={poolData.borrowAPY}
           supplyAPY={poolData.supplyAPY}

@@ -1,8 +1,15 @@
 'use client'
 
 import { Badge, Box, Card, Heading, HStack, Text, VStack } from '@chakra-ui/react'
-import type { LendingTransaction } from '@repo/lib/cradle-client-ts/types'
+import type { PoolTransactionType } from '@repo/lib/cradle-client-ts/types'
 import { fromTokenDecimals } from './utils'
+
+interface LendingTransaction {
+  id: string
+  transaction_type: PoolTransactionType
+  amount: number
+  created_at: string
+}
 
 interface PoolActivityCardProps {
   transactions: LendingTransaction[]

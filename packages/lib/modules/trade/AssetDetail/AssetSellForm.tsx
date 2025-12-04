@@ -4,23 +4,32 @@ import { Box, Button, HStack, Input, Text, VStack, useToast } from '@chakra-ui/r
 import { ArrowDown } from 'react-feather'
 import { IconButton } from '@chakra-ui/react'
 import { TokenInput } from '@repo/lib/modules/tokens/TokenInput/TokenInput'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { HumanAmount } from '@balancer/sdk'
 import { useAssetDetail } from './AssetDetailProvider'
-import { useHederaBalance } from '@repo/lib/shared/hooks/useHederaBalance'
 import { useUser } from '@clerk/nextjs'
 import { useAccountByLinkedId } from '@repo/lib/cradle-client-ts/hooks/accounts/useAccountByLinkedId'
 import { useWalletByAccountId } from '@repo/lib/cradle-client-ts/hooks/accounts/useWallet'
+import { useAssetBalances } from '@repo/lib/cradle-client-ts/hooks/accounts/useAssetBalances'
 import { useAsset } from '@repo/lib/cradle-client-ts/hooks/assets/useAsset'
 import { placeOrder } from '@repo/lib/actions/orders'
-import {
-  blockInvalidNumberInput,
-  formatTo8Decimals,
-  formatToWholeNumber,
-} from '@repo/lib/shared/utils/numbers'
-import type { PlaceOrderInput, FillMode } from '@repo/lib/cradle-client-ts/cradle-api-client'
+import { blockInvalidNumberInput, formatTo8Decimals } from '@repo/lib/shared/utils/numbers'
+import { toTokenDecimals, fromTokenDecimals } from '@repo/lib/modules/lend/utils'
+import type { FillMode } from '@repo/lib/cradle-client-ts/cradle-api-client'
 
 type OrderType = 'market' | 'limit'
+
+interface PlaceOrderInput {
+  wallet: string
+  market_id: string
+  bid_asset: string
+  ask_asset: string
+  bid_amount: string
+  ask_amount: string
+  price: string
+  mode: FillMode
+  order_type: OrderType
+}
 
 export function AssetSellForm() {
   const { user } = useUser()
@@ -76,19 +85,48 @@ export function AssetSellForm() {
       : (`0x${address}` as `0x${string}`)
   }
 
-  // Fetch balance for asset_one (the asset we're selling, e.g., SAF)
-  const { data: sellAssetBalance } = useHederaBalance({
-    accountId: wallet?.contract_id, // Use contract_id which is in Hedera format (0.0.XXXXX)
-    tokenId: assetOne?.token, // Token ID in hex format
-    enabled: !!wallet?.contract_id && !!assetOne?.token,
+  // Fetch balances for both assets using useAssetBalances
+  const assetIds = useMemo(() => {
+    const ids: string[] = []
+    if (assetOne?.id) ids.push(assetOne.id)
+    if (assetTwo?.id) ids.push(assetTwo.id)
+    return ids
+  }, [assetOne?.id, assetTwo?.id])
+
+  const assetBalances = useAssetBalances({
+    walletId: wallet?.id || '',
+    assetIds,
+    enabled: !!wallet?.id && assetIds.length > 0,
   })
 
-  // Fetch balance for asset_two (the asset we're receiving, e.g., cpUSD)
-  const { data: receiveAssetBalance } = useHederaBalance({
-    accountId: wallet?.contract_id, // Use contract_id which is in Hedera format (0.0.XXXXX)
-    tokenId: assetTwo?.token, // Token ID in hex format
-    enabled: !!wallet?.contract_id && !!assetTwo?.token,
-  })
+  // Extract balances for each asset
+  const sellAssetBalanceData = useMemo(() => {
+    const balance = assetBalances.find(b => b.assetId === assetOne?.id)
+    if (!balance?.data) return null
+    const normalized = fromTokenDecimals(balance.data.balance, balance.data.decimals)
+    return {
+      formatted: new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(normalized),
+      balance: balance.data.balance.toString(),
+      decimals: balance.data.decimals,
+    }
+  }, [assetBalances, assetOne?.id])
+
+  const receiveAssetBalanceData = useMemo(() => {
+    const balance = assetBalances.find(b => b.assetId === assetTwo?.id)
+    if (!balance?.data) return null
+    const normalized = fromTokenDecimals(balance.data.balance, balance.data.decimals)
+    return {
+      formatted: new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(normalized),
+      balance: balance.data.balance.toString(),
+      decimals: balance.data.decimals,
+    }
+  }, [assetBalances, assetTwo?.id])
 
   // Calculate price based on order type
   const getPrice = () => {
@@ -175,30 +213,21 @@ export function AssetSellForm() {
       const price = getPrice()
 
       // Format amounts: whole numbers for amounts, 8 decimals for price
+      const askAssetDecimals = assetOne?.decimals ?? 8
+      const bidAssetDecimals = assetTwo?.decimals ?? 8
+      const askAmountScaled = toTokenDecimals(Number(sellAmount), askAssetDecimals)
+      const bidAmountScaled = toTokenDecimals(Number(receiveAmount), bidAssetDecimals)
       const orderPayload: PlaceOrderInput = {
         wallet: wallet.id,
         market_id: market.id,
         bid_asset: assetTwo.id, //  bid asset is the one you want and are gonna be receiving.
         ask_asset: assetOne.id, // ask asset is the one you have and are gonna be paying with.
-        bid_amount: formatToWholeNumber(receiveAmount), // bid amount is the amount you want to receive (whole number)
-        ask_amount: formatToWholeNumber(sellAmount), //ask amount is the amount you have and are gonna be paying with (whole number)
+        bid_amount: String(bidAmountScaled), // amount to receive in base units
+        ask_amount: String(askAmountScaled), // amount to pay in base units
         price: formatTo8Decimals(price), // Price in 8 decimal format
         mode: fillMode,
         order_type: orderType,
       }
-
-      console.log('=== Order Placement Debug (SELL) ===')
-      console.log('User Input - Sell Amount:', sellAmount)
-      console.log('User Input - Receive Amount:', receiveAmount)
-      console.log('User Input - Price:', price)
-      console.log('Formatted - bid_amount:', formatToWholeNumber(receiveAmount))
-      console.log('Formatted - ask_amount:', formatToWholeNumber(sellAmount))
-      console.log('Formatted - price:', formatTo8Decimals(price))
-      console.log('Wallet:', wallet)
-      console.log('Market:', market)
-      console.log('Asset One (selling):', assetOne)
-      console.log('Asset Two (receiving):', assetTwo)
-      console.log('Order Payload:', orderPayload)
 
       const result = await placeOrder(orderPayload)
 
@@ -215,10 +244,13 @@ export function AssetSellForm() {
         // Reset form
         setSellAmount('0' as HumanAmount)
         setReceiveAmount('0' as HumanAmount)
-        setLimitPrice('')
+        setLimitPrice(currentMarketPrice.toFixed(4))
 
         // Refetch data
         refetch()
+
+        // Refetch asset balances
+        assetBalances.forEach(balance => balance.refetch())
       } else {
         toast({
           title: 'Order Failed',
@@ -458,7 +490,7 @@ export function AssetSellForm() {
             Sell
           </Text>
           <Text color="font.secondary" fontSize="xs">
-            Balance: {sellAssetBalance?.formatted || '0'} {assetOne?.symbol}
+            Balance: {sellAssetBalanceData?.formatted || '0'} {assetOne?.symbol}
           </Text>
         </HStack>
         <Box w="full">
@@ -474,7 +506,7 @@ export function AssetSellForm() {
             }}
             chain="ETHEREUM"
             customUsdPrice={currentMarketPrice}
-            customUserBalance={sellAssetBalance?.formatted}
+            customUserBalance={sellAssetBalanceData?.formatted}
             onChange={handleSellAmountChange}
             placeholder="0.00"
             value={sellAmount}
@@ -503,7 +535,7 @@ export function AssetSellForm() {
             Receive
           </Text>
           <Text color="font.secondary" fontSize="xs">
-            Balance: {receiveAssetBalance?.formatted || '0'} {assetTwo?.symbol}
+            Balance: {receiveAssetBalanceData?.formatted || '0'} {assetTwo?.symbol}
           </Text>
         </HStack>
         <Box w="full">
@@ -519,7 +551,7 @@ export function AssetSellForm() {
             }}
             chain="ETHEREUM"
             customUsdPrice={1} // Assuming stable coin, adjust if needed
-            customUserBalance={receiveAssetBalance?.formatted}
+            customUserBalance={receiveAssetBalanceData?.formatted}
             onChange={handleReceiveAmountChange}
             placeholder="0.00"
             value={receiveAmount}

@@ -10,13 +10,17 @@ import { useQuery, type UseQueryOptions } from '@tanstack/react-query'
 import { cradleQueryKeys } from '../../queryKeys'
 import { fetchLendingPools } from '../../services/fetchers'
 import { standardQueryOptions } from '../../utils/query-options'
-import type { LendingPool, LendingPoolFilters } from '../../cradle-api-client'
+import type { LendingPool } from '../../types'
 
 export interface UseLendingPoolsOptions {
   /**
    * Optional filters for lending pools
    */
-  filters?: LendingPoolFilters
+  filters?: {
+    reserve_asset?: string
+    min_loan_to_value?: number
+    max_loan_to_value?: number
+  }
   /**
    * Whether the query is enabled
    * @default true

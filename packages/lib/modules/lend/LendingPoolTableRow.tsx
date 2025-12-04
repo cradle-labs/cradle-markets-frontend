@@ -93,7 +93,7 @@ export function LendingPoolTableRow({
                     }
                     h="full"
                     objectFit="contain"
-                    src={pool.asset.icon}
+                    src={pool.asset.icon ?? undefined}
                     w="full"
                   />
                 </Box>

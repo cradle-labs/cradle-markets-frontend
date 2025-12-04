@@ -1,146 +1,32 @@
-/**
- * Cradle Back-End REST API Client
- * TypeScript module for interacting with the Cradle Back-End REST API
- */
+// Cradle TypeScript client generated from IMPLEMENTATION_SUMMARY.md
+// Provides typed helpers for REST endpoints and the Action Router.
 
-import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios'
+import axios, { AxiosInstance, AxiosRequestConfig } from 'axios'
 
-// ============================================================================
-// COMMON TYPES
-// ============================================================================
+type UUID = string
+type Big = string
 
-/**
- * Standard API response wrapper
- */
-export interface ApiResponse<T> {
+interface ApiResponse<T> {
   success: boolean
-  data: T | null
-  error: string | null
+  data?: T
+  error?: string
 }
 
-/**
- * Health check response
- */
-export interface HealthResponse {
-  status: string
-  timestamp: string
-}
-
-// ============================================================================
-// ACCOUNT TYPES
-// ============================================================================
-
-export type CradleAccountType = 'retail' | 'institutional'
-export type CradleAccountStatus = 'unverified' | 'verified' | 'suspended' | 'closed'
-export type CradleWalletStatus = 'active' | 'inactive' | 'suspended'
-export type WithdrawalType = 'fiat' | 'crypto'
-
-export interface CradleAccount {
-  id: string
-  linked_account_id: string
-  created_at: string
-  account_type: CradleAccountType
-  status: CradleAccountStatus
-}
-
-export interface CradleWallet {
-  id: string
-  cradle_account_id: string
-  address: string
-  contract_id: string
-  created_at: string
-  status: CradleWalletStatus
-}
-
-// ============================================================================
-// ASSET TYPES
-// ============================================================================
-
-export type AssetType =
-  | 'bridged'
-  | 'native'
-  | 'yield_breaking'
-  | 'chain_native'
-  | 'stablecoin'
-  | 'volatile'
-
-export interface Asset {
-  id: string
-  asset_manager: string
-  token: string
-  created_at: string
-  asset_type: AssetType
-  name: string
-  symbol: string
-  decimals: number
-  icon: string
-}
-
-// ============================================================================
-// MARKET TYPES
-// ============================================================================
-
-export type MarketStatus = 'active' | 'inactive' | 'suspended'
-export type MarketType = 'spot' | 'derivative' | 'futures'
-export type MarketRegulation = 'regulated' | 'unregulated'
-
-export interface Market {
-  id: string
-  name: string
-  description: string
-  icon: string
-  asset_one: string
-  asset_two: string
-  created_at: string
-  market_type: MarketType
-  market_status: MarketStatus
-  market_regulation: MarketRegulation
-}
-
-export interface MarketFilters {
-  market_type?: MarketType
-  status?: MarketStatus
-  regulation?: MarketRegulation
-}
-
-// ============================================================================
-// ORDER TYPES
-// ============================================================================
-
-export type OrderStatus = 'open' | 'closed' | 'cancelled'
-export type OrderType = 'limit' | 'market'
-export type FillMode = 'fill-or-kill' | 'immediate-or-cancel' | 'good-till-cancel'
-export type OrderFillStatus = 'partial' | 'filled' | 'cancelled'
-
-export interface Order {
-  id: string
-  wallet: string
-  market_id: string
-  bid_asset: string
-  ask_asset: string
-  bid_amount: string
-  ask_amount: string
-  price: string
-  mode: FillMode
-  order_type: OrderType
-  status: OrderStatus
-  created_at: string
-}
-
-export interface OrderFilters {
-  wallet?: string
-  market_id?: string
-  status?: OrderStatus
-  order_type?: OrderType
-  from_date?: string
-  to_date?: string
-}
-
-// ============================================================================
-// TIME SERIES TYPES
-// ============================================================================
-
-export type TimeSeriesInterval =
+// Core enums
+type CradleAccountType = 'retail' | 'institutional' | 'system'
+type CradleAccountStatus = 'unverified' | 'verified' | 'suspended' | 'closed'
+type CradleWalletStatus = 'active' | 'inactive' | 'suspended'
+type AssetType = 'bridged' | 'native' | 'yield_bearing' | 'chain_native' | 'stablecoin' | 'volatile'
+type MarketStatus = 'active' | 'inactive' | 'suspended'
+type MarketType = 'spot' | 'derivative' | 'futures'
+type MarketRegulation = 'regulated' | 'unregulated'
+type FillMode = 'fill-or-kill' | 'immediate-or-cancel' | 'good-till-cancel'
+type OrderStatus = 'open' | 'closed' | 'cancelled'
+type OrderType = 'limit' | 'market'
+type TimeSeriesInterval =
+  | '15secs'
+  | '30secs'
+  | '45secs'
   | '1min'
   | '5min'
   | '15min'
@@ -149,1090 +35,789 @@ export type TimeSeriesInterval =
   | '4hr'
   | '1day'
   | '1week'
+type DataProviderType = 'order_book' | 'exchange' | 'aggregated'
+type LoanStatus = 'active' | 'repaid' | 'liquidated'
+type PoolTransactionType = 'supply' | 'withdraw'
+type ListingStatus = 'pending' | 'open' | 'closed' | 'paused' | 'cancelled'
+type OrderFillStatus = 'Partial' | 'Filled' | 'Cancelled'
 
-export type DataProviderType = 'order_book' | 'exchange' | 'aggregated'
-
-export interface TimeSeriesRecord {
-  id: string
-  market_id: string
-  asset: string
-  open: string
-  high: string
-  low: string
-  close: string
-  volume: string
-  start_time: string
-  end_time: string
-  interval: TimeSeriesInterval
-  data_provider_type: DataProviderType
-  data_provider: string
-}
-
-export interface TimeSeriesFilters {
-  market_id?: string
-  asset?: string
-  interval?: TimeSeriesInterval
-  start_time?: string
-  end_time?: string
-  data_provider?: string
-}
-
-// ============================================================================
-// LENDING POOL TYPES
-// ============================================================================
-
-export type LoanStatus = 'active' | 'repaid' | 'liquidated'
-export type PoolTransactionType = 'supply' | 'withdraw'
-
-export interface LendingPool {
-  id: string
-  pool_address: string
-  pool_contract_id: string
-  reserve_asset: string
-  loan_to_value: string
-  base_rate: string
-  slope1: string
-  slope2: string
-  liquidation_threshold: string
-  liquidation_discount: string
-  reserve_factor: string
-  name?: string
-  title?: string
-  description?: string
-  created_at: string
-  updated_at?: string
-}
-
-export interface LendingPoolSnapshot {
-  id: string
-  lending_pool_id: string
-  total_supply: string
-  total_borrow: string
-  available_liquidity: string
-  utilization_rate: string
-  supply_apy: string
-  borrow_apy: string
-  created_at: string
-}
-
-export interface LendingTransaction {
-  id: string
-  wallet: string
-  pool: string
-  amount: number
-  transaction_type: PoolTransactionType
-  created_at: string
-}
-
-export interface Loan {
-  id: string
-  account_id: string
-  wallet_id: string
-  pool: string
-  borrow_index: string
-  principal_amount: string
-  created_at: string
-  status: LoanStatus
-  transaction?: string
-}
-
-export interface LoanRepayment {
-  id: string
-  loan_id: string
-  repayment_amount: string
-  repayment_date: string
-  transaction?: string
-}
-
-export interface LoanLiquidation {
-  id: string
-  loan_id: string
-  liquidator_wallet_id: string
-  liquidation_amount: string
-  liquidation_date: string
-  transaction?: string
-}
-
-export interface LendingPoolFilters {
-  reserve_asset?: string
-  min_loan_to_value?: number
-  max_loan_to_value?: number
-}
-
-export interface LoanFilters {
-  pool_id?: string
-  wallet_id?: string
-  status?: LoanStatus
-  from_date?: string
-  to_date?: string
-}
-
-export interface LoanRepaymentFilters {
-  loan_id?: string
-  from_date?: string
-  to_date?: string
-}
-
-export interface LoanLiquidationFilters {
-  loan_id?: string
-  from_date?: string
-  to_date?: string
-}
-
-// Lending Pool Contract Getters
-export interface InterestRateModel {
-  description: string
-  slope1_threshold: string
-  slope1_rate: string
-  slope2_rate: string
-}
-
-export interface InterestRates {
-  pool_id: string
-  base_rate: string
-  slope1: string
-  slope2: string
-  reserve_factor: string
-  interest_rate_model: InterestRateModel
-}
-
-export interface RiskParameters {
-  ltv: string
-  liquidation_threshold: string
-  liquidation_penalty: string
-}
-
-export interface CollateralInfo {
-  pool_id: string
-  loan_to_value: string
-  liquidation_threshold: string
-  liquidation_discount: string
-  risk_parameters: RiskParameters
-}
-
-export interface PoolMetrics {
-  total_supply: string | null
-  total_borrow: string | null
-  available_liquidity: string | null
-  utilization_rate: string | null
-  supply_apy: string | null
-  borrow_apy: string | null
-}
-
-export interface RateConfiguration {
-  base_rate: string
-  slope1: string
-  slope2: string
-}
-
-export interface PoolStatistics {
-  pool_id: string
-  pool_name: string
-  pool_address: string
-  reserve_asset: string
-  metrics: PoolMetrics
-  last_updated?: string
-  note?: string
-  rate_configuration: RateConfiguration
-}
-
-export interface LoanDetail {
-  loan_id: string
-  principal_amount: string
-  status: string
-  created_at: string
-}
-
-export interface BorrowPosition {
-  active_loans_count: number
-  total_borrow_amount: string
-  loans: LoanDetail[]
-}
-
-export interface RecentRepayment {
-  repayment_amount: string
-  repayment_date: string
-}
-
-export interface RepaymentHistory {
-  total_repaid: string
-  repayment_count: number
-  recent_repayments: RecentRepayment[]
-}
-
-export interface UserPositions {
-  pool_id: string
-  wallet_id: string
-  borrow_position: BorrowPosition
-  repayment_history: RepaymentHistory
-}
-
-// ============================================================================
-// MUTATION TYPES
-// ============================================================================
-
-// Account Mutations
-export interface CreateAccountInput {
+// Records
+interface CradleAccountRecord {
+  id: UUID
   linked_account_id: string
+  created_at: string
   account_type: CradleAccountType
   status: CradleAccountStatus
 }
 
-export interface UpdateAccountStatusInput {
-  account_id: string
-  status: CradleAccountStatus
-}
-
-export interface CreateWalletInput {
-  cradle_account_id: string
+interface CradleWalletAccountRecord {
+  id: UUID
+  cradle_account_id: UUID
   address: string
   contract_id: string
+  created_at: string
+  status: CradleWalletStatus
 }
 
-// Asset Mutations
-export interface CreateAssetInput {
+interface AssetBookRecord {
+  id: UUID
   asset_manager: string
   token: string
+  created_at: string
   asset_type: AssetType
   name: string
   symbol: string
   decimals: number
-  icon: string
+  icon?: string | null
 }
 
-// Market Mutations
-export interface CreateMarketInput {
+interface MarketRecord {
+  id: UUID
   name: string
-  description: string
-  icon: string
-  asset_one: string
-  asset_two: string
+  description?: string | null
+  icon?: string | null
+  asset_one: UUID
+  asset_two: UUID
+  created_at: string
   market_type: MarketType
   market_status: MarketStatus
   market_regulation: MarketRegulation
 }
 
-export interface UpdateMarketStatusInput {
-  market_id: string
-  status: MarketStatus
-}
-
-// Order Mutations
-export interface PlaceOrderInput {
-  wallet: string
-  market_id: string
-  bid_asset: string
-  ask_asset: string
-  bid_amount: string
-  ask_amount: string
-  price: string
+interface OrderBookRecord {
+  id: UUID
+  wallet: UUID
+  market_id: UUID
+  bid_asset: UUID
+  ask_asset: UUID
+  bid_amount: Big
+  ask_amount: Big
+  price: Big
+  filled_bid_amount: Big
+  filled_ask_amount: Big
   mode: FillMode
+  status: OrderStatus
+  created_at: string
+  filled_at?: string | null
+  cancelled_at?: string | null
+  expires_at?: string | null
   order_type: OrderType
 }
 
-export interface PlaceOrderResult {
-  id: string
-  status: OrderFillStatus
-  bid_amount_filled: string
-  ask_amount_filled: string
-  matched_trades: string[]
+interface NewOrderBookRecord {
+  wallet: UUID
+  market_id: UUID
+  bid_asset: UUID
+  ask_asset: UUID
+  bid_amount: Big
+  ask_amount: Big
+  price: Big
+  mode?: FillMode
+  expires_at?: string | null
+  order_type?: OrderType
 }
 
-// Time Series Mutations
-export interface AddTimeSeriesRecordInput {
-  market_id: string
-  asset: string
-  open: string
-  high: string
-  low: string
-  close: string
-  volume: string
+interface MarketTimeSeriesRecord {
+  id: UUID
+  market_id: UUID
+  asset: UUID
+  open: Big
+  high: Big
+  low: Big
+  close: Big
+  volume: Big
+  created_at: string
   start_time: string
   end_time: string
   interval: TimeSeriesInterval
   data_provider_type: DataProviderType
-  data_provider: string
+  data_provider?: string | null
 }
 
-// Lending Pool Mutations
-export interface CreateLendingPoolInput {
+interface LendingPoolRecord {
+  id: UUID
   pool_address: string
   pool_contract_id: string
-  reserve_asset: string
-  loan_to_value: string
-  base_rate: string
-  slope1: string
-  slope2: string
-  liquidation_threshold: string
-  liquidation_discount: string
-  reserve_factor: string
+  reserve_asset: UUID
+  yield_asset: UUID
+  treasury_wallet: UUID
+  reserve_wallet: UUID
+  pool_account_id: UUID
+  loan_to_value: Big
+  base_rate: Big
+  slope1: Big
+  slope2: Big
+  liquidation_threshold: Big
+  liquidation_discount: Big
+  reserve_factor: Big
+  name?: string | null
+  title?: string | null
+  description?: string | null
+  created_at: string
+  updated_at: string
+}
+
+interface LendingPoolSnapShotRecord {
+  id: UUID
+  lending_pool_id: UUID
+  total_supply: Big
+  total_borrow: Big
+  available_liquidity: Big
+  utilization_rate: Big
+  supply_apy: Big
+  borrow_apy: Big
+  created_at: string
+}
+
+interface LoanRecord {
+  id: UUID
+  account_id: UUID
+  wallet_id: UUID
+  pool: UUID
+  borrow_index: Big
+  principal_amount: Big
+  created_at: string
+  status: LoanStatus
+  transaction?: string | null
+  collateral_asset: UUID
+}
+
+interface LoanRepaymentsRecord {
+  id: UUID
+  loan_id: UUID
+  repayment_amount: Big
+  repayment_date: string
+  transaction?: string | null
+}
+
+// CompanyRow interface - kept for potential future use
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+interface CompanyRow {
+  id: UUID
   name: string
-  title: string
   description: string
+  listed_at?: string | null
+  legal_documents: string
+  beneficiary_wallet: UUID
 }
 
-export interface SupplyLiquidityInput {
-  wallet: string
-  pool: string
-  amount: number
+interface CradleNativeListingRow {
+  id: UUID
+  listing_contract_id: string
+  name: string
+  description: string
+  documents: string
+  company: UUID
+  status: ListingStatus
+  created_at: string
+  opened_at?: string | null
+  stopped_at?: string | null
+  listed_asset: UUID
+  purchase_with_asset: UUID
+  purchase_price: Big
+  max_supply: Big
+  treasury: UUID
+  shadow_asset: UUID
 }
 
-export interface BorrowAssetInput {
-  wallet: string
-  pool: string
-  amount: number
-  collateral: string
-}
+// Unknown shapes from backend; kept permissive for now.
+type ListingStats = Record<string, unknown>
+type GetPoolStatsOutput = Record<string, unknown>
+type GetUserBorrowPositionOutput = Record<string, unknown>
+type GetUserDepositPositonOutput = Record<string, unknown>
+type RepaymentAmount = Record<string, unknown>
 
-export interface RepayBorrowInput {
-  wallet: string
-  loan: string
-  amount: number
-}
-
-export interface CreateLoanRepaymentInput {
-  loan_id: string
-  repayment_amount: string
-  transaction?: string
-}
-
-export interface CreateLoanLiquidationInput {
-  loan_id: string
-  liquidator_wallet_id: string
-  liquidation_amount: string
-  transaction?: string
-}
-
-// Mutation Action Types
-export type MutationAction =
-  | { Accounts: { CreateAccount: CreateAccountInput } }
-  | { Accounts: { UpdateAccountStatus: UpdateAccountStatusInput } }
-  | { Accounts: { CreateWallet: CreateWalletInput } }
-  | { Assets: { CreateAsset: CreateAssetInput } }
-  | { Assets: { CreateExistingAsset: string } }
-  | { Markets: { CreateMarket: CreateMarketInput } }
-  | { Markets: { UpdateMarketStatus: UpdateMarketStatusInput } }
-  | { OrderBook: { PlaceOrder: PlaceOrderInput } }
-  | { OrderBook: { CancelOrder: string } }
-  | { MarketTimeSeries: { AddRecord: AddTimeSeriesRecordInput } }
-  | { Pool: { CreateLendingPool: CreateLendingPoolInput } }
-  | { Pool: { SupplyLiquidity: SupplyLiquidityInput } }
-  | { Pool: { BorrowAsset: BorrowAssetInput } }
-  | { Pool: { RepayBorrow: RepayBorrowInput } }
-  | { Loans: { CreateRepayment: CreateLoanRepaymentInput } }
-  | { Loans: { CreateLiquidation: CreateLoanLiquidationInput } }
-
-export type MutationResponse =
-  | { Accounts: { CreateAccount: string } }
-  | { Accounts: { UpdateAccountStatus: null } }
-  | { Accounts: { CreateWallet: string } }
-  | { Assets: { CreateAsset: string } }
-  | { Assets: { CreateExistingAsset: string } }
-  | { Markets: { CreateMarket: string } }
-  | { Markets: { UpdateMarketStatus: null } }
-  | { OrderBook: { PlaceOrder: PlaceOrderResult } }
-  | { OrderBook: { CancelOrder: null } }
-  | { MarketTimeSeries: { AddRecord: string } }
-  | { Pool: { CreateLendingPool: string } }
-  | { Pool: { SupplyLiquidity: string } }
-  | { Pool: { BorrowAsset: string } }
-  | { Pool: { RepayBorrow: null } }
-  | { Loans: { CreateRepayment: string } }
-  | { Loans: { CreateLiquidation: string } }
-
-// ============================================================================
-// TYPE GUARD HELPERS
-// ============================================================================
-
-/**
- * Type guard helpers for safely accessing mutation responses
- */
-export const MutationResponseHelpers = {
-  // Account helpers
-  isCreateAccount(response: MutationResponse): response is { Accounts: { CreateAccount: string } } {
-    return 'Accounts' in response && 'CreateAccount' in response.Accounts
-  },
-  isUpdateAccountStatus(
-    response: MutationResponse
-  ): response is { Accounts: { UpdateAccountStatus: null } } {
-    return 'Accounts' in response && 'UpdateAccountStatus' in response.Accounts
-  },
-  isCreateWallet(response: MutationResponse): response is { Accounts: { CreateWallet: string } } {
-    return 'Accounts' in response && 'CreateWallet' in response.Accounts
-  },
-
-  // Asset helpers
-  isCreateAsset(response: MutationResponse): response is { Assets: { CreateAsset: string } } {
-    return 'Assets' in response && 'CreateAsset' in response.Assets
-  },
-  isCreateExistingAsset(
-    response: MutationResponse
-  ): response is { Assets: { CreateExistingAsset: string } } {
-    return 'Assets' in response && 'CreateExistingAsset' in response.Assets
-  },
-
-  // Market helpers
-  isCreateMarket(response: MutationResponse): response is { Markets: { CreateMarket: string } } {
-    return 'Markets' in response && 'CreateMarket' in response.Markets
-  },
-  isUpdateMarketStatus(
-    response: MutationResponse
-  ): response is { Markets: { UpdateMarketStatus: null } } {
-    return 'Markets' in response && 'UpdateMarketStatus' in response.Markets
-  },
-
-  // Order helpers
-  isPlaceOrder(
-    response: MutationResponse
-  ): response is { OrderBook: { PlaceOrder: PlaceOrderResult } } {
-    return 'OrderBook' in response && 'PlaceOrder' in response.OrderBook
-  },
-  isCancelOrder(response: MutationResponse): response is { OrderBook: { CancelOrder: null } } {
-    return 'OrderBook' in response && 'CancelOrder' in response.OrderBook
-  },
-
-  // Time series helpers
-  isAddRecord(response: MutationResponse): response is { MarketTimeSeries: { AddRecord: string } } {
-    return 'MarketTimeSeries' in response && 'AddRecord' in response.MarketTimeSeries
-  },
-
-  // Lending pool helpers
-  isCreateLendingPool(
-    response: MutationResponse
-  ): response is { Pool: { CreateLendingPool: string } } {
-    return 'Pool' in response && 'CreateLendingPool' in response.Pool
-  },
-  isSupplyLiquidity(response: MutationResponse): response is { Pool: { SupplyLiquidity: string } } {
-    return 'Pool' in response && 'SupplyLiquidity' in response.Pool
-  },
-  isBorrowAsset(response: MutationResponse): response is { Pool: { BorrowAsset: string } } {
-    return 'Pool' in response && 'BorrowAsset' in response.Pool
-  },
-  isRepayBorrow(response: MutationResponse): response is { Pool: { RepayBorrow: null } } {
-    return 'Pool' in response && 'RepayBorrow' in response.Pool
-  },
-
-  // Loan helpers
-  isCreateRepayment(
-    response: MutationResponse
-  ): response is { Loans: { CreateRepayment: string } } {
-    return 'Loans' in response && 'CreateRepayment' in response.Loans
-  },
-  isCreateLiquidation(
-    response: MutationResponse
-  ): response is { Loans: { CreateLiquidation: string } } {
-    return 'Loans' in response && 'CreateLiquidation' in response.Loans
-  },
-}
-
-// ============================================================================
-// API CLIENT CONFIGURATION
-// ============================================================================
-
-export interface CradleApiConfig {
-  baseUrl?: string
-  apiKey: string
-  timeout?: number
-}
-
-// ============================================================================
-// API CLIENT
-// ============================================================================
-
-export class CradleApiClient {
-  private axiosInstance: AxiosInstance
-
-  constructor(config: CradleApiConfig) {
-    const baseUrl = config.baseUrl || 'http://localhost:3000'
-    const timeout = config.timeout || 30000
-
-    this.axiosInstance = axios.create({
-      baseURL: baseUrl,
-      timeout,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.apiKey}`,
-        'ngrok-skip-browser-warning': '6969',
-      },
-    })
-
-    // Add response interceptor for error handling
-    this.axiosInstance.interceptors.response.use(
-      response => response,
-      (error: AxiosError) => {
-        return Promise.reject(error)
+// Action Router types
+type AccountsProcessorInput =
+  | {
+      CreateAccount: {
+        linked_account_id: string
+        account_type?: CradleAccountType
+        status?: CradleAccountStatus
       }
+    }
+  | { CreateAccountWallet: { cradle_account_id: UUID; status?: CradleWalletStatus } }
+  | { UpdateAccountStatus: { cradle_account_id: UUID; status: CradleAccountStatus } }
+  | { UpdateAccountType: { cradle_account_id: UUID; account_type: CradleAccountType } }
+  | { UpdateAccountWalletStatusById: { wallet_id: UUID; status: CradleWalletStatus } }
+  | { UpdateAccountWalletStatusByAccount: { cradle_account_id: UUID; status: CradleWalletStatus } }
+  | { DeleteAccount: { ById: UUID } | { ByLinkedAccount: string } }
+  | { DeleteWallet: { ById: UUID } | { ByOwner: UUID } }
+  | { GetAccount: { ByID: UUID } | { ByLinkedAccount: string } }
+  | { GetWallet: { ById: UUID } | { ByCradleAccount: UUID } }
+  | { GetAccounts: Record<string, never> }
+  | { GetWallets: Record<string, never> }
+  | { AssociateTokenToWallet: { wallet_id: UUID; token: UUID } }
+  | { GrantKYC: { wallet_id: UUID; token: UUID } }
+  | {
+      WithdrawTokens: {
+        withdrawal_type: 'Fiat' | 'Crypto'
+        to: string
+        amount: Big
+        token: string
+        from: UUID
+      }
+    }
+  | { HandleAssociateAssets: UUID }
+  | { HandleKYCAssets: UUID }
+
+type AccountsProcessorOutput =
+  | { CreateAccount: { id: UUID; wallet_id: UUID } }
+  | { CreateAccountWallet: { id: UUID } }
+  | { UpdateAccountStatus: null }
+  | { UpdateAccountType: null }
+  | { UpdateAccountWalletStatus: null }
+  | { UpdateAccountWalletStatusById: null }
+  | { UpdateAccountWalletStatusByAccount: null }
+  | { GetAccount: CradleAccountRecord }
+  | { GetWallet: CradleWalletAccountRecord }
+  | { GetAccounts: null }
+  | { GetWallets: null }
+  | { DeleteAccount: null }
+  | { DeleteWallet: null }
+  | { AssociateTokenToWallet: null }
+  | { GrantKYC: null }
+  | { WithdrawTokens: null }
+  | { HandleAssociateAssets: null }
+  | { HandleKYCAssets: null }
+
+type AssetBookProcessorInput =
+  | {
+      CreateNewAsset: {
+        asset_type: AssetType
+        name: string
+        symbol: string
+        decimals: number
+        icon: string
+      }
+    }
+  | {
+      CreateExistingAsset: {
+        asset_manager?: string
+        token: string
+        asset_type: AssetType
+        name: string
+        symbol: string
+        decimals: number
+        icon: string
+      }
+    }
+  | { GetAsset: { ById: UUID } | { ByToken: string } | { ByAssetManager: string } }
+
+type AssetBookProcessorOutput =
+  | { CreateNewAsset: UUID }
+  | { CreateExistingAsset: UUID }
+  | { GetAsset: AssetBookRecord }
+
+type MarketProcessorInput =
+  | {
+      CreateMarket: {
+        name: string
+        description?: string | null
+        icon?: string | null
+        asset_one: UUID
+        asset_two: UUID
+        market_type?: MarketType
+        market_status?: MarketStatus
+        market_regulation?: MarketRegulation
+      }
+    }
+  | { UpdateMarketStatus: { market_id: UUID; status: MarketStatus } }
+  | { UpdateMarketType: { market_id: UUID; market_type: MarketType } }
+  | { UpdateMarketRegulation: { market_id: UUID; regulation: MarketRegulation } }
+  | { GetMarket: UUID }
+  | {
+      GetMarkets: { status?: MarketStatus; market_type?: MarketType; regulation?: MarketRegulation }
+    }
+
+type MarketProcessorOutput =
+  | { CreateMarket: UUID }
+  | { UpdateMarketStatus: null }
+  | { UpdateMarketType: null }
+  | { UpdateMarketRegulation: null }
+  | { GetMarket: MarketRecord }
+  | { GetMarkets: MarketRecord[] }
+
+type MarketTimeSeriesProcessorInput =
+  | {
+      AddRecord: {
+        market_id: UUID
+        asset: UUID
+        open: Big
+        high: Big
+        low: Big
+        close: Big
+        volume: Big
+        start_time: string
+        end_time: string
+        interval?: TimeSeriesInterval
+        data_provider_type?: DataProviderType
+        data_provider?: string | null
+      }
+    }
+  | {
+      GetHistory: {
+        market_id: UUID
+        duration_secs: Big
+        interval: TimeSeriesInterval
+        asset_id: UUID
+      }
+    }
+
+type MarketTimeSeriesProcessorOutput =
+  | { AddRecord: UUID }
+  | { GetHistory: MarketTimeSeriesRecord[] }
+
+type OrderBookProcessorInput =
+  | { PlaceOrder: NewOrderBookRecord }
+  | { GetOrder: UUID }
+  | {
+      GetOrders: {
+        wallet?: UUID
+        market_id?: UUID
+        status?: OrderStatus
+        order_type?: OrderType
+        mode?: FillMode
+      }
+    }
+
+type OrderBookProcessorOutput =
+  | {
+      PlaceOrder: {
+        id: UUID
+        status: OrderFillStatus
+        bid_amount_filled: Big
+        ask_amount_filled: Big
+        matched_trades: UUID[]
+      }
+    }
+  | { GetOrder: OrderBookRecord }
+  | { GetOrders: OrderBookRecord[] }
+
+type LendingPoolFunctionsInput =
+  | {
+      CreateLendingPool: {
+        pool_address: string
+        pool_contract_id: string
+        reserve_asset: UUID
+        loan_to_value: Big
+        base_rate: Big
+        slope1: Big
+        slope2: Big
+        liquidation_threshold: Big
+        liquidation_discount: Big
+        reserve_factor: Big
+        name?: string | null
+        title?: string | null
+        description?: string | null
+        yield_asset: UUID
+        treasury_wallet: UUID
+        reserve_wallet: UUID
+        pool_account_id: UUID
+      }
+    }
+  | { GetLendingPool: { ByName: string } | { ByAddress: string } | { ById: UUID } }
+  | { CreateSnapShot: UUID }
+  | { GetSnapShot: UUID }
+  | { SupplyLiquidity: { wallet: UUID; pool: UUID; amount: number } }
+  | { WithdrawLiquidity: { wallet: UUID; pool: UUID; amount: number } }
+  | { BorrowAsset: { wallet: UUID; pool: UUID; amount: number; collateral: UUID } }
+  | { RepayBorrow: { wallet: UUID; loan: UUID; amount: number } }
+  | { LiquidatePosition: { wallet: UUID; loan: UUID; amount: number } }
+
+type LendingPoolFunctionsOutput =
+  | { CreateLendingPool: UUID }
+  | { GetLendingPool: LendingPoolRecord }
+  | { CreateSnapShot: UUID }
+  | { GetSnapShot: LendingPoolSnapShotRecord }
+  | { SupplyLiquidity: UUID }
+  | { WithdrawLiquidity: UUID }
+  | { BorrowAsset: UUID }
+  | { RepayBorrow: null }
+  | { LiquidatePosition: null }
+
+type CradleNativeListingFunctionsInput =
+  | { CreateCompany: { name: string; description: string; legal_documents: string } }
+  | {
+      CreateListing: {
+        name: string
+        description: string
+        documents: string
+        company: UUID
+        asset:
+          | { Existing: UUID }
+          | {
+              New: {
+                asset_type: AssetType
+                name: string
+                symbol: string
+                decimals: number
+                icon: string
+              }
+            }
+        purchase_asset: UUID
+        purchase_price: Big
+        max_supply: Big
+      }
+    }
+  | { Purchase: { wallet: UUID; amount: Big; listing: UUID } }
+  | { ReturnAsset: { wallet: UUID; amount: Big; listing: UUID } }
+  | { WithdrawToBeneficiary: { amount: Big; listing: UUID } }
+  | { GetStats: UUID }
+  | { GetFee: { listing_id: UUID; amount: Big } }
+
+type CradleNativeListingFunctionsOutput =
+  | { CreateCompany: UUID }
+  | { CreateListing: UUID }
+  | { Purchase: null }
+  | { ReturnAsset: null }
+  | { WithdrawToBeneficiary: null }
+  | { GetStats: ListingStats }
+  | { GetFee: number }
+
+type ActionRouterInput =
+  | { Accounts: AccountsProcessorInput }
+  | { AssetBook: AssetBookProcessorInput }
+  | { Markets: MarketProcessorInput }
+  | { MarketTimeSeries: MarketTimeSeriesProcessorInput }
+  | { OrderBook: OrderBookProcessorInput }
+  | { Pool: LendingPoolFunctionsInput }
+  | { Listing: CradleNativeListingFunctionsInput }
+
+type ActionRouterOutput =
+  | { Accounts: AccountsProcessorOutput }
+  | { AssetBook: AssetBookProcessorOutput }
+  | { Markets: MarketProcessorOutput }
+  | { MarketTimeSeries: MarketTimeSeriesProcessorOutput }
+  | { OrderBook: OrderBookProcessorOutput }
+  | { Pool: LendingPoolFunctionsOutput }
+  | { Listing: CradleNativeListingFunctionsOutput }
+
+export interface CradleClientOptions {
+  baseUrl: string
+  apiKey?: string
+  axiosInstance?: AxiosInstance
+  timeoutMs?: number
+  userAgent?: string
+}
+
+class CradleClient {
+  private readonly apiKey?: string
+  private readonly axios: AxiosInstance
+  private readonly userAgent?: string
+
+  constructor(options: CradleClientOptions) {
+    const baseUrl = options.baseUrl.replace(/\/+$/, '')
+    this.apiKey = options.apiKey
+    this.userAgent = options.userAgent
+    this.axios =
+      options.axiosInstance ??
+      axios.create({
+        baseURL: baseUrl,
+        timeout: options.timeoutMs ?? 180000,
+      })
+  }
+
+  async health(): Promise<ApiResponse<{ status: 'ok' }>> {
+    return this.get('/health', { auth: false })
+  }
+
+  async process(body: ActionRouterInput): Promise<ApiResponse<ActionRouterOutput>> {
+    const keys = Object.keys(body)
+    if (keys.length !== 1) {
+      throw new Error('Action Router payload must contain exactly one top-level key')
+    }
+    return this.post('/process', body)
+  }
+
+  // Accounts & wallets
+  getAccount(id: UUID): Promise<ApiResponse<CradleAccountRecord>> {
+    return this.get(`/accounts/${id}`)
+  }
+
+  getAccountByLinked(linkedId: string): Promise<ApiResponse<CradleAccountRecord>> {
+    return this.get(`/accounts/linked/${linkedId}`)
+  }
+
+  getWalletsForAccount(accountId: UUID): Promise<ApiResponse<CradleWalletAccountRecord>> {
+    return this.get(`/accounts/${accountId}/wallets`)
+  }
+
+  getWallet(id: UUID): Promise<ApiResponse<CradleWalletAccountRecord>> {
+    return this.get(`/wallets/${id}`)
+  }
+
+  getWalletByAccount(accountId: UUID): Promise<ApiResponse<CradleWalletAccountRecord>> {
+    return this.get(`/wallets/account/${accountId}`)
+  }
+
+  getBalances(accountId: UUID): Promise<ApiResponse<Array<{ token: string; balance: Big }>>> {
+    return this.get(`/balances/${accountId}`)
+  }
+
+  getBalance(
+    walletId: UUID,
+    assetId: UUID
+  ): Promise<
+    ApiResponse<{
+      balance: number
+      before_deductions: number
+      deductions: number
+      decimals: number
+    }>
+  > {
+    return this.get(`/balance/${walletId}/${assetId}`)
+  }
+
+  // Assets
+  listAssets(): Promise<ApiResponse<AssetBookRecord[]>> {
+    return this.get('/assets')
+  }
+
+  getAsset(id: UUID): Promise<ApiResponse<AssetBookRecord>> {
+    return this.get(`/assets/${id}`)
+  }
+
+  getAssetByToken(token: string): Promise<ApiResponse<AssetBookRecord>> {
+    return this.get(`/assets/token/${token}`)
+  }
+
+  getAssetsByManager(manager: string): Promise<ApiResponse<AssetBookRecord>> {
+    return this.get(`/assets/manager/${manager}`)
+  }
+
+  // Markets
+  listMarkets(): Promise<ApiResponse<MarketRecord[]>> {
+    return this.get('/markets')
+  }
+
+  getMarket(id: UUID): Promise<ApiResponse<MarketRecord>> {
+    return this.get(`/markets/${id}`)
+  }
+
+  // Orders
+  listOrders(filters?: {
+    wallet?: UUID
+    market_id?: UUID
+    status?: OrderStatus
+    order_type?: OrderType
+    mode?: FillMode
+  }): Promise<ApiResponse<OrderBookRecord[]>> {
+    const query = this.queryString(filters)
+    return this.get(`/orders${query}`)
+  }
+
+  getOrder(id: UUID): Promise<ApiResponse<OrderBookRecord>> {
+    return this.get(`/orders/${id}`)
+  }
+
+  // Time series
+  getTimeSeriesHistory(params: {
+    market: UUID
+    duration_secs: Big | number
+    interval: TimeSeriesInterval
+    asset_id: UUID
+  }): Promise<ApiResponse<MarketTimeSeriesRecord[]>> {
+    const query = this.queryString({
+      market: params.market,
+      duration_secs: params.duration_secs,
+      interval: params.interval,
+      asset_id: params.asset_id,
+    })
+    return this.get(`/time-series/history${query}`)
+  }
+
+  // Faucet
+  faucet(body: { asset: UUID; account: UUID }): Promise<ApiResponse<void>> {
+    return this.post('/faucet', body)
+  }
+
+  // Listings
+  listListings(filters?: {
+    company?: UUID
+    listed_asset?: UUID
+    purchase_asset?: UUID
+    status?: ListingStatus
+  }): Promise<ApiResponse<CradleNativeListingRow[]>> {
+    const query = this.queryString(filters)
+    return this.get(`/listings${query}`)
+  }
+
+  getListing(id: UUID): Promise<ApiResponse<CradleNativeListingRow>> {
+    return this.get(`/listings/${id}`)
+  }
+
+  // Lending
+  listPools(): Promise<ApiResponse<LendingPoolRecord[]>> {
+    return this.get('/pools')
+  }
+
+  getPool(id: UUID): Promise<ApiResponse<LendingPoolRecord>> {
+    return this.get(`/pools/${id}`)
+  }
+
+  getLoans(walletId: UUID): Promise<ApiResponse<LoanRecord[]>> {
+    return this.get(`/loans/${walletId}`)
+  }
+
+  getPoolStats(id: UUID): Promise<ApiResponse<GetPoolStatsOutput>> {
+    return this.get(`/pool-stats/${id}`)
+  }
+
+  getLoanPosition(loanId: UUID): Promise<ApiResponse<GetUserBorrowPositionOutput>> {
+    return this.get(`/loan-position/${loanId}`)
+  }
+
+  getDepositPosition(
+    poolId: UUID,
+    walletId: UUID
+  ): Promise<ApiResponse<GetUserDepositPositonOutput>> {
+    return this.get(`/pools/deposit/${poolId}/${walletId}`)
+  }
+
+  getLoanRepayments(loanId: UUID): Promise<ApiResponse<LoanRepaymentsRecord[]>> {
+    return this.get(`/loans/repayments/${loanId}`)
+  }
+
+  getRepaymentAmount(loanId: UUID): Promise<ApiResponse<RepaymentAmount>> {
+    return this.get(`/loan/${loanId}`)
+  }
+
+  private async get<T>(path: string, opts?: { auth?: boolean }): Promise<T> {
+    return this.request<T>(path, { method: 'GET' }, opts)
+  }
+
+  private async post<T>(path: string, body: unknown, opts?: { auth?: boolean }): Promise<T> {
+    return this.request<T>(
+      path,
+      {
+        method: 'POST',
+        data: body,
+      },
+      opts
     )
   }
 
-  /**
-   * Make an authenticated HTTP request
-   */
   private async request<T>(
-    method: 'GET' | 'POST',
     path: string,
-    body?: unknown,
-    requiresAuth: boolean = true
-  ): Promise<ApiResponse<T>> {
+    config: AxiosRequestConfig,
+    opts?: { auth?: boolean }
+  ): Promise<T> {
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      ...(config.headers as Record<string, string> | undefined),
+    }
+
+    if (opts?.auth !== false) {
+      if (!this.apiKey) {
+        throw new Error('API key is required for authenticated requests')
+      }
+      headers.Authorization = `Bearer ${this.apiKey}`
+    }
+
+    if (this.userAgent) {
+      headers['User-Agent'] = this.userAgent
+    }
+
     try {
-      const config: AxiosRequestConfig = {
-        method,
+      const response = await this.axios.request<ApiResponse<unknown>>({
+        ...config,
         url: path,
-        data: body,
-      }
+        headers,
+      })
+      const payload = response.data
 
-      // Remove auth header if not required
-      if (!requiresAuth) {
-        config.headers = {
-          ...config.headers,
-          Authorization: '',
+      // If payload has success field, it's already in ApiResponse format
+      if (payload && typeof payload === 'object' && 'success' in payload) {
+        if (payload.success === false) {
+          throw new Error((payload as ApiResponse<unknown>).error ?? 'Request failed')
         }
+        return payload as unknown as T
       }
 
-      const response = await this.axiosInstance.request<ApiResponse<T>>(config)
-      return response.data
+      // If payload doesn't have success field but HTTP status is 200, wrap it
+      // This handles endpoints like /health that return data directly
+      if (response.status >= 200 && response.status < 300) {
+        return {
+          success: true,
+          data: payload,
+        } as unknown as T
+      }
+
+      // If we get here, something unexpected happened
+      return payload as unknown as T
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        // If we got a response with error data, return it
-        if (error.response?.data) {
-          return error.response.data as ApiResponse<T>
-        }
-
-        // Otherwise create error response
-        return {
-          success: false,
-          data: null,
-          error: error.message || 'Request failed',
-        }
+        const apiError = (error.response?.data as ApiResponse<unknown> | undefined)?.error
+        const message = apiError ?? error.message
+        const status = error.response?.status
+        throw new Error(
+          status ? `Request failed (${status}): ${message}` : `Request failed: ${message}`
+        )
       }
+      throw error as Error
+    }
+  }
 
-      // Handle non-axios errors
-      if (error instanceof Error) {
-        return {
-          success: false,
-          data: null,
-          error: error.message,
-        }
+  private queryString(
+    params?: Record<string, string | number | boolean | null | undefined>
+  ): string {
+    if (!params) return ''
+    const search = new URLSearchParams()
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== null && value !== undefined) {
+        search.set(key, String(value))
       }
-
-      return {
-        success: false,
-        data: null,
-        error: 'Unknown error occurred',
-      }
-    }
-  }
-
-  // ============================================================================
-  // HEALTH CHECK
-  // ============================================================================
-
-  /**
-   * Check API health status (no authentication required)
-   */
-  async health(): Promise<HealthResponse> {
-    try {
-      const response = await axios.get<HealthResponse>(
-        `${this.axiosInstance.defaults.baseURL}/health`
-      )
-      return response.data
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Health check failed'
-      throw new Error(`Health check failed: ${message}`)
-    }
-  }
-
-  // ============================================================================
-  // ACCOUNTS API
-  // ============================================================================
-
-  /**
-   * Get a cradle account by UUID
-   */
-  async getAccount(id: string): Promise<ApiResponse<CradleAccount>> {
-    return this.request<CradleAccount>('GET', `/accounts/${id}`)
-  }
-
-  /**
-   * Get account by linked account identifier
-   */
-  async getAccountByLinkedId(linkedId: string): Promise<ApiResponse<CradleAccount>> {
-    return this.request<CradleAccount>('GET', `/accounts/linked/${linkedId}`)
-  }
-
-  /**
-   * Get all wallets for an account (not yet implemented)
-   */
-  async getAccountWallets(accountId: string): Promise<ApiResponse<CradleWallet[]>> {
-    return this.request<CradleWallet[]>('GET', `/accounts/${accountId}/wallets`)
-  }
-
-  // ============================================================================
-  // WALLETS API
-  // ============================================================================
-
-  /**
-   * Get a specific wallet by UUID
-   */
-  async getWallet(id: string): Promise<ApiResponse<CradleWallet>> {
-    return this.request<CradleWallet>('GET', `/wallets/${id}`)
-  }
-
-  /**
-   * Get wallet by account ID
-   */
-  async getWalletByAccountId(accountId: string): Promise<ApiResponse<CradleWallet>> {
-    return this.request<CradleWallet>('GET', `/accounts/${accountId}/wallets`)
-  }
-
-  // ============================================================================
-  // ASSETS API
-  // ============================================================================
-
-  /**
-   * Get an asset by UUID
-   */
-  async getAsset(id: string): Promise<ApiResponse<Asset>> {
-    return this.request<Asset>('GET', `/assets/${id}`)
-  }
-
-  async getAssets(): Promise<ApiResponse<Array<Asset>>> {
-    return this.request<Array<Asset>>('GET', '/assets')
-  }
-
-  /**
-   * Get asset by token identifier
-   */
-  async getAssetByToken(token: string): Promise<ApiResponse<Asset>> {
-    return this.request<Asset>('GET', `/assets/token/${token}`)
-  }
-
-  /**
-   * Get asset by asset manager identifier
-   */
-  async getAssetByManager(manager: string): Promise<ApiResponse<Asset>> {
-    return this.request<Asset>('GET', `/assets/manager/${manager}`)
-  }
-
-  // ============================================================================
-  // MARKETS API
-  // ============================================================================
-
-  /**
-   * Get a market by UUID
-   */
-  async getMarket(id: string): Promise<ApiResponse<Market>> {
-    return this.request<Market>('GET', `/markets/${id}`)
-  }
-
-  /**
-   * Get all markets with optional filters
-   */
-  async getMarkets(filters?: MarketFilters): Promise<ApiResponse<Market[]>> {
-    const params = new URLSearchParams()
-    if (filters?.market_type) params.append('market_type', filters.market_type)
-    if (filters?.status) params.append('status', filters.status)
-    if (filters?.regulation) params.append('regulation', filters.regulation)
-
-    const query = params.toString()
-    const path = query ? `/markets?${query}` : '/markets'
-    return this.request<Market[]>('GET', path)
-  }
-
-  // ============================================================================
-  // ORDERS API
-  // ============================================================================
-
-  /**
-   * Get an order by UUID
-   */
-  async getOrder(id: string): Promise<ApiResponse<Order>> {
-    return this.request<Order>('GET', `/orders/${id}`)
-  }
-
-  /**
-   * Get all orders with optional filters
-   */
-  async getOrders(filters?: OrderFilters): Promise<ApiResponse<Order[]>> {
-    const params = new URLSearchParams()
-    if (filters?.wallet) params.append('wallet', filters.wallet)
-    if (filters?.market_id) params.append('market_id', filters.market_id)
-    if (filters?.status) params.append('status', filters.status)
-    if (filters?.order_type) params.append('order_type', filters.order_type)
-    if (filters?.from_date) params.append('from_date', filters.from_date)
-    if (filters?.to_date) params.append('to_date', filters.to_date)
-
-    const query = params.toString()
-    const path = query ? `/orders?${query}` : '/orders'
-    return this.request<Order[]>('GET', path)
-  }
-
-  // ============================================================================
-  // TIME SERIES API
-  // ============================================================================
-
-  /**
-   * Get a time series record by UUID
-   */
-  async getTimeSeriesRecord(id: string): Promise<ApiResponse<TimeSeriesRecord>> {
-    return this.request<TimeSeriesRecord>('GET', `/time-series/${id}`)
-  }
-
-  /**
-   * Get time series records with optional filters
-   */
-  async getTimeSeriesRecords(
-    filters?: TimeSeriesFilters
-  ): Promise<ApiResponse<TimeSeriesRecord[]>> {
-    const params = new URLSearchParams()
-    if (filters?.market_id) params.append('market', filters.market_id)
-    if (filters?.asset) params.append('asset', filters.asset)
-    if (filters?.interval) params.append('interval', filters.interval)
-    if (filters?.start_time) params.append('duration_sec', '')
-    if (filters?.data_provider) params.append('data_provider', filters.data_provider)
-
-    const query = params.toString()
-    const path = query ? `/time-series?${query}` : '/time-series'
-    return this.request<TimeSeriesRecord[]>('GET', path)
-  }
-
-  // ============================================================================
-  // LENDING POOLS API
-  // ============================================================================
-
-  /**
-   * Get a lending pool by UUID
-   */
-  async getLendingPool(id: string): Promise<ApiResponse<LendingPool>> {
-    return this.request<LendingPool>('GET', `/pools/${id}`)
-  }
-
-  /**
-   * Get all lending pools with optional filters
-   */
-  async getLendingPools(): Promise<ApiResponse<LendingPool[]>> {
-    const path = '/pools'
-    return this.request<LendingPool[]>('GET', path)
-  }
-
-  /**
-   * Get lending transactions for a specific pool
-   */
-  async getLendingTransactions(poolId: string): Promise<ApiResponse<LendingTransaction[]>> {
-    console.log('[CradleAPI] Fetching transactions for pool:', poolId)
-    const endpoint = `/pools/${poolId}/transactions`
-    console.log('[CradleAPI] Endpoint:', endpoint)
-    const response = await this.request<LendingTransaction[]>('GET', endpoint)
-    console.log('[CradleAPI] Response:', response)
-    return response
-  }
-
-  /**
-   * Get lending transactions for a specific wallet
-   */
-  async getLendingTransactionsByWallet(
-    walletId: string
-  ): Promise<ApiResponse<LendingTransaction[]>> {
-    console.log('[CradleAPI] Fetching transactions for wallet:', walletId)
-    const endpoint = `/lending-transactions/wallet/${walletId}`
-    console.log('[CradleAPI] Endpoint:', endpoint)
-    const response = await this.request<LendingTransaction[]>('GET', endpoint)
-    console.log('[CradleAPI] Response:', response)
-    return response
-  }
-
-  /**
-   * Get loans for a specific pool
-   */
-  async getLoans(poolId: string): Promise<ApiResponse<Loan[]>> {
-    return this.request<Loan[]>('GET', `/lending-pools/${poolId}/loans`)
-  }
-
-  /**
-   * Get loans for a specific wallet
-   */
-  async getLoansByWallet(walletId: string): Promise<ApiResponse<Loan[]>> {
-    console.log('[CradleAPI] Fetching loans for wallet:', walletId)
-    const endpoint = `/loans/wallet/${walletId}`
-    console.log('[CradleAPI] Endpoint:', endpoint)
-    const response = await this.request<Loan[]>('GET', endpoint)
-    console.log('[CradleAPI] Response:', response)
-    return response
-  }
-
-  /**
-   * Get a specific loan by UUID
-   */
-  async getLoan(id: string): Promise<ApiResponse<Loan>> {
-    return this.request<Loan>('GET', `/loan/${id}`)
-  }
-
-  /**
-   * Get lending pool by name
-   */
-  async getLendingPoolByName(name: string): Promise<ApiResponse<LendingPool>> {
-    return this.request<LendingPool>('GET', `/pools/name/${encodeURIComponent(name)}`)
-  }
-
-  /**
-   * Get lending pool by contract address
-   */
-  async getLendingPoolByAddress(address: string): Promise<ApiResponse<LendingPool>> {
-    return this.request<LendingPool>('GET', `/pools/address/${address}`)
-  }
-
-  /**
-   * Get the latest snapshot (metrics) for a lending pool
-   */
-  async getPoolSnapshot(poolId: string): Promise<ApiResponse<LendingPoolSnapshot>> {
-    return this.request<LendingPoolSnapshot>('GET', `/pools/${poolId}/snapshot`)
-  }
-
-  /**
-   * Get all loans
-   */
-  async getAllLoans(): Promise<ApiResponse<Loan[]>> {
-    return this.request<Loan[]>('GET', '/loans')
-  }
-
-  /**
-   * Get loans by pool ID
-   */
-  async getLoansByPool(poolId: string): Promise<ApiResponse<Loan[]>> {
-    return this.request<Loan[]>('GET', `/loans/pool/${poolId}`)
-  }
-
-  /**
-   * Get loans by status (active, repaid, or liquidated)
-   */
-  async getLoansByStatus(status: LoanStatus): Promise<ApiResponse<Loan[]>> {
-    return this.request<Loan[]>('GET', `/loans/status/${status}`)
-  }
-
-  /**
-   * Get all loan repayments
-   */
-  async getAllRepayments(): Promise<ApiResponse<LoanRepayment[]>> {
-    return this.request<LoanRepayment[]>('GET', '/loan-repayments')
-  }
-
-  /**
-   * Get repayments for a specific loan
-   */
-  async getRepaymentsByLoan(loanId: string): Promise<ApiResponse<LoanRepayment[]>> {
-    return this.request<LoanRepayment[]>('GET', `/loan-repayments/loan/${loanId}`)
-  }
-
-  /**
-   * Get all loan liquidations
-   */
-  async getAllLiquidations(): Promise<ApiResponse<LoanLiquidation[]>> {
-    return this.request<LoanLiquidation[]>('GET', '/loan-liquidations')
-  }
-
-  /**
-   * Get liquidations for a specific loan
-   */
-  async getLiquidationsByLoan(loanId: string): Promise<ApiResponse<LoanLiquidation[]>> {
-    return this.request<LoanLiquidation[]>('GET', `/loan-liquidations/loan/${loanId}`)
-  }
-
-  /**
-   * Get interest rate configuration for a lending pool
-   */
-  async getPoolInterestRates(poolId: string): Promise<ApiResponse<InterestRates>> {
-    return this.request<InterestRates>('GET', `/pools/${poolId}/interest-rates`)
-  }
-
-  /**
-   * Get collateral configuration and risk parameters for a lending pool
-   */
-  async getPoolCollateralInfo(poolId: string): Promise<ApiResponse<CollateralInfo>> {
-    return this.request<CollateralInfo>('GET', `/pools/${poolId}/collateral-info`)
-  }
-
-  /**
-   * Get comprehensive statistics and metrics for a lending pool
-   */
-  async getPoolStatistics(poolId: string): Promise<ApiResponse<PoolStatistics>> {
-    return this.request<PoolStatistics>('GET', `/pools/${poolId}/pool-stats`)
-  }
-
-  /**
-   * Get detailed borrow position and repayment history for a user in a specific pool
-   */
-  async getUserPositions(poolId: string, walletId: string): Promise<ApiResponse<UserPositions>> {
-    return this.request<UserPositions>('GET', `/pools/${poolId}/user-positions/${walletId}`)
-  }
-
-  // faucet
-  async airdrop(airdropArgs: { account: string; asset: string }) {
-    return this.request('POST', '/faucet', airdropArgs)
-  }
-
-  // ============================================================================
-  // MUTATIONS API
-  // ============================================================================
-
-  /**
-   * Process a mutation action
-   */
-  async processMutation(action: MutationAction): Promise<ApiResponse<MutationResponse>> {
-    return this.request<MutationResponse>('POST', '/process', action)
-  }
-
-  // ============================================================================
-  // CONVENIENCE MUTATION METHODS
-  // ============================================================================
-
-  /**
-   * Create a new account
-   */
-  async createAccount(input: CreateAccountInput): Promise<ApiResponse<MutationResponse>> {
-    return this.processMutation({
-      Accounts: { CreateAccount: input },
     })
-  }
-
-  /**
-   * Update account status
-   */
-  async updateAccountStatus(
-    input: UpdateAccountStatusInput
-  ): Promise<ApiResponse<MutationResponse>> {
-    return this.processMutation({
-      Accounts: { UpdateAccountStatus: input },
-    })
-  }
-
-  /**
-   * Create a new wallet
-   */
-  async createWallet(input: CreateWalletInput): Promise<ApiResponse<MutationResponse>> {
-    return this.processMutation({
-      Accounts: { CreateWallet: input },
-    })
-  }
-
-  /**
-   * Create a new asset
-   */
-  async createAsset(input: CreateAssetInput): Promise<ApiResponse<MutationResponse>> {
-    return this.processMutation({
-      Assets: { CreateAsset: input },
-    })
-  }
-
-  /**
-   * Create an existing asset
-   */
-  async createExistingAsset(assetId: string): Promise<ApiResponse<MutationResponse>> {
-    return this.processMutation({
-      Assets: { CreateExistingAsset: assetId },
-    })
-  }
-
-  /**
-   * Create a new market
-   */
-  async createMarket(input: CreateMarketInput): Promise<ApiResponse<MutationResponse>> {
-    return this.processMutation({
-      Markets: { CreateMarket: input },
-    })
-  }
-
-  /**
-   * Update market status
-   */
-  async updateMarketStatus(input: UpdateMarketStatusInput): Promise<ApiResponse<MutationResponse>> {
-    return this.processMutation({
-      Markets: { UpdateMarketStatus: input },
-    })
-  }
-
-  /**
-   * Place an order
-   */
-  async placeOrder(input: PlaceOrderInput): Promise<ApiResponse<MutationResponse>> {
-    return this.processMutation({
-      OrderBook: { PlaceOrder: input },
-    })
-  }
-
-  /**
-   * Cancel an order
-   */
-  async cancelOrder(orderId: string): Promise<ApiResponse<MutationResponse>> {
-    return this.processMutation({
-      OrderBook: { CancelOrder: orderId },
-    })
-  }
-
-  /**
-   * Add a time series record
-   */
-  async addTimeSeriesRecord(
-    input: AddTimeSeriesRecordInput
-  ): Promise<ApiResponse<MutationResponse>> {
-    return this.processMutation({
-      MarketTimeSeries: { AddRecord: input },
-    })
-  }
-
-  /**
-   * Create a lending pool
-   */
-  async createLendingPool(input: CreateLendingPoolInput): Promise<ApiResponse<MutationResponse>> {
-    return this.processMutation({
-      Pool: { CreateLendingPool: input },
-    })
-  }
-
-  /**
-   * Supply liquidity to a lending pool
-   */
-  async supplyLiquidity(input: SupplyLiquidityInput): Promise<ApiResponse<MutationResponse>> {
-    console.log('[CradleAPI] 🔵 Supply Liquidity Called')
-    console.log('[CradleAPI] Input:', input)
-
-    const mutation = {
-      Pool: { SupplyLiquidity: input },
-    }
-    console.log('[CradleAPI] Mutation:', mutation)
-
-    const response = await this.processMutation(mutation)
-    console.log('[CradleAPI] ✅ Supply Liquidity Response:', response)
-
-    if (response.success && response.data) {
-      console.log('[CradleAPI] MutationResponse Data:', JSON.stringify(response.data, null, 2))
-    } else {
-      console.log('[CradleAPI] ❌ Supply Liquidity Failed:', response.error)
-    }
-
-    return response
-  }
-
-  /**
-   * Borrow an asset from a lending pool
-   */
-  async borrowAsset(input: BorrowAssetInput): Promise<ApiResponse<MutationResponse>> {
-    return this.processMutation({
-      Pool: { BorrowAsset: input },
-    })
-  }
-
-  /**
-   * Repay a borrowed asset
-   */
-  async repayBorrow(input: RepayBorrowInput): Promise<ApiResponse<MutationResponse>> {
-    return this.processMutation({
-      Pool: { RepayBorrow: input },
-    })
+    const query = search.toString()
+    return query ? `?${query}` : ''
   }
 }
 
-// ============================================================================
-// EXPORT DEFAULT
-// ============================================================================
+// Export the client class (not a type)
+export { CradleClient }
+export default CradleClient
 
-export default CradleApiClient
+// Export types using 'export type' for isolatedModules compatibility
+export type {
+  ApiResponse,
+  AssetBookRecord,
+  AssetType,
+  CradleAccountRecord,
+  CradleAccountStatus,
+  CradleAccountType,
+  CradleNativeListingRow,
+  CradleWalletAccountRecord,
+  DataProviderType,
+  FillMode,
+  ListingStatus,
+  LoanRecord,
+  LoanRepaymentsRecord,
+  LoanStatus,
+  MarketRecord,
+  MarketRegulation,
+  MarketStatus,
+  MarketTimeSeriesRecord,
+  MarketTimeSeriesProcessorInput,
+  MarketTimeSeriesProcessorOutput,
+  MarketType,
+  NewOrderBookRecord,
+  OrderBookRecord,
+  OrderFillStatus,
+  OrderStatus,
+  OrderType,
+  TimeSeriesInterval,
+  UUID,
+  Big,
+  ActionRouterInput,
+  ActionRouterOutput,
+  ListingStats,
+  LendingPoolRecord,
+  LendingPoolSnapShotRecord,
+  GetPoolStatsOutput,
+  GetUserBorrowPositionOutput,
+  GetUserDepositPositonOutput,
+  RepaymentAmount,
+  PoolTransactionType,
+}

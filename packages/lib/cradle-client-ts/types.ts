@@ -4,76 +4,103 @@
  *
  * @example
  * import type { CradleAccount, Asset, Market } from './types';
- * import { MutationResponseHelpers } from './types';
  */
 
 // Re-export all types from the main client
 export type {
   // Common types
   ApiResponse,
-  HealthResponse,
 
   // Account types
   CradleAccountType,
   CradleAccountStatus,
-  CradleWalletStatus,
-  WithdrawalType,
-  CradleAccount,
-  CradleWallet,
+  CradleAccountRecord,
+  CradleWalletAccountRecord,
 
   // Asset types
   AssetType,
-  Asset,
+  AssetBookRecord,
 
   // Market types
   MarketStatus,
   MarketType,
   MarketRegulation,
-  Market,
-  MarketFilters,
+  MarketRecord,
 
   // Order types
   OrderStatus,
   OrderType,
   FillMode,
   OrderFillStatus,
-  Order,
-  OrderFilters,
+  OrderBookRecord,
+  NewOrderBookRecord,
 
   // Time series types
   TimeSeriesInterval,
   DataProviderType,
-  TimeSeriesRecord,
-  TimeSeriesFilters,
+  MarketTimeSeriesRecord,
 
   // Lending pool types
   LoanStatus,
   PoolTransactionType,
-  LendingPool,
-  LendingTransaction,
-  Loan,
-  LendingPoolFilters,
+  LendingPoolRecord,
+  LendingPoolSnapShotRecord,
+  LoanRecord,
+  LoanRepaymentsRecord,
 
-  // Mutation types
-  CreateAccountInput,
-  UpdateAccountStatusInput,
-  CreateWalletInput,
-  CreateAssetInput,
-  CreateMarketInput,
-  UpdateMarketStatusInput,
-  PlaceOrderInput,
-  PlaceOrderResult,
-  AddTimeSeriesRecordInput,
-  CreateLendingPoolInput,
-  SupplyLiquidityInput,
-  BorrowAssetInput,
-  RepayBorrowInput,
-  MutationAction,
-  MutationResponse,
+  // Listing types
+  ListingStatus,
+  CradleNativeListingRow,
+  ListingStats,
 
-  // Config types
-  CradleApiConfig,
+  // Action Router types
+  ActionRouterInput,
+  ActionRouterOutput,
+
+  // Other types
+  GetPoolStatsOutput,
+  GetUserBorrowPositionOutput,
+  GetUserDepositPositonOutput,
+  RepaymentAmount,
+  UUID,
+  Big,
 } from './cradle-api-client'
 
-// Re-export the mutation response helpers (not a type, so regular export)
-export { MutationResponseHelpers } from './cradle-api-client'
+// Import types for aliases (needed for type aliases to reference exported types)
+import type {
+  CradleAccountRecord,
+  CradleWalletAccountRecord,
+  AssetBookRecord,
+  MarketRecord,
+  OrderBookRecord,
+  MarketTimeSeriesRecord,
+  LendingPoolRecord,
+  LendingPoolSnapShotRecord,
+  LoanRecord,
+  LoanRepaymentsRecord,
+  CradleNativeListingRow,
+} from './cradle-api-client'
+
+// Type aliases for backward compatibility
+export type CradleAccount = CradleAccountRecord
+export type CradleWallet = CradleWalletAccountRecord
+export type Asset = AssetBookRecord
+export type Market = MarketRecord
+export type Order = OrderBookRecord
+export type TimeSeriesRecord = MarketTimeSeriesRecord
+export type LendingPool = LendingPoolRecord
+export type LendingPoolSnapshot = LendingPoolSnapShotRecord
+export type Loan = LoanRecord
+export type LoanRepayment = LoanRepaymentsRecord
+export type Listing = CradleNativeListingRow
+
+// Re-export the client class
+export { CradleClient } from './cradle-api-client'
+export type { CradleClientOptions } from './cradle-api-client'
+
+// Legacy config type alias
+export interface CradleApiConfig {
+  baseUrl: string
+  apiKey: string
+  timeout?: number
+}

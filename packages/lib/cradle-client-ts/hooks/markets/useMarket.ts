@@ -10,7 +10,7 @@ import { useQuery, type UseQueryOptions } from '@tanstack/react-query'
 import { cradleQueryKeys } from '../../queryKeys'
 import { fetchMarket } from '../../services/fetchers'
 import { standardQueryOptions } from '../../utils/query-options'
-import type { Market } from '../../cradle-api-client'
+import type { Market } from '../../types'
 
 export interface UseMarketOptions {
   /**

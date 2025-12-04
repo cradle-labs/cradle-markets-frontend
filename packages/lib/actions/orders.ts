@@ -10,12 +10,18 @@
 import { revalidatePath } from 'next/cache'
 import { getCradleClient } from '../cradle-client-ts/client'
 import { executeCradleOperation } from '../cradle-client-ts/services/api.service'
-import { MutationResponseHelpers } from '../cradle-client-ts/cradle-api-client'
 import type {
   Order,
-  OrderFilters,
-  PlaceOrderInput,
-  PlaceOrderResult,
+  OrderStatus,
+  OrderType,
+  FillMode,
+  OrderFillStatus,
+} from '../cradle-client-ts/types'
+import type {
+  ActionRouterInput,
+  ActionRouterOutput,
+  UUID,
+  Big,
 } from '../cradle-client-ts/cradle-api-client'
 
 // =============================================================================
@@ -33,9 +39,23 @@ export async function getOrder(id: string): Promise<Order> {
 /**
  * Get all orders with optional filters
  */
-export async function getOrders(filters?: OrderFilters): Promise<Order[]> {
+export async function getOrders(filters?: {
+  wallet?: string
+  market_id?: string
+  status?: OrderStatus
+  order_type?: OrderType
+  mode?: FillMode
+}): Promise<Order[]> {
   const client = getCradleClient()
-  return executeCradleOperation(() => client.getOrders(filters))
+  return executeCradleOperation(() =>
+    client.listOrders({
+      wallet: filters?.wallet as UUID | undefined,
+      market_id: filters?.market_id as UUID | undefined,
+      status: filters?.status,
+      order_type: filters?.order_type,
+      mode: filters?.mode,
+    })
+  )
 }
 
 // =============================================================================
@@ -48,9 +68,25 @@ export async function getOrders(filters?: OrderFilters): Promise<Order[]> {
  * @param input - Order placement input
  * @returns The order placement result
  */
-export async function placeOrder(input: PlaceOrderInput): Promise<{
+export async function placeOrder(input: {
+  wallet: string
+  market_id: string
+  bid_asset: string
+  ask_asset: string
+  bid_amount: string
+  ask_amount: string
+  price: string
+  mode: FillMode
+  order_type: OrderType
+}): Promise<{
   success: boolean
-  result?: PlaceOrderResult
+  result?: {
+    id: string
+    status: OrderFillStatus
+    bid_amount_filled: string
+    ask_amount_filled: string
+    matched_trades: string[]
+  }
   error?: string
 }> {
   try {
@@ -58,7 +94,22 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{
     console.log('Input:', JSON.stringify(input, null, 2))
 
     const client = getCradleClient()
-    const response = await client.placeOrder(input)
+    const action: ActionRouterInput = {
+      OrderBook: {
+        PlaceOrder: {
+          wallet: input.wallet as UUID,
+          market_id: input.market_id as UUID,
+          bid_asset: input.bid_asset as UUID,
+          ask_asset: input.ask_asset as UUID,
+          bid_amount: input.bid_amount as Big,
+          ask_amount: input.ask_amount as Big,
+          price: input.price as Big,
+          mode: input.mode,
+          order_type: input.order_type,
+        },
+      },
+    }
+    const response = await client.process(action)
 
     console.log('API Response:', JSON.stringify(response, null, 2))
 
@@ -78,62 +129,34 @@ export async function placeOrder(input: PlaceOrderInput): Promise<{
       }
     }
 
-    if (!MutationResponseHelpers.isPlaceOrder(response.data)) {
-      console.error('Unexpected response format:', response.data)
+    const output = response.data as ActionRouterOutput
+    if ('OrderBook' in output && 'PlaceOrder' in output.OrderBook) {
+      const result = output.OrderBook.PlaceOrder
+
+      // Revalidate order and market pages
+      revalidatePath('/trade')
+      revalidatePath('/portfolio')
+      revalidatePath(`/market/${input.market_id}`)
+
       return {
-        success: false,
-        error: 'Unexpected response format from API',
+        success: true,
+        result: {
+          id: result.id,
+          status: result.status,
+          bid_amount_filled: result.bid_amount_filled,
+          ask_amount_filled: result.ask_amount_filled,
+          matched_trades: result.matched_trades,
+        },
       }
     }
 
-    const result = response.data.OrderBook.PlaceOrder
-
-    // Revalidate order and market pages
-    revalidatePath('/trade')
-    revalidatePath('/portfolio')
-    revalidatePath(`/market/${input.market_id}`)
-
+    console.error('Unexpected response format:', response.data)
     return {
-      success: true,
-      result,
+      success: false,
+      error: 'Unexpected response format from API',
     }
   } catch (error) {
     console.error('Error placing order:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
-    }
-  }
-}
-
-/**
- * Cancel an order
- *
- * @param orderId - The order ID to cancel
- * @returns Success status
- */
-export async function cancelOrder(orderId: string): Promise<{
-  success: boolean
-  error?: string
-}> {
-  try {
-    const client = getCradleClient()
-    const response = await client.cancelOrder(orderId)
-
-    if (!response.success) {
-      return {
-        success: false,
-        error: response.error || 'Failed to cancel order',
-      }
-    }
-
-    // Revalidate order pages
-    revalidatePath('/trade')
-    revalidatePath('/portfolio')
-
-    return { success: true }
-  } catch (error) {
-    console.error('Error canceling order:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred',

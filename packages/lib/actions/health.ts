@@ -5,12 +5,12 @@
 'use server'
 
 import { getCradleClient } from '../cradle-client-ts/client'
-import type { HealthResponse } from '../cradle-client-ts/cradle-api-client'
+import { executeCradleOperation } from '../cradle-client-ts/services/api.service'
 
 /**
  * Check API health status
  */
-export async function checkHealth(): Promise<HealthResponse> {
+export async function checkHealth(): Promise<{ status: 'ok' }> {
   const client = getCradleClient()
-  return client.health()
+  return executeCradleOperation(() => client.health())
 }

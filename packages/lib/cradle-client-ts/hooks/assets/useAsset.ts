@@ -10,7 +10,7 @@ import { useQuery, type UseQueryOptions } from '@tanstack/react-query'
 import { cradleQueryKeys } from '../../queryKeys'
 import { fetchAsset, fetchAssetByToken, fetchAssetByManager } from '../../services/fetchers'
 import { staticQueryOptions } from '../../utils/query-options'
-import type { Asset } from '../../cradle-api-client'
+import type { Asset } from '../../types'
 
 export interface UseAssetByIdOptions {
   /**

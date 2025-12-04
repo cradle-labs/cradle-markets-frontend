@@ -10,7 +10,7 @@ import { useQuery, type UseQueryOptions } from '@tanstack/react-query'
 import { cradleQueryKeys } from '../../queryKeys'
 import { fetchOrder } from '../../services/fetchers'
 import { userDataQueryOptions } from '../../utils/query-options'
-import type { Order } from '../../cradle-api-client'
+import type { Order } from '../../types'
 
 export interface UseOrderOptions {
   /**

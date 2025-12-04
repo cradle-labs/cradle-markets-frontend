@@ -28,6 +28,7 @@ import { ChevronLeftIcon, ChevronRightIcon } from '@chakra-ui/icons'
 import { useUser } from '@clerk/nextjs'
 import { useAccountByLinkedId } from '@repo/lib/cradle-client-ts/hooks/accounts/useAccountByLinkedId'
 import { useWalletByAccountId } from '@repo/lib/cradle-client-ts/hooks/accounts/useWallet'
+import { fromTokenDecimals } from '@repo/lib/modules/lend'
 import { useAssetDetail } from './AssetDetailProvider'
 
 export function MarketOrders() {
@@ -57,6 +58,8 @@ export function MarketOrders() {
     if (!wallet?.id) return []
     return orders.filter(order => order.wallet === wallet.id)
   }, [orders, wallet?.id])
+
+  console.log('User orders:', userOrders)
 
   // Split orders by status
   const openOrders = useMemo(() => {
@@ -217,7 +220,9 @@ export function MarketOrders() {
                   <Text fontSize="xs">{order.mode}</Text>
                 </Td>
                 <Td isNumeric>
-                  <Text fontSize="sm">{parseFloat(order.ask_amount).toLocaleString()}</Text>
+                  <Text fontSize="sm">
+                    ${fromTokenDecimals(parseFloat(order.ask_amount)).toLocaleString()}
+                  </Text>
                 </Td>
                 <Td isNumeric>
                   <Text fontSize="sm" fontWeight="medium">
@@ -362,9 +367,16 @@ export function MarketOrders() {
                     Total Volume
                   </Text>
                   <Text fontSize="sm" fontWeight="medium">
+                    $
                     {userOrders
-                      .reduce((sum, order) => sum + parseFloat(order.ask_amount), 0)
-                      .toLocaleString()}
+                      .reduce(
+                        (sum, order) => sum + fromTokenDecimals(parseFloat(order.ask_amount)),
+                        0
+                      )
+                      .toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                   </Text>
                 </VStack>
 
@@ -385,12 +397,14 @@ export function MarketOrders() {
 
                 <VStack align="start" spacing={1}>
                   <Text color="font.secondary" fontSize="xs" textTransform="uppercase">
-                    Total Value
+                    Total Shares
                   </Text>
                   <Text fontSize="sm" fontWeight="medium">
-                    $
                     {userOrders
-                      .reduce((sum, order) => sum + parseFloat(order.bid_amount), 0)
+                      .reduce(
+                        (sum, order) => sum + fromTokenDecimals(parseFloat(order.bid_amount)),
+                        0
+                      )
                       .toLocaleString(undefined, {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,

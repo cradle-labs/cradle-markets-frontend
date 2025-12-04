@@ -10,8 +10,8 @@
 import { revalidatePath } from 'next/cache'
 import { getCradleClient } from '../cradle-client-ts/client'
 import { executeCradleOperation } from '../cradle-client-ts/services/api.service'
-import { MutationResponseHelpers } from '../cradle-client-ts/cradle-api-client'
-import type { Asset, CreateAssetInput } from '../cradle-client-ts/cradle-api-client'
+import type { Asset, AssetType } from '../cradle-client-ts/types'
+import type { ActionRouterInput, ActionRouterOutput } from '../cradle-client-ts/cradle-api-client'
 
 // =============================================================================
 // QUERIES
@@ -38,7 +38,7 @@ export async function getAssetByToken(token: string): Promise<Asset> {
  */
 export async function getAssetByManager(manager: string): Promise<Asset> {
   const client = getCradleClient()
-  return executeCradleOperation(() => client.getAssetByManager(manager))
+  return executeCradleOperation(() => client.getAssetsByManager(manager))
 }
 
 /**
@@ -46,7 +46,7 @@ export async function getAssetByManager(manager: string): Promise<Asset> {
  */
 export async function getAssets(): Promise<Asset[]> {
   const client = getCradleClient()
-  return executeCradleOperation(() => client.getAssets())
+  return executeCradleOperation(() => client.listAssets())
 }
 
 // =============================================================================
@@ -59,14 +59,33 @@ export async function getAssets(): Promise<Asset[]> {
  * @param input - Asset creation input
  * @returns The created asset ID
  */
-export async function createAsset(input: CreateAssetInput): Promise<{
+export async function createAsset(input: {
+  asset_manager: string
+  token: string
+  asset_type: AssetType
+  name: string
+  symbol: string
+  decimals: number
+  icon: string
+}): Promise<{
   success: boolean
   assetId?: string
   error?: string
 }> {
   try {
     const client = getCradleClient()
-    const response = await client.createAsset(input)
+    const action: ActionRouterInput = {
+      AssetBook: {
+        CreateNewAsset: {
+          asset_type: input.asset_type,
+          name: input.name,
+          symbol: input.symbol,
+          decimals: input.decimals,
+          icon: input.icon,
+        },
+      },
+    }
+    const response = await client.process(action)
 
     if (!response.success || !response.data) {
       return {
@@ -75,22 +94,23 @@ export async function createAsset(input: CreateAssetInput): Promise<{
       }
     }
 
-    if (!MutationResponseHelpers.isCreateAsset(response.data)) {
+    const output = response.data as ActionRouterOutput
+    if ('AssetBook' in output && 'CreateNewAsset' in output.AssetBook) {
+      const assetId = output.AssetBook.CreateNewAsset
+
+      // Revalidate asset pages
+      revalidatePath('/trade')
+      revalidatePath('/cash')
+
       return {
-        success: false,
-        error: 'Unexpected response format from API',
+        success: true,
+        assetId,
       }
     }
 
-    const assetId = response.data.Assets.CreateAsset
-
-    // Revalidate asset pages
-    revalidatePath('/trade')
-    revalidatePath('/cash')
-
     return {
-      success: true,
-      assetId,
+      success: false,
+      error: 'Unexpected response format from API',
     }
   } catch (error) {
     console.error('Error creating asset:', error)
@@ -104,17 +124,38 @@ export async function createAsset(input: CreateAssetInput): Promise<{
 /**
  * Create an existing asset reference
  *
- * @param assetId - The existing asset ID
+ * @param input - Asset creation input with token and manager
  * @returns Success status
  */
-export async function createExistingAsset(assetId: string): Promise<{
+export async function createExistingAsset(input: {
+  asset_manager?: string
+  token: string
+  asset_type: AssetType
+  name: string
+  symbol: string
+  decimals: number
+  icon: string
+}): Promise<{
   success: boolean
   assetId?: string
   error?: string
 }> {
   try {
     const client = getCradleClient()
-    const response = await client.createExistingAsset(assetId)
+    const action: ActionRouterInput = {
+      AssetBook: {
+        CreateExistingAsset: {
+          asset_manager: input.asset_manager,
+          token: input.token,
+          asset_type: input.asset_type,
+          name: input.name,
+          symbol: input.symbol,
+          decimals: input.decimals,
+          icon: input.icon,
+        },
+      },
+    }
+    const response = await client.process(action)
 
     if (!response.success || !response.data) {
       return {
@@ -123,22 +164,23 @@ export async function createExistingAsset(assetId: string): Promise<{
       }
     }
 
-    if (!MutationResponseHelpers.isCreateExistingAsset(response.data)) {
+    const output = response.data as ActionRouterOutput
+    if ('AssetBook' in output && 'CreateExistingAsset' in output.AssetBook) {
+      const assetId = output.AssetBook.CreateExistingAsset
+
+      // Revalidate asset pages
+      revalidatePath('/trade')
+      revalidatePath('/cash')
+
       return {
-        success: false,
-        error: 'Unexpected response format from API',
+        success: true,
+        assetId,
       }
     }
 
-    const createdAssetId = response.data.Assets.CreateExistingAsset
-
-    // Revalidate asset pages
-    revalidatePath('/trade')
-    revalidatePath('/cash')
-
     return {
-      success: true,
-      assetId: createdAssetId,
+      success: false,
+      error: 'Unexpected response format from API',
     }
   } catch (error) {
     console.error('Error creating existing asset:', error)

@@ -1,12 +1,13 @@
 /**
  * Server-Side API Service
  *
- * Wrapper around CradleApiClient for server-side use.
+ * Wrapper around CradleClient for server-side use.
  * Provides error handling, logging, and response transformation.
  *
  * This service is meant to be used in server actions and API routes.
  */
 
+import axios from 'axios'
 import { getCradleClient } from '../client'
 import type { ApiResponse } from '../cradle-api-client'
 import { CradleApiError, throwIfError } from '../utils/error-handlers'
@@ -26,8 +27,8 @@ export async function executeCradleOperation<T>(
     const response = await operation()
     throwIfError(response)
 
-    if (response.data === null) {
-      throw new CradleApiError('API returned null data')
+    if (response.data === undefined || response.data === null) {
+      throw new CradleApiError('API returned null or undefined data')
     }
 
     return response.data
@@ -40,7 +41,41 @@ export async function executeCradleOperation<T>(
       throw error
     }
 
-    throw new CradleApiError(error instanceof Error ? error.message : 'Unknown error occurred')
+    // Handle axios errors with proper status code extraction
+    if (axios.isAxiosError(error)) {
+      const statusCode = error.response?.status
+      const apiError = (error.response?.data as ApiResponse<unknown> | undefined)?.error
+      const message = apiError || error.message || 'Request failed'
+
+      // Provide helpful messages for common HTTP errors
+      let errorMessage = message
+      if (statusCode === 502) {
+        errorMessage =
+          'The API server is temporarily unavailable (Bad Gateway). Please try again later.'
+      } else if (statusCode === 503) {
+        errorMessage = 'The API service is temporarily unavailable. Please try again later.'
+      } else if (statusCode === 504) {
+        errorMessage = 'The API request timed out. Please try again.'
+      } else if (statusCode) {
+        errorMessage = `Request failed with status ${statusCode}: ${message}`
+      }
+
+      throw new CradleApiError(errorMessage, statusCode, error.response?.data)
+    }
+
+    // Handle generic errors
+    if (error instanceof Error) {
+      // Try to extract status code from error message if it follows the pattern "Request failed (502): ..."
+      const statusMatch = error.message.match(/Request failed \((\d+)\):/)
+      const statusCode = statusMatch ? parseInt(statusMatch[1], 10) : undefined
+      const message = statusMatch
+        ? error.message.replace(/Request failed \(\d+\): /, '')
+        : error.message
+
+      throw new CradleApiError(message, statusCode, error)
+    }
+
+    throw new CradleApiError('Unknown error occurred')
   }
 }
 
@@ -62,7 +97,7 @@ export async function executeCradleOperationNullable<T>(
       return null
     }
 
-    return response.data
+    return response.data ?? null
   } catch (error) {
     console.error('Cradle API operation failed:', error)
     return null

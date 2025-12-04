@@ -1,0 +1,38 @@
+{
+  "name": "cradle-api-client",
+  "version": "1.0.0",
+  "description": "TypeScript client for the Cradle Back-End REST API",
+  "main": "dist/cradle-api-client.js",
+  "types": "dist/cradle-api-client.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "cradle",
+    "api",
+    "client",
+    "typescript",
+    "hedera",
+    "blockchain",
+    "defi"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": ""
+  }
+}

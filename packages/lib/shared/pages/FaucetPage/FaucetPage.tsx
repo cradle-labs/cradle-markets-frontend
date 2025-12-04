@@ -156,17 +156,7 @@ export function FaucetPage() {
               </VStack>
             ) : (
               <VStack align="stretch" gap={4}>
-                {wallet.address && (
-                  <Box bg="gray.800" borderRadius="md" p={3}>
-                    <Text color="gray.400" fontSize="sm" mb={1}>
-                      Wallet Address (tokens will be sent here):
-                    </Text>
-                    <Text color="white" fontFamily="mono" fontSize="sm">
-                      {wallet.address}
-                    </Text>
-                  </Box>
-                )}
-
+                x
                 <FormControl isRequired>
                   <FormLabel>Asset</FormLabel>
                   <Select
@@ -181,7 +171,6 @@ export function FaucetPage() {
                     ))}
                   </Select>
                 </FormControl>
-
                 <Button
                   isDisabled={!selectedAsset || isRequesting}
                   isLoading={isRequesting}

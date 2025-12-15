@@ -43,6 +43,7 @@ import {
   fromBasisPoints,
   fromTokenDecimals,
 } from '@repo/lib/modules/lend'
+import { TokenizedAssetProvider } from '@repo/lib/modules/trade/TokenizedAssets'
 
 interface LendPoolDetailsPageProps {
   poolId: string
@@ -369,21 +370,25 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
             slope1={poolData.slope1}
             slope2={poolData.slope2}
           />
-
-          <LendTradingPanel
-            assetName={poolData.asset?.name}
-            assetSymbol={poolData.asset?.symbol}
-            borrowAPY={poolData.borrowAPY}
-            loanToValue={poolData.loan_to_value}
-            onTransactionSuccess={() => {
-              refetchTransactions()
-              refetchPoolStats()
-            }}
-            poolId={poolData.id}
-            reserveAssetId={poolData.reserve_asset}
-            supplyAPY={poolData.supplyAPY}
-            walletId={wallet?.id}
-          />
+          <TokenizedAssetProvider>
+            <LendTradingPanel
+              assetDecimals={
+                poolData.asset?.decimals != null ? Number(poolData.asset.decimals) : undefined
+              }
+              assetName={poolData.asset?.name}
+              assetSymbol={poolData.asset?.symbol}
+              borrowAPY={poolData.borrowAPY}
+              loanToValue={poolData.loan_to_value}
+              onTransactionSuccess={() => {
+                refetchTransactions()
+                refetchPoolStats()
+              }}
+              poolId={poolData.id}
+              reserveAssetId={poolData.reserve_asset}
+              supplyAPY={poolData.supplyAPY}
+              walletId={wallet?.id}
+            />
+          </TokenizedAssetProvider>
         </Grid>
 
         {/* Recent Activity */}

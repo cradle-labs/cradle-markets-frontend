@@ -15,6 +15,8 @@ export function LendDetails() {
   const router = useRouter()
   const { data: lendingPools, isLoading: isLoadingLendingPools } = useLendingPools()
   const { data: assets, isLoading: isLoadingAssets } = useAssets()
+  console.log('lendingPools', lendingPools)
+  console.log('assets', assets)
 
   // Fetch stats for all pools
   const snapshotQueries = useQueries({

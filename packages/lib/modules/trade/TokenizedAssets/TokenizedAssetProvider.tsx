@@ -7,15 +7,44 @@ import { useMarkets } from '@repo/lib/cradle-client-ts/hooks/markets/useMarkets'
 import { useAssets } from '@repo/lib/cradle-client-ts/hooks/assets/useAssets'
 import type { TimeHistoryDataPoint } from '@repo/lib/actions/time-history'
 
-// Import the fetcher function
+// Time history configuration - single config for all markets
+const TIME_HISTORY_CONFIG = {
+  duration_secs: '2592000', // 1 month
+  interval: '1week' as const,
+}
+
+// Fetch time history data using the Time Series server action
 async function fetchTimeHistory(params: {
   market: string
   asset_id: string
   duration_secs: string
   interval: '15secs' | '1min' | '5min' | '15min' | '30min' | '1hr' | '4hr' | '1day' | '1week'
 }): Promise<TimeHistoryDataPoint[]> {
-  const { getTimeHistory } = await import('@repo/lib/actions/time-history')
-  return getTimeHistory(params)
+  const { getTimeSeriesHistory } = await import('@repo/lib/actions/time-series')
+
+  const paramPayload = {
+    market: params.market,
+    asset_id: params.asset_id,
+    duration_secs: Number(params.duration_secs),
+    interval: params.interval,
+  }
+  console.log('paramPayload', paramPayload)
+  // Use the new time series action and adapt its output
+  const timeSeriesRecords = await getTimeSeriesHistory(paramPayload)
+  console.log('timeSeriesRecords', timeSeriesRecords)
+  // Map TimeSeriesRecord -> TimeHistoryDataPoint
+  return timeSeriesRecords.map(record => {
+    const timestamp = Math.floor(new Date(record.start_time).getTime() / 1000)
+
+    return {
+      timestamp,
+      open: Number(record.open),
+      high: Number(record.high),
+      low: Number(record.low),
+      close: Number(record.close),
+      volume: Number(record.volume),
+    }
+  })
 }
 
 interface TokenizedAssetContextType {
@@ -87,15 +116,21 @@ function transformMarketsToAssets(
         point.close,
       ])
 
-      // Calculate current price and daily change from real data
+      // Calculate current price from the latest data
       const latestDataPoint = timeHistoryData[timeHistoryData.length - 1]
       const currentPrice = typeof latestDataPoint?.close === 'number' ? latestDataPoint.close : 0
 
-      const previousDataPoint =
-        timeHistoryData.length > 1 ? timeHistoryData[timeHistoryData.length - 2] : null
-      const previousPrice =
-        previousDataPoint && typeof previousDataPoint.close === 'number'
-          ? previousDataPoint.close
+      // Find data point from ~24 hours ago for daily change
+      const dayAgo = Date.now() / 1000 - 86400
+      const dayAgoData = timeHistoryData.find(point => point.timestamp >= dayAgo)
+      const previousPrice = dayAgoData
+        ? typeof dayAgoData.close === 'number'
+          ? dayAgoData.close
+          : currentPrice
+        : timeHistoryData.length > 1
+          ? typeof timeHistoryData[0].close === 'number'
+            ? timeHistoryData[0].close
+            : currentPrice
           : currentPrice
 
       const dailyChange = currentPrice - previousPrice
@@ -139,26 +174,35 @@ export function TokenizedAssetProvider({ children }: TokenizedAssetProviderProps
 
   // Fetch time history for each spot market using useQueries
   const timeHistoryQueries = useQueries({
-    queries: spotMarkets.map(market => ({
-      queryKey: ['time-history', market.id, market.asset_one, '86400', '15secs'],
-      queryFn: () =>
-        fetchTimeHistory({
+    queries: spotMarkets.map((market, marketIndex) => ({
+      queryKey: [
+        'time-history',
+        market.id,
+        market.asset_one,
+        TIME_HISTORY_CONFIG.duration_secs,
+        TIME_HISTORY_CONFIG.interval,
+      ],
+      queryFn: async () => {
+        const payload = {
           market: market.id,
           asset_id: market.asset_one,
-          duration_secs: '86400', // 1 day
-          interval: '15secs' as const,
-        }),
+          duration_secs: TIME_HISTORY_CONFIG.duration_secs,
+          interval: TIME_HISTORY_CONFIG.interval,
+        }
+        console.log(`[Time History] Market ${marketIndex} (${market.id}) payload:`, payload)
+        const result = await fetchTimeHistory(payload)
+        console.log(`[Time History] Market ${marketIndex} (${market.id}) response:`, {
+          dataPoints: result?.length || 0,
+          sample: result?.slice(0, 2), // First 2 items
+        })
+        return result
+      },
       enabled: !!market.id && !!market.asset_one && assets.length > 0,
       staleTime: 1000 * 60 * 30, // 30 minutes - historical data doesn't change
       gcTime: 1000 * 60 * 60, // 1 hour
       retry: false, // Don't retry on failure, just use fallback
     })),
   })
-
-  console.log(
-    'timeHistoryQueries',
-    timeHistoryQueries.map(query => query.data)
-  )
 
   // Aggregate loading states
   const timeHistoryLoading = timeHistoryQueries.some(query => query.isLoading)

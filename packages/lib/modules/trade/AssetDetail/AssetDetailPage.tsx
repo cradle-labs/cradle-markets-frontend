@@ -33,6 +33,7 @@ const contentTabs: ButtonGroupOption[] = [
 
 function AssetDetailContent() {
   const { asset, loading, error } = useAssetDetail()
+  console.log('Asset:', asset)
   const [activeTab, setActiveTab] = useState<ButtonGroupOption>(contentTabs[0])
 
   if (loading) {

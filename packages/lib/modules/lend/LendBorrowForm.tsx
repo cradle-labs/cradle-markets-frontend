@@ -19,6 +19,7 @@ import { useAssets } from '@repo/lib/cradle-client-ts/hooks'
 import { useAssetBalances } from '@repo/lib/cradle-client-ts/hooks/accounts/useAssetBalances'
 import { SelectInput, SelectOption } from '@repo/lib/shared/components/inputs/SelectInput'
 import { fromBasisPoints, toTokenDecimals, fromTokenDecimals } from './utils'
+import { useTokenizedAssets } from '@repo/lib/modules/trade/TokenizedAssets'
 
 /**
  * Deposit position structure from the API
@@ -40,6 +41,7 @@ interface LendBorrowFormProps {
   reserveAssetId: string
   borrowAPY: number
   loanToValue: string
+  assetDecimals?: number
   onSuccess?: () => void
 }
 
@@ -49,12 +51,14 @@ export function LendBorrowForm({
   assetSymbol,
   borrowAPY,
   loanToValue,
+  assetDecimals,
   onSuccess,
 }: LendBorrowFormProps) {
   const [amount, setAmount] = useState('')
   const [selectedCollateralId, setSelectedCollateralId] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
   const toast = useToast()
+  const { assets: tokenizedAssets, loading: tokenizedAssetsLoading } = useTokenizedAssets()
 
   const formatAmount = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -85,6 +89,44 @@ export function LendBorrowForm({
     assetIds: collateralAssetIds,
     enabled: !!walletId && collateralAssetIds.length > 0,
   })
+
+  const selectedCollateralAsset = useMemo(() => {
+    return collateralAssets.find(asset => asset.id === selectedCollateralId)
+  }, [collateralAssets, selectedCollateralId])
+
+  const collateralSymbol = selectedCollateralAsset?.symbol || ''
+
+  const ltvDecimal = useMemo(() => fromBasisPoints(loanToValue), [loanToValue])
+
+  const collateralPrice = useMemo(() => {
+    if (!selectedCollateralAsset) {
+      console.log('[LendBorrowForm] No selected collateral asset yet')
+      return 0
+    }
+
+    const priceMatchBySymbol = tokenizedAssets.find(
+      asset => asset.symbol.toLowerCase() === selectedCollateralAsset.symbol?.toLowerCase()
+    )
+    const priceMatchByName = tokenizedAssets.find(
+      asset => asset.name.toLowerCase() === selectedCollateralAsset.name?.toLowerCase()
+    )
+
+    const price = priceMatchBySymbol?.currentPrice ?? priceMatchByName?.currentPrice ?? 0
+
+    console.log('[LendBorrowForm] Collateral pricing lookup', {
+      selectedCollateralAsset: {
+        id: selectedCollateralAsset.id,
+        symbol: selectedCollateralAsset.symbol,
+        name: selectedCollateralAsset.name,
+      },
+      tokenizedAssetsCount: tokenizedAssets.length,
+      matchedBySymbol: priceMatchBySymbol,
+      matchedByName: priceMatchByName,
+      collateralPrice: price,
+    })
+
+    return price
+  }, [selectedCollateralAsset, tokenizedAssets])
 
   // Create select options for collateral assets
   const collateralOptions: SelectOption[] = useMemo(() => {
@@ -140,23 +182,25 @@ export function LendBorrowForm({
     return fromTokenDecimals(balance.data.balance, balance.data.decimals)
   }, [selectedCollateralId, collateralBalances])
 
-  // Calculate available borrow amount based on collateral
-  // Available borrow = (collateral balance * LTV) - already borrowed
+  // Calculate available borrow amount based on collateral value and LTV
+  // Available borrow (cpUSD) = (collateral balance * price * LTV) - already borrowed
   const availableBorrow = useMemo(() => {
-    if (collateralBalance <= 0) return 0
+    if (collateralBalance <= 0 || collateralPrice <= 0 || ltvDecimal <= 0) return 0
 
-    const ltv = fromBasisPoints(loanToValue)
-    const maxBorrowable = collateralBalance * ltv
+    const maxBorrowable = collateralBalance * collateralPrice * ltvDecimal
 
     // If deposit position has borrowed amount, subtract it
     const position = depositPosition as DepositPosition | undefined
     const borrowed =
       position?.borrowed || position?.borrowed_amount
-        ? fromTokenDecimals(Number(position.borrowed || position.borrowed_amount || 0))
+        ? fromTokenDecimals(
+            Number(position.borrowed || position.borrowed_amount || 0),
+            assetDecimals
+          )
         : 0
 
     return Math.max(0, maxBorrowable - borrowed)
-  }, [collateralBalance, loanToValue, depositPosition])
+  }, [collateralBalance, collateralPrice, ltvDecimal, depositPosition, assetDecimals])
 
   const formatPercentage = (value: number | string) => {
     const numValue = typeof value === 'string' ? fromBasisPoints(value) : value
@@ -164,12 +208,22 @@ export function LendBorrowForm({
   }
 
   const calculateRequiredCollateral = () => {
-    if (!amount || parseFloat(amount) <= 0) return 0
-    // Convert LTV from basis points to decimal
-    const ltv = fromBasisPoints(loanToValue)
-    // Required collateral = borrow amount / LTV
-    return parseFloat(amount) / ltv
+    const borrowAmount = parseFloat(amount)
+    if (!borrowAmount || borrowAmount <= 0 || collateralPrice <= 0 || ltvDecimal <= 0) return 0
+    // Required collateral in selected asset units = borrowAmount (cpUSD) / (price * LTV)
+    return borrowAmount / (collateralPrice * ltvDecimal)
   }
+
+  const requiredCollateral = useMemo(calculateRequiredCollateral, [
+    amount,
+    collateralPrice,
+    ltvDecimal,
+  ])
+
+  const requiredCollateralValueUsd = useMemo(
+    () => requiredCollateral * collateralPrice,
+    [requiredCollateral, collateralPrice]
+  )
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -196,6 +250,17 @@ export function LendBorrowForm({
       return
     }
 
+    if (collateralPrice <= 0) {
+      toast({
+        title: 'Price Unavailable',
+        description: 'Unable to fetch collateral price. Please try again shortly.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+      return
+    }
+
     if (!amount || parseFloat(amount) <= 0) {
       toast({
         title: 'Invalid Amount',
@@ -208,10 +273,12 @@ export function LendBorrowForm({
     }
 
     // Validate borrow amount doesn't exceed available (only if we have deposit position data)
-    if (depositPosition && parseFloat(amount) > availableBorrow) {
+    if (parseFloat(amount) > availableBorrow) {
       toast({
         title: 'Insufficient Collateral',
-        description: `You can only borrow up to ${formatAmount(availableBorrow)} ${assetSymbol || 'tokens'} based on your supplied collateral`,
+        description: `You can only borrow up to ${formatAmount(
+          availableBorrow
+        )} ${assetSymbol || 'tokens'} based on your supplied collateral`,
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -222,18 +289,32 @@ export function LendBorrowForm({
     setIsLoading(true)
 
     try {
-      // Convert normalized amount to token decimals (8 decimals)
-      // User enters "1.5", backend needs "150000000"
-      const amountInDecimals = toTokenDecimals(parseFloat(amount))
+      // Get collateral asset decimals from balance data
+      const collateralBalanceData = collateralBalances.find(b => b.assetId === selectedCollateralId)
+      const collateralAssetDecimals =
+        collateralBalanceData?.data?.decimals ?? selectedCollateralAsset?.decimals ?? 8
+
+      // The amount field should be the required collateral amount (in collateral asset units)
+      // Convert required collateral from normalized form to token decimals
+      const collateralAmountInDecimals = toTokenDecimals(
+        requiredCollateral,
+        collateralAssetDecimals
+      )
 
       const borrowAssetPayload = {
         wallet: walletId,
         pool: poolId,
-        amount: amountInDecimals,
+        amount: collateralAmountInDecimals, // Pass collateral amount, not borrow amount
         collateral: selectedCollateralId,
       }
 
-      console.log('Borrow Asset Payload:', borrowAssetPayload)
+      console.log('Borrow Asset Payload:', {
+        ...borrowAssetPayload,
+        borrowAmountCpUsd: parseFloat(amount),
+        requiredCollateralAmount: requiredCollateral,
+        collateralSymbol,
+        collateralDecimals: collateralAssetDecimals,
+      })
 
       const result = await borrowAsset(borrowAssetPayload)
 
@@ -331,12 +412,17 @@ export function LendBorrowForm({
           />
           <FormHelperText color="text.tertiary" fontSize="xs">
             {walletId && collateralBalance > 0
-              ? `You can borrow up to ${formatAmount(availableBorrow)} ${assetSymbol} based on your ${collateralAssets.find(a => a.id === selectedCollateralId)?.symbol || 'collateral'} balance`
+              ? `You can borrow up to ${formatAmount(availableBorrow)} ${assetSymbol} based on your ${collateralSymbol || 'collateral'} value`
               : `Borrow ${assetSymbol} at ${formatPercentage(borrowAPY)} APY`}
           </FormHelperText>
+          {selectedCollateralId && collateralPrice <= 0 && !tokenizedAssetsLoading && (
+            <Text color="orange.300" fontSize="xs" mt={1}>
+              Collateral price unavailable. Please retry or choose another collateral asset.
+            </Text>
+          )}
         </FormControl>
 
-        {amount && parseFloat(amount) > 0 && (
+        {amount && parseFloat(amount) > 0 && collateralPrice > 0 && (
           <Box bg="background.level1" borderRadius="md" p={4} w="full">
             <VStack align="stretch" spacing={2}>
               <Box>
@@ -344,10 +430,11 @@ export function LendBorrowForm({
                   Required Collateral
                 </Text>
                 <Text fontSize="lg" fontWeight="semibold">
-                  ${calculateRequiredCollateral().toFixed(2)}
+                  {requiredCollateral.toFixed(4)} {collateralSymbol || 'collateral'}
                 </Text>
                 <Text color="text.tertiary" fontSize="xs">
-                  Based on {formatPercentage(loanToValue)} LTV
+                  ≈ ${requiredCollateralValueUsd.toFixed(2)} based on {formatPercentage(ltvDecimal)}{' '}
+                  LTV
                 </Text>
               </Box>
               <Box mt={2}>
@@ -370,7 +457,9 @@ export function LendBorrowForm({
             !selectedCollateralId ||
             !amount ||
             parseFloat(amount) <= 0 ||
-            (depositPosition && parseFloat(amount) > availableBorrow)
+            collateralPrice <= 0 ||
+            tokenizedAssetsLoading ||
+            parseFloat(amount) > availableBorrow
           }
           isLoading={isLoading}
           size="lg"

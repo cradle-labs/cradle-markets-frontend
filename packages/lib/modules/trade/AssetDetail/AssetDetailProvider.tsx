@@ -96,13 +96,21 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
         config.duration_secs,
         config.interval,
       ],
-      queryFn: () =>
-        fetchTimeHistory({
+      queryFn: async () => {
+        const payload = {
           market: marketId,
           asset_id: market?.asset_one || '',
           duration_secs: config.duration_secs,
           interval: config.interval,
-        }),
+        }
+        console.log(`[Time History] ${period} payload:`, payload)
+        const result = await fetchTimeHistory(payload)
+        console.log(`[Time History] ${period} response:`, {
+          dataPoints: result?.length || 0,
+          sample: result?.slice(0, 2), // First 2 items
+        })
+        return result
+      },
       enabled: !!market?.asset_one,
       // For REALTIME data, refetch every 15 seconds
       refetchInterval: (period === 'REALTIME' ? 15000 : false) as number | false,
@@ -116,16 +124,31 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
   // Combine all time history data and sort by timestamp
   const allTimeHistoryData = useMemo(() => {
     const allData: TimeHistoryDataPoint[] = []
-    timeHistoryQueries.forEach(query => {
+    const periodNames = Object.keys(TIME_CONFIGS)
+
+    timeHistoryQueries.forEach((query, index) => {
+      const period = periodNames[index]
       if (query.data && Array.isArray(query.data)) {
+        console.log(`[allData] Adding ${query.data.length} data points from ${period} period`)
         allData.push(...query.data)
+      } else {
+        console.log(
+          `[allData] No data from ${period} period (isLoading: ${query.isLoading}, hasError: ${!!query.error})`
+        )
       }
+    })
+
+    console.log('[allData] Total combined data points:', allData.length)
+    console.log('[allData] Breakdown by timestamp:', {
+      uniqueTimestamps: new Set(allData.map(d => d.timestamp)).size,
+      allData: allData,
     })
 
     // Remove duplicates and sort by timestamp
     const uniqueData = Array.from(
       new Map(allData.map(item => [item.timestamp, item])).values()
     ).sort((a, b) => a.timestamp - b.timestamp)
+    console.log('uniqueData', uniqueData)
 
     console.log('Combined time history data:', uniqueData.length, 'data points')
     return uniqueData

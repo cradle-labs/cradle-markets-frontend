@@ -17,6 +17,7 @@ interface LendTradingPanelProps {
   supplyAPY: number
   borrowAPY: number
   loanToValue: string
+  assetDecimals?: number
   onTransactionSuccess?: () => void
 }
 
@@ -31,6 +32,7 @@ export function LendTradingPanel({
   supplyAPY,
   borrowAPY,
   loanToValue,
+  assetDecimals,
   onTransactionSuccess,
 }: LendTradingPanelProps) {
   const [activeTab, setActiveTab] = useState<TabValue>('supply')
@@ -71,6 +73,7 @@ export function LendTradingPanel({
             />
           ) : (
             <LendBorrowForm
+              assetDecimals={assetDecimals}
               assetName={assetName}
               assetSymbol={assetSymbol}
               borrowAPY={borrowAPY}

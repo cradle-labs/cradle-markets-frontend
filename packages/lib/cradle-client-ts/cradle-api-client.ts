@@ -227,6 +227,21 @@ type GetUserBorrowPositionOutput = Record<string, unknown>
 type GetUserDepositPositonOutput = Record<string, unknown>
 type RepaymentAmount = Record<string, unknown>
 
+// Onramp types
+interface OnRampRequest {
+  token: UUID
+  amount: Big
+  wallet_id: UUID
+  result_page: string
+  email: string
+}
+
+interface OnRampResponse {
+  reference: string
+  authorization_url: string
+  access_code: string
+}
+
 // Action Router types
 type AccountsProcessorInput =
   | {
@@ -683,6 +698,11 @@ class CradleClient {
     return this.get(`/loan/${loanId}`)
   }
 
+  // Onramp
+  onrampRequest(body: OnRampRequest): Promise<ApiResponse<OnRampResponse>> {
+    return this.post('/onramp-request', body)
+  }
+
   private async get<T>(path: string, opts?: { auth?: boolean }): Promise<T> {
     return this.request<T>(path, { method: 'GET' }, opts)
   }
@@ -820,4 +840,6 @@ export type {
   GetUserDepositPositonOutput,
   RepaymentAmount,
   PoolTransactionType,
+  OnRampRequest,
+  OnRampResponse,
 }

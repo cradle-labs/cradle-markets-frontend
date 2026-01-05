@@ -40,6 +40,7 @@ export interface ActiveLoansSectionProps {
     created_at: string
     status: string
     collateral_asset: string
+    transaction?: string | null
   }>
   pools: Array<{
     id: string
@@ -59,6 +60,7 @@ export interface ActiveLoansSectionProps {
 
 enum LoanTab {
   ACTIVE = 'active',
+  REPAID = 'repaid',
   REPAYMENTS = 'repayments',
 }
 
@@ -89,18 +91,23 @@ export function ActiveLoansSection({
     assets.forEach(asset => map.set(asset.id, asset))
     return map
   }, [assets])
+  console.log('loans:', loans)
 
-  // Filter for active loans only with principal amount > 0
+  // Filter for active loans only
   const activeLoans = useMemo(() => {
-    return loans.filter(loan => {
-      const principalAmount = parseFloat(loan.principal_amount)
-      return loan.status === 'active' && principalAmount > 0
-    })
+    return loans.filter(loan => loan.status === 'active')
+  }, [loans])
+  console.log('activeLoans', activeLoans)
+
+  // Filter for repaid loans only
+  const repaidLoans = useMemo(() => {
+    return loans.filter(loan => loan.status === 'repaid')
   }, [loans])
 
   // Tab options
   const loanTabs: LoanTabOption[] = [
-    { value: LoanTab.ACTIVE, label: `Active Loans (${activeLoans.length})` },
+    { value: LoanTab.ACTIVE, label: `Active Loans` },
+    { value: LoanTab.REPAID, label: 'Repaid Loans' },
     { value: LoanTab.REPAYMENTS, label: 'Loan Repayments' },
   ]
 
@@ -209,6 +216,64 @@ export function ActiveLoansSection({
             </Table>
           </TableContainer>
         )
+      ) : activeTab.value === LoanTab.REPAID ? (
+        // Repaid Loans Tab Content
+        isLoading ? (
+          <Skeleton borderRadius="lg" h="200px" w="full" />
+        ) : repaidLoans.length === 0 ? (
+          <NoisyCard
+            cardProps={{
+              borderRadius: 'lg',
+              w: 'full',
+            }}
+            contentProps={{
+              p: 8,
+              position: 'relative',
+            }}
+            shadowContainerProps={{
+              shadow: 'innerXl',
+            }}
+          >
+            <VStack spacing={2}>
+              <Text color="font.secondary" fontSize="sm">
+                No repaid loans yet
+              </Text>
+              <Text color="font.secondary" fontSize="xs">
+                Your completed loan repayments will appear here
+              </Text>
+            </VStack>
+          </NoisyCard>
+        ) : (
+          <TableContainer bg={cardBg} borderRadius="lg" shadow="xl" w="full">
+            <Table variant="simple">
+              <Thead>
+                <Tr>
+                  <Th>Pool</Th>
+                  <Th>Collateral Asset</Th>
+                  <Th isNumeric>Principal Amount</Th>
+                  <Th>Borrowed On</Th>
+                  <Th>Status</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {repaidLoans.map(loan => {
+                  const pool = poolMap.get(loan.pool)
+                  const collateralAsset = assetMap.get(loan.collateral_asset)
+
+                  return (
+                    <RepaidLoanTableRow
+                      collateralAsset={collateralAsset}
+                      formatDate={formatDate}
+                      key={loan.id}
+                      loan={loan}
+                      pool={pool}
+                    />
+                  )
+                })}
+              </Tbody>
+            </Table>
+          </TableContainer>
+        )
       ) : (
         // Loan Repayments Tab Content
         <LoanRepaymentsTable assets={assets} loans={loans} pools={pools} />
@@ -270,10 +335,12 @@ function LoanTableRow({
   onRepayClick,
   formatDate,
 }: LoanTableRowProps) {
+  console.log('loan', loan)
   // Fetch loan position to get health factor
   const { data: loanPosition, isLoading: isLoadingPosition } = useLoanPosition({
     loanId: loan.id,
   })
+  console.log('loanPosition', loanPosition)
 
   const healthFactor = loanPosition?.health_factor
     ? parseFloat(String(loanPosition.health_factor)) / 1e18
@@ -299,6 +366,11 @@ function LoanTableRow({
   const collateralAmount = loanPosition?.collateral_amount
     ? fromTokenDecimals(parseFloat(String(loanPosition.collateral_amount)))
     : 0
+
+  // Don't render if the loan has been fully repaid (current debt is essentially 0)
+  if (!isLoadingPosition && currentDebt < 0.01) {
+    return null
+  }
 
   return (
     <Tr>
@@ -379,6 +451,84 @@ function LoanTableRow({
         <Button onClick={() => onRepayClick(loan)} size="sm" variant="primary">
           Repay
         </Button>
+      </Td>
+    </Tr>
+  )
+}
+
+interface RepaidLoanTableRowProps {
+  loan: {
+    id: string
+    wallet_id: string
+    pool: string
+    principal_amount: string
+    borrow_index: string
+    created_at: string
+    status: string
+    transaction?: string | null
+    collateral_asset: string
+  }
+  pool:
+    | {
+        id: string
+        name?: string | null
+        title?: string | null
+        reserve_asset: string
+      }
+    | undefined
+  collateralAsset:
+    | {
+        id: string
+        name: string
+        symbol: string
+        icon?: string | null
+      }
+    | undefined
+  formatDate: (dateString: string) => string
+}
+
+function RepaidLoanTableRow({ loan, pool, collateralAsset, formatDate }: RepaidLoanTableRowProps) {
+  // Convert principal amount from token decimals to display format
+  const principalAmount = parseFloat(loan.principal_amount) / 100000000 // 8 decimal places
+
+  return (
+    <Tr>
+      <Td>
+        <Text fontSize="sm" fontWeight="semibold">
+          {pool?.title ?? pool?.name ?? 'Unknown Pool'}
+        </Text>
+      </Td>
+      <Td>
+        <HStack spacing={2}>
+          {collateralAsset?.icon && (
+            <Box h="20px" w="20px">
+              <Box
+                alt={collateralAsset.symbol}
+                as="img"
+                h="full"
+                objectFit="contain"
+                src={collateralAsset.icon}
+                w="full"
+              />
+            </Box>
+          )}
+          <Text fontSize="sm" fontWeight="medium">
+            {collateralAsset?.symbol || 'Unknown'}
+          </Text>
+        </HStack>
+      </Td>
+      <Td isNumeric>
+        <Text fontSize="sm" fontWeight="semibold">
+          ${principalAmount.toFixed(2)}
+        </Text>
+      </Td>
+      <Td>
+        <Text fontSize="sm">{formatDate(loan.created_at)}</Text>
+      </Td>
+      <Td>
+        <Badge colorScheme="gray" fontSize="xs">
+          Repaid
+        </Badge>
       </Td>
     </Tr>
   )

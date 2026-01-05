@@ -24,8 +24,23 @@ import { getSelectStyles } from '@repo/lib/shared/services/chakra/custom/chakra-
 import { useIsMounted } from '@repo/lib/shared/hooks/useIsMounted'
 
 export type ViewMode = 'grid' | 'list'
-export type AssetCategory = 'all' | 'etf' | 'technology' | 'consumer' | 'financials' | 'large-cap' | 'growth' | 'value'
-export type SortOption = 'most-popular' | 'price-asc' | 'price-desc' | 'change-asc' | 'change-desc' | 'volume-asc' | 'volume-desc'
+export type AssetCategory =
+  | 'all'
+  | 'etf'
+  | 'technology'
+  | 'consumer'
+  | 'financials'
+  | 'large-cap'
+  | 'growth'
+  | 'value'
+export type SortOption =
+  | 'most-popular'
+  | 'price-asc'
+  | 'price-desc'
+  | 'change-asc'
+  | 'change-desc'
+  | 'volume-asc'
+  | 'volume-desc'
 
 interface AssetSearchFiltersProps {
   search: string | null
@@ -67,29 +82,21 @@ const sortOptions: SortSelectOption[] = [
 
 function FilterButton({ onClick }: { onClick: () => void }) {
   return (
-    <Button
-      borderRadius="md"
-      minW="40px"
-      onClick={onClick}
-      p={2}
-      size="sm"
-      variant="tertiary"
-    >
+    <Button borderRadius="md" minW="40px" onClick={onClick} p={2} size="sm" variant="tertiary">
       <Filter size={16} />
     </Button>
   )
 }
 
-function ViewToggle({ viewMode, setViewMode }: { viewMode: ViewMode; setViewMode: (mode: ViewMode) => void }) {
+function ViewToggle({
+  viewMode,
+  setViewMode,
+}: {
+  viewMode: ViewMode
+  setViewMode: (mode: ViewMode) => void
+}) {
   return (
-    <HStack
-      bg="background.level1"
-      borderRadius="md"
-      h="48px"
-      p={0}
-      spacing={0}
-      w="full"
-    >
+    <HStack bg="background.level1" borderRadius="md" h="48px" p={0} spacing={0} w="full">
       <Button
         borderBottomLeftRadius="md"
         borderBottomRightRadius="none"
@@ -137,7 +144,7 @@ function CategoryFilters({
 }) {
   return (
     <VStack align="stretch" spacing={3}>
-      {assetCategories.map((category) => (
+      {assetCategories.map(category => (
         <Button
           borderRadius="md"
           colorScheme={selectedCategory === category.value ? 'primary' : 'gray'}
@@ -160,12 +167,12 @@ function CategoryFilters({
   )
 }
 
-function SortSelect({ 
-  sortBy, 
-  setSortBy 
-}: { 
+function SortSelect({
+  sortBy,
+  setSortBy,
+}: {
   sortBy: SortOption
-  setSortBy: (sort: SortOption) => void 
+  setSortBy: (sort: SortOption) => void
 }) {
   const isMounted = useIsMounted()
   const baseStyles = getSelectStyles<SortSelectOption>()
@@ -179,17 +186,27 @@ function SortSelect({
   const value = options.find(option => option.value === sortBy)
 
   // Custom styles to override the selected option color
-  const customStyles = useMemo(() => ({
-    ...baseStyles,
-    option: (provided: any, state: any) => ({
-      ...baseStyles.option?.(provided, state),
-      background: state.isSelected ? 'brown.500' : (state.isFocused ? 'background.level3' : 'background.level4'),
-      color: state.isSelected ? 'white' : 'inherit',
-      _hover: {
-        background: state.isSelected ? 'brown.600' : 'background.level3',
-      },
+  const customStyles = useMemo(
+    () => ({
+      ...baseStyles,
+      option: (provided: any, state: any) => ({
+        ...baseStyles.option?.(provided, state),
+        background: state.isSelected
+          ? 'background.level0'
+          : state.isFocused
+            ? 'background.level3'
+            : 'background.level4',
+        color: state.isSelected ? 'white' : 'inherit',
+        fontWeight: state.isSelected ? 'bold' : 'inherit',
+        _hover: {
+          background: state.isSelected ? 'background.level0' : 'background.level3',
+          color: state.isSelected ? 'white' : 'inherit',
+          fontWeight: state.isSelected ? 'bold' : 'inherit',
+        },
+      }),
     }),
-  }), [baseStyles])
+    [baseStyles]
+  )
 
   if (!isMounted) return null
 
@@ -231,18 +248,18 @@ function MobileFilterDrawer({
   setSortBy: (sort: SortOption) => void
 }) {
   return (
-    <Drawer 
+    <Drawer
       closeOnEsc={true}
       closeOnOverlayClick={true}
-      isOpen={isOpen} 
-      onClose={onClose} 
-      placement="bottom" 
+      isOpen={isOpen}
+      onClose={onClose}
+      placement="bottom"
       size="md"
     >
       <DrawerOverlay bg="blackAlpha.300" />
-      <DrawerContent 
+      <DrawerContent
         borderBottomRadius="none"
-        borderTopRadius="2xl" 
+        borderTopRadius="2xl"
         maxH="80vh"
         mb={0}
         minH="60vh"
@@ -254,7 +271,7 @@ function MobileFilterDrawer({
             Filter
           </Text>
         </DrawerHeader>
-        
+
         <DrawerBody overflowY="auto" pb={0} px={4}>
           <VStack align="stretch" spacing={6}>
             {/* Categories */}
@@ -355,7 +372,7 @@ export function AssetSearchFilters({
               setSearch={setSearch}
             />
           </Box>
-          
+
           {/* Filter Button */}
           <FilterButton onClick={onOpen} />
         </HStack>
@@ -391,7 +408,7 @@ export function AssetSearchFilters({
       <HStack align="center" justify="space-between" spacing={4}>
         {/* Category Filters */}
         <HStack flex={1} minW="0" overflowX="auto" spacing={2}>
-          {assetCategories.map((category) => (
+          {assetCategories.map(category => (
             <Button
               borderRadius="full"
               colorScheme={selectedCategory === category.value ? 'primary' : 'gray'}
@@ -411,7 +428,7 @@ export function AssetSearchFilters({
         {/* View Toggle and Sort */}
         <HStack flexShrink={0} spacing={3}>
           <ViewToggle setViewMode={setViewMode} viewMode={viewMode} />
-          
+
           <Box w="72">
             <SortSelect setSortBy={setSortBy} sortBy={sortBy} />
           </Box>
@@ -420,5 +437,3 @@ export function AssetSearchFilters({
     </VStack>
   )
 }
-
-

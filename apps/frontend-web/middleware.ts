@@ -25,7 +25,6 @@ const isSharedRoute = createRouteMatcher([
   '/trade(.*)',
   '/lend(.*)',
   '/portfolio(.*)',
-  '/cash(.*)',
   '/perps(.*)',
   '/faucet(.*)',
 ])

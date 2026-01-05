@@ -37,11 +37,6 @@ export function useNav() {
       roles: ['institutional', 'retail'],
     },
     {
-      href: '/cash',
-      label: 'Cash',
-      roles: ['institutional', 'retail'],
-    },
-    {
       href: '/faucet',
       label: 'Faucet',
       roles: ['institutional', 'retail'],

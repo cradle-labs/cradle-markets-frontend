@@ -32,13 +32,6 @@ export async function goToPortfolio(page: Page) {
 }
 
 /**
- * Navigate to cash page
- */
-export async function goToCash(page: Page) {
-  await navigateTo(page, '/cash')
-}
-
-/**
  * Navigate to faucet page
  */
 export async function goToFaucet(page: Page) {
@@ -84,7 +77,7 @@ export async function isOnPage(page: Page, path: string): Promise<boolean> {
  * Get all visible navigation links
  */
 export async function getVisibleNavLinks(page: Page): Promise<string[]> {
-  const navLinks = ['Trade', 'Lend', 'Portfolio', 'Cash', 'Faucet']
+  const navLinks = ['Trade', 'Lend', 'Portfolio', 'Faucet']
   const visibleLinks: string[] = []
 
   for (const link of navLinks) {

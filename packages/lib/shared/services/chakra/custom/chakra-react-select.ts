@@ -52,6 +52,7 @@ const defaultStyles = <T>(): ChakraStylesConfig<T> => ({
     },
     _selected: {
       background: 'background.level0',
+      color: 'white',
       fontWeight: 'bold',
     },
   }),
@@ -116,6 +117,7 @@ const gradientStyles = <T>(): ChakraStylesConfig<T> => ({
     },
     _selected: {
       background: 'background.level0',
+      color: 'white',
       fontWeight: 'bold',
     },
   }),

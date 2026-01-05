@@ -1,24 +1,12 @@
 'use client'
 
-import {
-  Box,
-  Button,
-  Card,
-  CardBody,
-  CardHeader,
-  FormControl,
-  FormLabel,
-  HStack,
-  Input,
-  InputGroup,
-  InputLeftElement,
-  Text,
-  VStack,
-} from '@chakra-ui/react'
-import { useState } from 'react'
-import { CreditCard } from 'react-feather'
-import ButtonGroup, { ButtonGroupOption } from '../btns/button-group/ButtonGroup'
+import { Box, Button, HStack, Input, Text, useToast, VStack } from '@chakra-ui/react'
+import { useState, useMemo, useEffect } from 'react'
 import { SelectInput, SelectOption } from '../inputs/SelectInput'
+import { requestOnramp } from '@repo/lib/actions/onramp'
+import { blockInvalidNumberInput } from '@repo/lib/shared/utils/numbers'
+import { toTokenDecimals } from '@repo/lib/modules/lend/utils'
+import type { Asset } from '@repo/lib/cradle-client-ts/types'
 
 export enum CashMode {
   PAY = 'pay',
@@ -33,228 +21,233 @@ export enum PaymentType {
 
 interface MobileMoneyFormProps {
   mode: CashMode
-  onModeChange: (mode: CashMode) => void
+  onModeChange?: (mode: CashMode) => void
+  walletId?: string
+  onClose?: () => void
+  assets?: Asset[]
 }
 
-export function MobileMoneyForm({ mode, onModeChange }: MobileMoneyFormProps) {
-  const [selectedCountry, setSelectedCountry] = useState('kenya')
-  const [paymentType, setPaymentType] = useState<PaymentType>(PaymentType.MOBILE_NUMBER)
-  const [mobileNetwork, setMobileNetwork] = useState('safaricom')
-  const [phoneNumber, setPhoneNumber] = useState('')
+export function MobileMoneyForm({ walletId, onClose, assets = [] }: MobileMoneyFormProps) {
+  const toast = useToast()
+  const [selectedAssetId, setSelectedAssetId] = useState<string>('')
   const [amount, setAmount] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const modeOptions: ButtonGroupOption[] = [
-    { value: CashMode.PAY, label: 'Pay' },
-    { value: CashMode.FUND_WALLET, label: 'Fund Wallet' },
-  ]
+  // Create asset options for the dropdown - only show KESy_TESTNET
+  const assetOptions: SelectOption[] = useMemo(() => {
+    const targetAssetId = '3ba160f6-39c6-4718-b46f-46650b841f74'
+    const filteredAssets = assets.filter(asset => asset.id === targetAssetId)
+    return filteredAssets.map(asset => ({
+      value: asset.id,
+      label: `${asset.symbol} - ${asset.name}`,
+    }))
+  }, [assets])
 
-  const countryOptions: SelectOption[] = [
-    { value: 'kenya', label: '🇰🇪 Kenya (KES)' },
-    { value: 'uganda', label: '🇺🇬 Uganda (UGX)' },
-    { value: 'tanzania', label: '🇹🇿 Tanzania (TZS)' },
-  ]
+  console.log('Asset Options:', assetOptions)
 
-  const networkOptions: SelectOption[] = [
-    { value: 'safaricom', label: 'Safaricom' },
-    { value: 'airtel', label: 'Airtel' },
-    { value: 'equitel', label: 'Equitel' },
-  ]
+  // Set default asset if available - specifically KESy_TESTNET
+  useEffect(() => {
+    const targetAssetId = '3ba160f6-39c6-4718-b46f-46650b841f74'
+    const targetAsset = assets.find(asset => asset.id === targetAssetId)
+    if (targetAsset && !selectedAssetId) {
+      setSelectedAssetId(targetAsset.id)
+    }
+  }, [assets, selectedAssetId])
 
-  const paymentTypeOptions: ButtonGroupOption[] = [
-    { value: PaymentType.MOBILE_NUMBER, label: 'Mobile Number' },
-    { value: PaymentType.PAYBILL, label: 'Paybill' },
-    { value: PaymentType.BUY_GOODS, label: 'Buy Goods' },
-  ]
+  // Get selected asset details
+  const selectedAsset = useMemo(() => {
+    return assets.find(asset => asset.id === selectedAssetId)
+  }, [assets, selectedAssetId])
 
-  const tokenOptions: SelectOption[] = [
-    { value: 'apt', label: 'APT' },
-    { value: 'usdc', label: 'USDC' },
-    { value: 'usdt', label: 'USDT' },
-  ]
+  const handleSubmit = async () => {
+    if (!walletId) {
+      toast({
+        title: 'Wallet not found',
+        description: 'Please ensure you have a wallet set up',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+      return
+    }
 
-  const handleModeChange = (option: ButtonGroupOption) => {
-    onModeChange(option.value as CashMode)
+    if (!selectedAssetId) {
+      toast({
+        title: 'Asset required',
+        description: 'Please select an asset to purchase',
+        status: 'warning',
+        duration: 5000,
+        isClosable: true,
+      })
+      return
+    }
+
+    if (!amount || parseFloat(amount) <= 0) {
+      toast({
+        title: 'Invalid amount',
+        description: 'Please enter a valid amount',
+        status: 'warning',
+        duration: 5000,
+        isClosable: true,
+      })
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      // Convert amount to token decimals for backend submission
+      // Uses 8 decimals for demo tokens
+      const amountInTokenDecimals = toTokenDecimals(parseFloat(amount)).toString()
+
+      // Get the result page URL (current page or portfolio)
+      const resultPage =
+        typeof window !== 'undefined' ? window.location.origin + '/portfolio' : '/portfolio'
+
+      const payload = {
+        walletId,
+        assetId: selectedAssetId,
+        amount: amountInTokenDecimals,
+        resultPage,
+      }
+
+      const result = await requestOnramp(payload)
+
+      if (result.success && result.data) {
+        // Redirect to authorization URL
+        if (result.data.authorization_url) {
+          window.location.href = result.data.authorization_url
+        } else {
+          toast({
+            title: 'Success',
+            description: 'Onramp request created successfully',
+            status: 'success',
+            duration: 5000,
+            isClosable: true,
+          })
+          onClose?.()
+        }
+      } else {
+        toast({
+          title: 'Failed to create onramp request',
+          description: result.error || 'An error occurred',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        })
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'An unexpected error occurred',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
-
-  const handlePaymentTypeChange = (option: ButtonGroupOption) => {
-    setPaymentType(option.value as PaymentType)
-  }
-
-  const handleSubmit = () => {
-    // TODO: Implement form submission
-    console.log('Form submitted:', {
-      mode,
-      selectedCountry,
-      paymentType,
-      mobileNetwork,
-      phoneNumber,
-      amount,
-    })
-  }
-
-  const isFundWallet = mode === CashMode.FUND_WALLET
-  const buttonText = isFundWallet ? 'Buy APT' : 'Send Money'
-  const title = isFundWallet ? 'Fund wallet' : 'Pay'
 
   return (
-    <Card maxW="md" mx="auto" rounded="xl">
-      <CardHeader>
-        <VStack align="stretch" spacing={4}>
-          {/* Mode Tabs */}
-          <HStack align="center" justify="space-between">
-            <ButtonGroup
-              currentOption={modeOptions.find(opt => opt.value === mode)}
-              groupId="cash-mode-tabs"
-              onChange={handleModeChange}
-              options={modeOptions}
-              size="sm"
-            />
+    <VStack spacing={4} w="full">
+      {/* Asset Selection */}
+      <VStack align="start" spacing={2} w="full">
+        <Text color="font.secondary" fontSize="sm" fontWeight="medium">
+          Select Asset
+        </Text>
+        <Box w="full">
+          <SelectInput
+            id="asset-selector"
+            isSearchable={true}
+            onChange={setSelectedAssetId}
+            options={assetOptions}
+            value={selectedAssetId}
+          />
+        </Box>
+      </VStack>
 
-            {/* Token Selector */}
-            <Box minW="120px">
-              <SelectInput
-                id="token-selector"
-                isSearchable={false}
-                onChange={() => {}}
-                options={tokenOptions}
-                value="apt"
-              />
-            </Box>
-          </HStack>
-
-          {/* Title */}
-          <Text color="font.primary" fontSize="2xl" fontWeight="bold">
-            {title}
+      {/* Amount Input */}
+      <VStack align="start" spacing={2} w="full">
+        <HStack justify="space-between" w="full">
+          <Text color="font.secondary" fontSize="sm" fontWeight="medium">
+            Amount (KES)
           </Text>
-
-          {/* Wallet Connection Banner */}
-          {isFundWallet && (
-            <Box bg="yellow.500" color="white" p={3} rounded="md" textAlign="center">
-              <Text fontSize="sm" fontWeight="medium">
-                Please connect your wallet to proceed
-              </Text>
-            </Box>
-          )}
-        </VStack>
-      </CardHeader>
-
-      <CardBody>
-        <VStack align="stretch" spacing={4}>
-          {/* Country Selection */}
-          <FormControl>
-            <FormLabel color="font.primary" fontSize="sm" fontWeight="medium">
-              Select Country
-            </FormLabel>
-            <SelectInput
-              id="country-selector"
-              isSearchable={false}
-              onChange={setSelectedCountry}
-              options={countryOptions}
-              value={selectedCountry}
-            />
-          </FormControl>
-
-          {/* Payment Type Selection (only for Pay mode) */}
-          {!isFundWallet && (
-            <FormControl>
-              <FormLabel color="font.primary" fontSize="sm" fontWeight="medium">
-                Payment Type
-              </FormLabel>
-              <ButtonGroup
-                currentOption={paymentTypeOptions.find(opt => opt.value === paymentType)}
-                groupId="payment-type-tabs"
-                onChange={handlePaymentTypeChange}
-                options={paymentTypeOptions}
-                size="sm"
-              />
-            </FormControl>
-          )}
-
-          {/* Mobile Network */}
-          <FormControl>
-            <FormLabel color="font.primary" fontSize="sm" fontWeight="medium">
-              Mobile Network
-            </FormLabel>
-            <SelectInput
-              id="network-selector"
-              isSearchable={false}
-              onChange={setMobileNetwork}
-              options={networkOptions}
-              value={mobileNetwork}
-            />
-          </FormControl>
-
-          {/* Phone Number */}
-          <FormControl>
-            <FormLabel color="font.primary" fontSize="sm" fontWeight="medium">
-              {isFundWallet ? 'M-Pesa Phone Number' : 'Phone Number'}
-            </FormLabel>
-            <HStack spacing={2}>
-              <Button leftIcon={<CreditCard size={16} />} minW="80px" size="sm" variant="tertiary">
-                Select
-              </Button>
+        </HStack>
+        <Box bg="background.level0" borderRadius="md" p={['ms', 'md']} shadow="innerBase" w="full">
+          <VStack align="start" spacing="md">
+            <HStack spacing={2} w="full">
               <Input
                 _focus={{
-                  bg: 'input.bgFocus',
-                  borderColor: 'input.borderFocus',
+                  outline: 'none',
+                  border: '0px solid transparent',
+                  boxShadow: 'none',
                 }}
                 _hover={{
-                  bg: 'input.bgHover',
-                  borderColor: 'input.borderHover',
+                  border: '0px solid transparent',
+                  boxShadow: 'none',
                 }}
-                bg="input.bgDefault"
-                border="1px solid"
-                borderColor="input.borderDefault"
-                onChange={e => setPhoneNumber(e.target.value)}
-                placeholder={isFundWallet ? '0799770833' : '0712345678'}
-                value={phoneNumber}
-              />
-            </HStack>
-          </FormControl>
-
-          {/* Amount Input */}
-          <FormControl>
-            <FormLabel color="font.primary" fontSize="sm" fontWeight="medium">
-              Enter Amount in KES
-            </FormLabel>
-            <InputGroup>
-              <InputLeftElement>
-                <Text color="font.primary" fontSize="lg" fontWeight="bold">
-                  KES
-                </Text>
-              </InputLeftElement>
-              <Input
-                _focus={{
-                  bg: 'input.bgFocus',
-                  borderColor: 'input.borderFocus',
-                }}
-                _hover={{
-                  bg: 'input.bgHover',
-                  borderColor: 'input.borderHover',
-                }}
-                bg="input.bgDefault"
-                border="1px solid"
-                borderColor="input.borderDefault"
-                fontSize="lg"
+                autoComplete="off"
+                autoCorrect="off"
+                bg="transparent"
+                border="0px solid transparent"
+                boxShadow="none"
+                flex={1}
+                fontSize="3xl"
+                fontWeight="medium"
+                min={0}
                 onChange={e => setAmount(e.target.value)}
-                pl="60px"
-                placeholder="0"
+                onKeyDown={blockInvalidNumberInput}
+                onWheel={e => {
+                  // Avoid changing the input value when scrolling
+                  return e.currentTarget.blur()
+                }}
+                outline="none"
+                p="0"
+                placeholder="0.00"
+                shadow="none"
+                step="any"
+                type="number"
                 value={amount}
               />
-            </InputGroup>
-          </FormControl>
+              <Text color="font.primary" fontSize="xl" fontWeight="bold">
+                KES
+              </Text>
+            </HStack>
 
-          {/* Submit Button */}
-          <Button mt={4} onClick={handleSubmit} size="lg" variant="primary" w="full">
-            {buttonText}
-          </Button>
+            {selectedAsset && (
+              <HStack justify="space-between" w="full">
+                <Text color="font.secondary" fontSize="xs">
+                  Purchasing {selectedAsset.symbol}
+                </Text>
+                {amount && !isNaN(Number(amount)) && Number(amount) > 0 && (
+                  <Text color="font.secondary" fontSize="xs">
+                    ≈{' '}
+                    {Number(amount).toLocaleString('en-US', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}{' '}
+                    KES
+                  </Text>
+                )}
+              </HStack>
+            )}
+          </VStack>
+        </Box>
+      </VStack>
 
-          {/* Limits */}
-          <Text color="font.secondary" fontSize="xs" textAlign="center">
-            Minimum: 20 KES • Maximum: 250,000 KES
-          </Text>
-        </VStack>
-      </CardBody>
-    </Card>
+      {/* Submit Button */}
+      <Button
+        isDisabled={!selectedAssetId || !amount || Number(amount) <= 0}
+        isLoading={isSubmitting}
+        loadingText="Processing..."
+        onClick={handleSubmit}
+        size="lg"
+        variant="primary"
+        w="full"
+      >
+        Fund Wallet
+      </Button>
+    </VStack>
   )
 }

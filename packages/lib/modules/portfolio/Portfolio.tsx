@@ -3,6 +3,13 @@
 import { useState } from 'react'
 import {
   Box,
+  Button,
+  Drawer,
+  DrawerBody,
+  DrawerCloseButton,
+  DrawerContent,
+  DrawerHeader,
+  DrawerOverlay,
   Heading,
   HStack,
   IconButton,
@@ -11,6 +18,7 @@ import {
   Text,
   Tooltip,
   VStack,
+  useDisclosure,
   useToast,
 } from '@chakra-ui/react'
 import { useUser } from '@clerk/nextjs'
@@ -21,6 +29,7 @@ import { useAssets } from '@repo/lib/cradle-client-ts/hooks/assets/useAssets'
 import { useLendingPools } from '@repo/lib/cradle-client-ts/hooks/lending/useLendingPools'
 import { useLoansByWallet } from '@repo/lib/cradle-client-ts/hooks/lending/useLoans'
 import { shortenAddress, copyToClipboard } from '@repo/lib/shared/utils/strings'
+import { MobileMoneyForm, CashMode } from '@repo/lib/shared/components/cash/MobileMoneyForm'
 import PortfolioSummary from './PortfolioSummary'
 import { ActiveLoansSection } from './ActiveLoansTable'
 
@@ -28,6 +37,7 @@ export default function Portfolio() {
   const { user } = useUser()
   const toast = useToast()
   const [copiedAddress, setCopiedAddress] = useState(false)
+  const { isOpen, onOpen, onClose } = useDisclosure()
   console.log('User in Portfolio:', user?.id)
 
   // First get the account ID using the Clerk user ID
@@ -143,9 +153,12 @@ export default function Portfolio() {
 
         {/* Wallet Section */}
         <Box w="full">
-          <Heading mb={4} size="md">
-            Wallet
-          </Heading>
+          <HStack justify="space-between" mb={4} w="full">
+            <Heading size="md">Wallet</Heading>
+            <Button onClick={onOpen} size="sm" variant="primary">
+              Fund Wallet
+            </Button>
+          </HStack>
           {isLoadingWallet ? (
             <Skeleton borderRadius="md" h="80px" w="full" />
           ) : wallet ? (
@@ -271,6 +284,27 @@ export default function Portfolio() {
           walletId={wallet?.id || ''}
         />
       </VStack>
+
+      {/* Fund Wallet Drawer */}
+      <Drawer isOpen={isOpen} onClose={onClose} placement="right" size="md">
+        <DrawerOverlay bg="blackAlpha.300" />
+        <DrawerContent>
+          <DrawerCloseButton />
+          <DrawerHeader>
+            <Text fontSize="lg" fontWeight="bold">
+              Fund Wallet
+            </Text>
+          </DrawerHeader>
+          <DrawerBody overflowY="auto" pb={6}>
+            <MobileMoneyForm
+              assets={assets || []}
+              mode={CashMode.FUND_WALLET}
+              onClose={onClose}
+              walletId={wallet?.id}
+            />
+          </DrawerBody>
+        </DrawerContent>
+      </Drawer>
     </Stack>
   )
 }

@@ -2,7 +2,7 @@
 
 import { Box, Button, HStack, Input, Text, useToast, VStack } from '@chakra-ui/react'
 import { useState, useMemo, useEffect } from 'react'
-import { SelectInput, SelectOption } from '../inputs/SelectInput'
+import { SelectInput, SelectOption } from '../../shared/components/inputs/SelectInput'
 import { requestOnramp } from '@repo/lib/actions/onramp'
 import { blockInvalidNumberInput } from '@repo/lib/shared/utils/numbers'
 import type { Asset } from '@repo/lib/cradle-client-ts/types'

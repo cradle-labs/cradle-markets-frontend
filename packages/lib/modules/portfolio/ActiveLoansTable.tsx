@@ -448,7 +448,7 @@ function LoanTableRow({
         </Badge>
       </Td>
       <Td>
-        <Button onClick={() => onRepayClick(loan)} size="sm" variant="primary">
+        <Button onClick={() => onRepayClick(loan)} size="md" variant="primary">
           Repay
         </Button>
       </Td>

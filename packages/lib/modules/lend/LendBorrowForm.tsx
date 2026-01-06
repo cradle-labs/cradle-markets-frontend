@@ -331,6 +331,7 @@ export function LendBorrowForm({
         setAmount('')
         // Refetch deposit position to update available borrow
         refetchDepositPosition()
+        // Note: collateral balances will be automatically refetched due to dependency changes
         // Refetch pool details after successful borrow
         onSuccess?.()
       } else {
@@ -403,6 +404,8 @@ export function LendBorrowForm({
             )}
           </HStack>
           <Input
+            isInvalid={!!(amount && parseFloat(amount) > availableBorrow)}
+            max={availableBorrow > 0 ? availableBorrow : undefined}
             onChange={e => setAmount(e.target.value)}
             placeholder="0.00"
             size="lg"
@@ -411,9 +414,17 @@ export function LendBorrowForm({
             value={amount}
           />
           <FormHelperText color="text.tertiary" fontSize="xs">
-            {walletId && collateralBalance > 0
-              ? `You can borrow up to ${formatAmount(availableBorrow)} ${assetSymbol} based on your ${collateralSymbol || 'collateral'} value`
-              : `Borrow ${assetSymbol} at ${formatPercentage(borrowAPY)} APY`}
+            {walletId && collateralBalance > 0 ? (
+              <>
+                You can borrow up to{' '}
+                <Text as="span" fontWeight="bold">
+                  {formatAmount(availableBorrow)}
+                </Text>{' '}
+                {assetSymbol} based on your {collateralSymbol || 'collateral'} value
+              </>
+            ) : (
+              `Borrow ${assetSymbol} at ${formatPercentage(borrowAPY)} APY`
+            )}
           </FormHelperText>
           {selectedCollateralId && collateralPrice <= 0 && !tokenizedAssetsLoading && (
             <Text color="orange.300" fontSize="xs" mt={1}>

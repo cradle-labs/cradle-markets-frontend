@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import {
   Box,
   HStack,
@@ -91,22 +91,70 @@ export function LoanRepaymentsTable({ loans, pools, assets }: LoanRepaymentsTabl
     )
   }
 
-  return (
-    <VStack align="stretch" spacing={4} w="full">
-      {allLoans.map(loan => (
-        <LoanRepaymentRows assetMap={assetMap} key={loan.id} loan={loan} poolMap={poolMap} />
-      ))}
-    </VStack>
-  )
+  return <RepaymentsContent allLoans={allLoans} assetMap={assetMap} poolMap={poolMap} />
 }
 
-interface LoanRepaymentRowsProps {
-  loan: LoanRepaymentsTableProps['loans'][0]
+interface RepaymentsContentProps {
+  allLoans: LoanRepaymentsTableProps['loans']
   poolMap: Map<string, LoanRepaymentsTableProps['pools'][0]>
   assetMap: Map<string, LoanRepaymentsTableProps['assets'][0]>
 }
 
-function LoanRepaymentRows({ loan, poolMap, assetMap }: LoanRepaymentRowsProps) {
+function RepaymentsContent({ allLoans, poolMap, assetMap }: RepaymentsContentProps) {
+  const [hasDisplayedContent, setHasDisplayedContent] = useState(false)
+
+  return (
+    <VStack align="stretch" spacing={4} w="full">
+      {allLoans.map(loan => (
+        <LoanRepaymentRowsWithCallback
+          assetMap={assetMap}
+          key={loan.id}
+          loan={loan}
+          onContentDisplayed={() => setHasDisplayedContent(true)}
+          poolMap={poolMap}
+        />
+      ))}
+      {!hasDisplayedContent && (
+        <NoisyCard
+          cardProps={{
+            borderRadius: 'lg',
+            w: 'full',
+          }}
+          contentProps={{
+            p: 8,
+            position: 'relative',
+          }}
+          shadowContainerProps={{
+            shadow: 'innerXl',
+          }}
+        >
+          <VStack spacing={2}>
+            <Text color="font.secondary" fontSize="sm">
+              No loan repayments yet
+            </Text>
+            <Text color="font.secondary" fontSize="xs">
+              Make loan repayments to see your payment history here
+            </Text>
+          </VStack>
+        </NoisyCard>
+      )}
+    </VStack>
+  )
+}
+
+interface LoanRepaymentRowsWithCallbackProps {
+  loan: LoanRepaymentsTableProps['loans'][0]
+  poolMap: Map<string, LoanRepaymentsTableProps['pools'][0]>
+  assetMap: Map<string, LoanRepaymentsTableProps['assets'][0]>
+  onContentDisplayed: () => void
+}
+
+function LoanRepaymentRowsWithCallback({
+  loan,
+  poolMap,
+  assetMap,
+  onContentDisplayed,
+}: LoanRepaymentRowsWithCallbackProps) {
   const cardBg = useColorModeValue('background.level1', 'background.level1')
   console.log('loan', loan)
 
@@ -131,6 +179,13 @@ function LoanRepaymentRows({ loan, poolMap, assetMap }: LoanRepaymentRowsProps) 
       return true
     })
   }, [repayments])
+
+  // Notify parent when content will be displayed
+  useEffect(() => {
+    if (!isLoading && uniqueRepayments && uniqueRepayments.length > 0) {
+      onContentDisplayed()
+    }
+  }, [isLoading, uniqueRepayments, onContentDisplayed])
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {

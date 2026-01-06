@@ -9,7 +9,7 @@ import type { TimeHistoryDataPoint } from '@repo/lib/actions/time-history'
 
 // Time history configuration - single config for all markets
 const TIME_HISTORY_CONFIG = {
-  duration_secs: '2592000', // 1 month
+  duration_secs: '94608000', // 1 month
   interval: '1week' as const,
 }
 

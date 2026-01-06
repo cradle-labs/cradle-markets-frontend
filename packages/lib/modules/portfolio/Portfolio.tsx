@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Box,
   Button,
@@ -39,6 +39,29 @@ export default function Portfolio() {
   const [copiedAddress, setCopiedAddress] = useState(false)
   const { isOpen, onOpen, onClose } = useDisclosure()
   console.log('User in Portfolio:', user?.id)
+
+  // Check for onramp success via URL query parameters
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const reference = urlParams.get('reference')
+
+      if (reference && reference.startsWith('TXN_TEST_')) {
+        toast({
+          title: 'Success',
+          description: 'Successfully funded your wallet with KESy',
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
+          position: 'top',
+        })
+
+        // Clean up the URL by removing the query parameters
+        const newUrl = window.location.pathname
+        window.history.replaceState({}, '', newUrl)
+      }
+    }
+  }, [toast])
 
   // First get the account ID using the Clerk user ID
   const { data: linkedAccount } = useAccountByLinkedId({

@@ -16,6 +16,7 @@ import {
 import { NoisyCard } from '@repo/lib/shared/components/containers/NoisyCard'
 import { Asset } from '@repo/lib/cradle-client-ts/types'
 import { fNum } from '@repo/lib/shared/utils/numbers'
+import { useTokenizedAssets } from '@repo/lib/modules/trade/TokenizedAssets'
 
 // Types for asset balances
 interface AssetBalance {
@@ -122,6 +123,11 @@ function AssetCard({ asset }: AssetCardProps) {
             <Text fontSize="sm" fontWeight="semibold">
               {displayBalance}
             </Text>
+            {asset.value !== undefined && asset.value > 0 && (
+              <Text color="font.secondary" fontSize="xs">
+                ${fNum('fiat', asset.value, { abbreviated: false })}
+              </Text>
+            )}
           </>
         )}
       </VStack>
@@ -136,6 +142,26 @@ const PortfolioSummary = ({
   isLoadingBalances,
 }: PortfolioSummaryProps) => {
   // Note: Now using useAssetBalances from Portfolio component instead of Hedera fallback
+
+  // Get tokenized assets with prices from time series
+  let tokenizedAssetsData: {
+    assets: Array<{ symbol: string; name: string; currentPrice: number }>
+    loading: boolean
+  } = { assets: [], loading: false }
+  try {
+    const tokenizedAssets = useTokenizedAssets()
+    tokenizedAssetsData = {
+      assets: tokenizedAssets.assets.map(asset => ({
+        symbol: asset.symbol,
+        name: asset.name,
+        currentPrice: asset.currentPrice,
+      })),
+      loading: tokenizedAssets.loading,
+    }
+  } catch {
+    // TokenizedAssetProvider not available, continue without prices
+    console.warn('TokenizedAssetProvider not available, dollar values will not be displayed')
+  }
 
   // Create a map of token -> balance from API balances
   const balanceMap = React.useMemo(() => {
@@ -197,6 +223,34 @@ const PortfolioSummary = ({
     const formatted = apiBalance ? formatBalance(apiBalance, asset.decimals, decimalPlaces) : '0'
     const isLoading = isLoadingBalances || false
 
+    // Calculate USD value from time series data for tokenized assets
+    let usdValue = 0
+    if (apiBalance && BigInt(apiBalance) > BigInt(0)) {
+      // Find matching tokenized asset by symbol or name
+      const priceMatchBySymbol = tokenizedAssetsData.assets.find(
+        ta => ta.symbol.toLowerCase() === asset.symbol?.toLowerCase()
+      )
+      const priceMatchByName = tokenizedAssetsData.assets.find(
+        ta => ta.name.toLowerCase() === asset.name?.toLowerCase()
+      )
+
+      const currentPrice = priceMatchBySymbol?.currentPrice ?? priceMatchByName?.currentPrice ?? 0
+
+      if (currentPrice > 0) {
+        // Convert balance to normalized value and multiply by price
+        try {
+          const balanceBigInt = BigInt(apiBalance)
+          const divisor = BigInt(10 ** asset.decimals)
+          const wholePart = balanceBigInt / divisor
+          const fractionalPart = balanceBigInt % divisor
+          const normalizedBalance = Number(wholePart) + Number(fractionalPart) / Number(divisor)
+          usdValue = normalizedBalance * currentPrice
+        } catch {
+          usdValue = 0
+        }
+      }
+    }
+
     return {
       id: asset.id,
       name: asset.name,
@@ -205,7 +259,7 @@ const PortfolioSummary = ({
       balance,
       formatted,
       isLoading,
-      value: 0, // TODO: Add price data to calculate USD value
+      value: usdValue,
     }
   }
 

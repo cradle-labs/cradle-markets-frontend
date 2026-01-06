@@ -30,6 +30,7 @@ import { useLendingPools } from '@repo/lib/cradle-client-ts/hooks/lending/useLen
 import { useLoansByWallet } from '@repo/lib/cradle-client-ts/hooks/lending/useLoans'
 import { shortenAddress, copyToClipboard } from '@repo/lib/shared/utils/strings'
 import { MobileMoneyForm } from '@repo/lib/modules/cash/MobileMoneyForm'
+import { TokenizedAssetProvider } from '@repo/lib/modules/trade/TokenizedAssets'
 import PortfolioSummary from './PortfolioSummary'
 import { ActiveLoansSection } from './ActiveLoansTable'
 
@@ -291,12 +292,14 @@ export default function Portfolio() {
         </Box>
 
         {/* Asset Balances Section */}
-        <PortfolioSummary
-          assets={assets || []}
-          balances={balances}
-          isLoadingAssets={isLoadingAssets}
-          isLoadingBalances={isLoadingBalances}
-        />
+        <TokenizedAssetProvider>
+          <PortfolioSummary
+            assets={assets || []}
+            balances={balances}
+            isLoadingAssets={isLoadingAssets}
+            isLoadingBalances={isLoadingBalances}
+          />
+        </TokenizedAssetProvider>
 
         {/* Active Loans Section */}
         <ActiveLoansSection

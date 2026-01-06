@@ -5,7 +5,6 @@ import { useState, useMemo, useEffect } from 'react'
 import { SelectInput, SelectOption } from '../inputs/SelectInput'
 import { requestOnramp } from '@repo/lib/actions/onramp'
 import { blockInvalidNumberInput } from '@repo/lib/shared/utils/numbers'
-import { toTokenDecimals } from '@repo/lib/modules/lend/utils'
 import type { Asset } from '@repo/lib/cradle-client-ts/types'
 
 export enum CashMode {
@@ -54,6 +53,28 @@ export function MobileMoneyForm({ walletId, onClose, assets = [] }: MobileMoneyF
     }
   }, [assets, selectedAssetId])
 
+  // Check for onramp success via URL query parameters
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const reference = urlParams.get('reference')
+
+      if (reference && reference.startsWith('TXN_TEST_')) {
+        toast({
+          title: 'Success',
+          description: 'Successfully onramped!',
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
+        })
+
+        // Clean up the URL by removing the query parameters
+        const newUrl = window.location.pathname
+        window.history.replaceState({}, '', newUrl)
+      }
+    }
+  }, [toast])
+
   // Get selected asset details
   const selectedAsset = useMemo(() => {
     return assets.find(asset => asset.id === selectedAssetId)
@@ -96,19 +117,11 @@ export function MobileMoneyForm({ walletId, onClose, assets = [] }: MobileMoneyF
     setIsSubmitting(true)
 
     try {
-      // Convert amount to token decimals for backend submission
-      // Uses 8 decimals for demo tokens
-      const amountInTokenDecimals = toTokenDecimals(parseFloat(amount)).toString()
-
-      // Get the result page URL (current page or portfolio)
-      const resultPage =
-        typeof window !== 'undefined' ? window.location.origin + '/portfolio' : '/portfolio'
-
       const payload = {
         walletId,
         assetId: selectedAssetId,
-        amount: amountInTokenDecimals,
-        resultPage,
+        amount,
+        resultPage: 'https://cradlemarkets.com/portfolio',
       }
 
       const result = await requestOnramp(payload)

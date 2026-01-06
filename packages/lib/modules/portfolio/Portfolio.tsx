@@ -53,7 +53,7 @@ export default function Portfolio() {
           status: 'success',
           duration: 5000,
           isClosable: true,
-          position: 'top',
+          position: 'bottom-right',
         })
 
         // Clean up the URL by removing the query parameters

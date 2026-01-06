@@ -44,14 +44,12 @@ function AssetCard({ asset }: AssetCardProps) {
   const cardBg = useColorModeValue('background.level1', 'background.level1')
   const fallbackBg = useColorModeValue('background.level2', 'background.level2')
   const fallbackColor = useColorModeValue('font.secondary', 'font.secondary')
-  const valueColor = useColorModeValue('font.secondary', 'font.secondary')
 
   const displayBalance = asset.isLoading ? (
     <Spinner size="xs" />
   ) : (
     `${asset.formatted} ${asset.symbol}`
   )
-  const displayValue = `$${(asset.value || 0).toFixed(2)}`
 
   return (
     <HStack
@@ -123,9 +121,6 @@ function AssetCard({ asset }: AssetCardProps) {
           <>
             <Text fontSize="sm" fontWeight="semibold">
               {displayBalance}
-            </Text>
-            <Text color={valueColor} fontSize="xs" fontWeight="medium">
-              {displayValue}
             </Text>
           </>
         )}

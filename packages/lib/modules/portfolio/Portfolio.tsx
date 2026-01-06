@@ -29,7 +29,7 @@ import { useAssets } from '@repo/lib/cradle-client-ts/hooks/assets/useAssets'
 import { useLendingPools } from '@repo/lib/cradle-client-ts/hooks/lending/useLendingPools'
 import { useLoansByWallet } from '@repo/lib/cradle-client-ts/hooks/lending/useLoans'
 import { shortenAddress, copyToClipboard } from '@repo/lib/shared/utils/strings'
-import { MobileMoneyForm } from '@repo/lib/shared/components/cash/MobileMoneyForm'
+import { MobileMoneyForm } from '@repo/lib/modules/cash/MobileMoneyForm'
 import PortfolioSummary from './PortfolioSummary'
 import { ActiveLoansSection } from './ActiveLoansTable'
 

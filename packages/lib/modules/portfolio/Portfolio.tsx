@@ -29,7 +29,7 @@ import { useAssets } from '@repo/lib/cradle-client-ts/hooks/assets/useAssets'
 import { useLendingPools } from '@repo/lib/cradle-client-ts/hooks/lending/useLendingPools'
 import { useLoansByWallet } from '@repo/lib/cradle-client-ts/hooks/lending/useLoans'
 import { shortenAddress, copyToClipboard } from '@repo/lib/shared/utils/strings'
-import { MobileMoneyForm, CashMode } from '@repo/lib/shared/components/cash/MobileMoneyForm'
+import { MobileMoneyForm } from '@repo/lib/shared/components/cash/MobileMoneyForm'
 import PortfolioSummary from './PortfolioSummary'
 import { ActiveLoansSection } from './ActiveLoansTable'
 
@@ -296,12 +296,7 @@ export default function Portfolio() {
             </Text>
           </DrawerHeader>
           <DrawerBody overflowY="auto" pb={6}>
-            <MobileMoneyForm
-              assets={assets || []}
-              mode={CashMode.FUND_WALLET}
-              onClose={onClose}
-              walletId={wallet?.id}
-            />
+            <MobileMoneyForm assets={assets || []} onClose={onClose} walletId={wallet?.id} />
           </DrawerBody>
         </DrawerContent>
       </Drawer>

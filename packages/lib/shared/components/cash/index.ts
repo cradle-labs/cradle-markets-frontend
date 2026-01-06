@@ -1,1 +1,1 @@
-export { MobileMoneyForm, CashMode, PaymentType } from './MobileMoneyForm'
+export { MobileMoneyForm } from './MobileMoneyForm'

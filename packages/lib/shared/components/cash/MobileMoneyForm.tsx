@@ -7,20 +7,7 @@ import { requestOnramp } from '@repo/lib/actions/onramp'
 import { blockInvalidNumberInput } from '@repo/lib/shared/utils/numbers'
 import type { Asset } from '@repo/lib/cradle-client-ts/types'
 
-export enum CashMode {
-  PAY = 'pay',
-  FUND_WALLET = 'fund-wallet',
-}
-
-export enum PaymentType {
-  MOBILE_NUMBER = 'mobile-number',
-  PAYBILL = 'paybill',
-  BUY_GOODS = 'buy-goods',
-}
-
 interface MobileMoneyFormProps {
-  mode: CashMode
-  onModeChange?: (mode: CashMode) => void
   walletId?: string
   onClose?: () => void
   assets?: Asset[]
@@ -52,28 +39,6 @@ export function MobileMoneyForm({ walletId, onClose, assets = [] }: MobileMoneyF
       setSelectedAssetId(targetAsset.id)
     }
   }, [assets, selectedAssetId])
-
-  // Check for onramp success via URL query parameters
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search)
-      const reference = urlParams.get('reference')
-
-      if (reference && reference.startsWith('TXN_TEST_')) {
-        toast({
-          title: 'Success',
-          description: 'Successfully onramped!',
-          status: 'success',
-          duration: 5000,
-          isClosable: true,
-        })
-
-        // Clean up the URL by removing the query parameters
-        const newUrl = window.location.pathname
-        window.history.replaceState({}, '', newUrl)
-      }
-    }
-  }, [toast])
 
   // Get selected asset details
   const selectedAsset = useMemo(() => {

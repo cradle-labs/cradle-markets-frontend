@@ -51,8 +51,24 @@ The token is backed by the underlying asset and maintains a 1:1 ratio with the o
 }
 
 export function AssetInfo({ asset }: AssetInfoProps) {
-  const { market } = useAssetDetail()
+  const { market, assetTwo } = useAssetDetail()
   const info = getAssetInfo(asset)
+  console.log('market', market)
+  console.log('info', info)
+  console.log('asset', asset)
+
+  // Get quote asset symbol for formatting (e.g., KESN, cpUSD)
+  const quoteSymbol = assetTwo?.symbol || asset.quoteAssetSymbol || '$'
+
+  // Format price with quote asset symbol
+  const formatPrice = (price: number) => {
+    const formatted = new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(price)
+    const separator = quoteSymbol === '$' ? '' : ' '
+    return `${quoteSymbol}${separator}${formatted}`
+  }
 
   // Safely handle price values
   const currentPrice = typeof asset.currentPrice === 'number' ? asset.currentPrice : 0
@@ -133,7 +149,7 @@ export function AssetInfo({ asset }: AssetInfoProps) {
                   Current Price
                 </Text>
                 <Text fontSize="sm" fontWeight="medium">
-                  ${currentPrice.toFixed(2)}
+                  {formatPrice(currentPrice)}
                 </Text>
               </VStack>
 
@@ -165,7 +181,7 @@ export function AssetInfo({ asset }: AssetInfoProps) {
                   All Time High
                 </Text>
                 <Text fontSize="sm" fontWeight="medium">
-                  {allTimeHigh ? `$${allTimeHigh.toFixed(2)}` : info.allTimeHigh}
+                  {allTimeHigh ? formatPrice(allTimeHigh) : info.allTimeHigh}
                 </Text>
               </VStack>
 
@@ -174,7 +190,7 @@ export function AssetInfo({ asset }: AssetInfoProps) {
                   All Time Low
                 </Text>
                 <Text fontSize="sm" fontWeight="medium">
-                  {allTimeLow ? `$${allTimeLow.toFixed(2)}` : info.allTimeLow}
+                  {allTimeLow ? formatPrice(allTimeLow) : info.allTimeLow}
                 </Text>
               </VStack>
 

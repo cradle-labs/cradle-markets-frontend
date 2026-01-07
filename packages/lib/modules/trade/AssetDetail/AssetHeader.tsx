@@ -3,16 +3,26 @@
 import { Box, HStack, Text, VStack, Image } from '@chakra-ui/react'
 import { ChevronUpIcon, ChevronDownIcon } from '@chakra-ui/icons'
 import { TokenizedAssetData } from '../TokenizedAssets/TokenizedAssetCard'
-import { useCurrency } from '@repo/lib/shared/hooks/useCurrency'
+import { useAssetDetail } from './AssetDetailProvider'
 
 interface AssetHeaderProps {
   asset: TokenizedAssetData
 }
 
 export function AssetHeader({ asset }: AssetHeaderProps) {
-  const { toCurrency } = useCurrency()
+  const { assetTwo } = useAssetDetail()
   const isPositive = asset.dailyChange >= 0
   const ChangeIcon = isPositive ? ChevronUpIcon : ChevronDownIcon
+
+  const formatPrice = (price: number) => {
+    const formatted = new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(price)
+    const symbol = assetTwo?.symbol ?? asset.quoteAssetSymbol ?? '$'
+    const separator = symbol === '$' ? '' : ' '
+    return `${symbol}${separator}${formatted}`
+  }
 
   return (
     <HStack align="start" justify="space-between" w="full">
@@ -58,14 +68,14 @@ export function AssetHeader({ asset }: AssetHeaderProps) {
 
           <HStack spacing={2}>
             <Text fontSize="3xl" fontWeight="bold">
-              {asset.currentPrice > 0 ? toCurrency(asset.currentPrice) : 'N/A'}
+              {asset.currentPrice > 0 ? formatPrice(asset.currentPrice) : 'N/A'}
             </Text>
             {asset.currentPrice > 0 && (
               <>
                 <HStack color={isPositive ? 'green.500' : 'red.500'} spacing={1}>
                   <ChangeIcon boxSize={4} />
                   <Text fontSize="lg" fontWeight="medium">
-                    {toCurrency(Math.abs(asset.dailyChange || 0))} (
+                    {formatPrice(Math.abs(asset.dailyChange || 0))} (
                     {Math.abs(asset.dailyChangePercent || 0).toFixed(2)}%)
                   </Text>
                 </HStack>

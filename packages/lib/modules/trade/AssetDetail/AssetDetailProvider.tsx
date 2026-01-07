@@ -75,6 +75,8 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
     enabled: !!market?.asset_one,
   })
 
+  console.log('primaryAsset', primaryAsset)
+
   // Fetch secondary asset data (asset_two from the market)
   const {
     data: secondaryAsset,
@@ -202,6 +204,9 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
         dailyChange: 0,
         dailyChangePercent: 0,
         priceHistory: [], // Empty array = no chart
+        quoteAssetSymbol: secondaryAsset?.symbol,
+        quoteAssetDecimals:
+          secondaryAsset?.decimals != null ? Number(secondaryAsset.decimals) : undefined,
         timeHistoryData: [],
       }
     }
@@ -241,9 +246,12 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
       dailyChange,
       dailyChangePercent,
       priceHistory,
+      quoteAssetSymbol: secondaryAsset?.symbol,
+      quoteAssetDecimals:
+        secondaryAsset?.decimals != null ? Number(secondaryAsset.decimals) : undefined,
       timeHistoryData: allTimeHistoryData, // Pass full OHLC data for candlestick chart
     }
-  }, [market, primaryAsset, allTimeHistoryData, marketId])
+  }, [market, primaryAsset, secondaryAsset, allTimeHistoryData, marketId])
 
   const refetch = () => {
     refetchMarket()

@@ -32,7 +32,7 @@ import { fromTokenDecimals } from '@repo/lib/modules/lend'
 import { useAssetDetail } from './AssetDetailProvider'
 
 export function MarketOrders() {
-  const { orders, market, loading } = useAssetDetail()
+  const { orders, market, loading, assetOne, assetTwo } = useAssetDetail()
   const { user } = useUser()
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
@@ -193,6 +193,41 @@ export function MarketOrders() {
     }
   }
 
+  const quoteSymbol = assetTwo?.symbol ?? '$'
+  const baseSymbol = assetOne?.symbol
+  const quoteDecimals = assetTwo?.decimals != null ? Number(assetTwo.decimals) : 6
+  const baseDecimals = assetOne?.decimals != null ? Number(assetOne.decimals) : 6
+
+  const formatQuoteAmount = (amount: string | number) => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount
+    const normalized = fromTokenDecimals(num, quoteDecimals)
+    const formatted = normalized.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+    const separator = quoteSymbol === '$' ? '' : ' '
+    return `${quoteSymbol}${separator}${formatted}`
+  }
+
+  const formatQuotePrice = (price: string | number) => {
+    const num = typeof price === 'string' ? parseFloat(price) : price
+    const formatted = num.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+    const separator = quoteSymbol === '$' ? '' : ' '
+    return `${quoteSymbol}${separator}${formatted}`
+  }
+
+  const formatBaseAmount = (amount: string | number) => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount
+    const normalized = fromTokenDecimals(num, baseDecimals)
+    return normalized.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+  }
+
   // Render order table
   const renderOrderTable = (orders: typeof paginatedOrders) => (
     <>
@@ -220,17 +255,11 @@ export function MarketOrders() {
                   <Text fontSize="xs">{order.mode}</Text>
                 </Td>
                 <Td isNumeric>
-                  <Text fontSize="sm">
-                    ${fromTokenDecimals(parseFloat(order.ask_amount)).toLocaleString()}
-                  </Text>
+                  <Text fontSize="sm">{formatQuoteAmount(order.ask_amount)}</Text>
                 </Td>
                 <Td isNumeric>
                   <Text fontSize="sm" fontWeight="medium">
-                    $
-                    {parseFloat(order.price).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                    {formatQuotePrice(order.price)}
                   </Text>
                 </Td>
                 <Td>
@@ -367,16 +396,9 @@ export function MarketOrders() {
                     Total Volume
                   </Text>
                   <Text fontSize="sm" fontWeight="medium">
-                    $
-                    {userOrders
-                      .reduce(
-                        (sum, order) => sum + fromTokenDecimals(parseFloat(order.ask_amount)),
-                        0
-                      )
-                      .toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                    {formatQuoteAmount(
+                      userOrders.reduce((sum, order) => sum + parseFloat(order.ask_amount), 0)
+                    )}
                   </Text>
                 </VStack>
 
@@ -385,13 +407,12 @@ export function MarketOrders() {
                     Avg. Price
                   </Text>
                   <Text fontSize="sm" fontWeight="medium">
-                    $
                     {userOrders.length > 0
-                      ? (
+                      ? formatQuotePrice(
                           userOrders.reduce((sum, order) => sum + parseFloat(order.price), 0) /
-                          userOrders.length
-                        ).toFixed(2)
-                      : '0.00'}
+                            userOrders.length
+                        )
+                      : formatQuotePrice(0)}
                   </Text>
                 </VStack>
 
@@ -400,15 +421,10 @@ export function MarketOrders() {
                     Total Shares
                   </Text>
                   <Text fontSize="sm" fontWeight="medium">
-                    {userOrders
-                      .reduce(
-                        (sum, order) => sum + fromTokenDecimals(parseFloat(order.bid_amount)),
-                        0
-                      )
-                      .toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                    {formatBaseAmount(
+                      userOrders.reduce((sum, order) => sum + parseFloat(order.bid_amount), 0)
+                    )}{' '}
+                    {baseSymbol}
                   </Text>
                 </VStack>
               </Box>

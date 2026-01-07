@@ -159,8 +159,9 @@ export function RepayLoanModal({ isOpen, onClose, loan, walletId, asset }: Repay
   }
 
   // KESN has 6 decimal places
+  // Add 20 buffer to ensure full repayments
   const currentDebt = loanPosition?.current_dept
-    ? fromTokenDecimals(parseFloat(String(loanPosition.current_dept)), 6)
+    ? fromTokenDecimals(parseFloat(String(loanPosition.current_dept)), 6) + 20
     : 0
 
   // Health factor is stored in 18 decimals (like Wei), so divide by 10^18

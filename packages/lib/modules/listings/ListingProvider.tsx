@@ -33,6 +33,7 @@ export function ListingProvider({ children, statusFilter }: ListingProviderProps
   } = useListings({
     filters: statusFilter ? { status: statusFilter } : undefined,
   })
+  console.log('rawListings', rawListings)
 
   // Fetch all assets to enrich listings
   const {
@@ -65,6 +66,7 @@ export function ListingProvider({ children, statusFilter }: ListingProviderProps
       const listedAsset = assets.find(a => a.id === listing.listed_asset)
       // Find the purchase asset
       const purchaseAsset = assets.find(a => a.id === listing.purchase_with_asset)
+      console.log('purchaseAsset', purchaseAsset)
       // Get stats for this listing
       const stats = statsQueries[index]?.data
 
@@ -73,7 +75,10 @@ export function ListingProvider({ children, statusFilter }: ListingProviderProps
         assetName: listedAsset?.name,
         assetSymbol: listedAsset?.symbol,
         assetIcon: listedAsset?.icon,
+        assetDecimals: listedAsset?.decimals != null ? Number(listedAsset.decimals) : undefined,
         purchaseAssetSymbol: purchaseAsset?.symbol,
+        purchaseAssetDecimals:
+          purchaseAsset?.decimals != null ? Number(purchaseAsset.decimals) : undefined,
         stats,
       }
     })

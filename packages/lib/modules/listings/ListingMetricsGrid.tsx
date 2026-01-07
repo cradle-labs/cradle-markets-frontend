@@ -22,6 +22,7 @@ export function ListingMetricsGrid({
   purchaseAssetDecimals,
 }: ListingMetricsGridProps) {
   console.log('purchaseAssetDecimals', purchaseAssetDecimals)
+  console.log('stats', stats)
   // Convert from purchase asset decimals and format as currency
   const formatCurrency = (amount: string | number) => {
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount

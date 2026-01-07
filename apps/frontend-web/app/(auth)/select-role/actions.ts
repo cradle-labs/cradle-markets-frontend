@@ -44,6 +44,14 @@ export async function setRole(prevState: any, formData: FormData): Promise<SetRo
         publicMetadata: { role },
       })
 
+      await client.users.updateUserMetadata(userId, {
+       publicMetadata: { 
+       role,
+       roleSetAt: new Date().toISOString() // Track when role was set
+       },
+   })
+
+
       // Create Cradle account
       const accountType: CradleAccountType = role === 'institutional' ? 'institutional' : 'retail'
       const accountResult = await createAccount({

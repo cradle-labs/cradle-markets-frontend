@@ -343,6 +343,7 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
         {/* Key Metrics Grid */}
         <PoolMetricsGrid
           activeLoansCount={poolData.loans.filter((l: Loan) => l.status === 'active').length}
+          assetSymbol={poolData.asset?.symbol ?? poolData.reserve_asset}
           availableLiquidity={poolData.availableLiquidity}
           baseRate={fromBasisPoints(poolData.base_rate)}
           borrowAPY={poolData.borrowAPY}

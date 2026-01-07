@@ -38,20 +38,25 @@ export function ListingTable({ listings, loading = false, onListingClick }: List
     cancelled: 'red',
   }
 
-  // Convert from 8 decimals and format as currency
-  const formatPrice = (price: string) => {
-    const numPrice = fromTokenDecimals(parseFloat(price))
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+  // Convert from token decimals and format as currency
+  const formatPrice = (
+    price: string,
+    purchaseAssetSymbol?: string,
+    purchaseAssetDecimals?: number
+  ) => {
+    const numPrice = fromTokenDecimals(parseFloat(price), purchaseAssetDecimals ?? 6)
+    const formatted = new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(numPrice)
+    const symbol = purchaseAssetSymbol ?? '$'
+    const separator = symbol === '$' ? '' : ' '
+    return `${symbol}${separator}${formatted}`
   }
 
-  // Convert from 8 decimals and format as compact number
-  const formatSupply = (supply: string) => {
-    const numSupply = fromTokenDecimals(parseFloat(supply))
+  // Convert from listed asset decimals and format as compact number
+  const formatSupply = (supply: string, assetDecimals?: number) => {
+    const numSupply = fromTokenDecimals(parseFloat(supply), assetDecimals ?? 6)
     return new Intl.NumberFormat('en-US', {
       notation: 'compact',
       maximumFractionDigits: 1,
@@ -157,15 +162,16 @@ export function ListingTable({ listings, loading = false, onListingClick }: List
                 </Text>
               </Td>
               <Td isNumeric>
-                <Text fontWeight="bold">{formatPrice(listing.purchase_price)}</Text>
-                {listing.purchaseAssetSymbol && (
-                  <Text color="font.secondary" fontSize="sm">
-                    {listing.purchaseAssetSymbol}
-                  </Text>
-                )}
+                <Text fontWeight="bold">
+                  {formatPrice(
+                    listing.purchase_price,
+                    listing.purchaseAssetSymbol,
+                    listing.purchaseAssetDecimals
+                  )}
+                </Text>
               </Td>
               <Td isNumeric>
-                <Text>{formatSupply(listing.max_supply)}</Text>
+                <Text>{formatSupply(listing.max_supply, listing.assetDecimals)}</Text>
               </Td>
               <Td>
                 <Badge colorScheme={statusColorMap[listing.status] || 'gray'}>

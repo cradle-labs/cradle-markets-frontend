@@ -10,6 +10,7 @@ interface ListingMetricsGridProps {
   stats?: ListingStats
   status: string
   purchaseAssetSymbol?: string
+  purchaseAssetDecimals?: number
 }
 
 export function ListingMetricsGrid({
@@ -18,17 +19,20 @@ export function ListingMetricsGrid({
   stats,
   status,
   purchaseAssetSymbol = 'USD',
+  purchaseAssetDecimals,
 }: ListingMetricsGridProps) {
-  // Convert from 8 decimals and format as currency
+  console.log('purchaseAssetDecimals', purchaseAssetDecimals)
+  // Convert from purchase asset decimals and format as currency
   const formatCurrency = (amount: string | number) => {
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount
-    const normalizedAmount = fromTokenDecimals(numAmount)
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    const normalizedAmount = fromTokenDecimals(numAmount, purchaseAssetDecimals ?? 6)
+    const formatted = new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(normalizedAmount)
+    const symbol = purchaseAssetSymbol ?? '$'
+    const separator = symbol === '$' ? '' : ' '
+    return `${symbol}${separator}${formatted}`
   }
 
   // Convert from 8 decimals and format as compact number

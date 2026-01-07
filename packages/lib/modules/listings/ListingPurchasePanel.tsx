@@ -38,6 +38,7 @@ interface ListingPurchasePanelProps {
   purchasePrice: string
   purchaseAssetId?: string
   purchaseAssetSymbol?: string
+  purchaseAssetDecimals?: number
   status: string
   onPurchaseSuccess?: () => void
 }
@@ -50,6 +51,7 @@ export function ListingPurchasePanel({
   purchasePrice,
   purchaseAssetId,
   purchaseAssetSymbol = 'USD',
+  purchaseAssetDecimals,
   status,
   onPurchaseSuccess,
 }: ListingPurchasePanelProps) {
@@ -57,8 +59,8 @@ export function ListingPurchasePanel({
   const [amount, setAmount] = useState<string>('')
   const [isPurchasing, setIsPurchasing] = useState(false)
 
-  // Convert purchase price from 8 decimals to display value
-  const normalizedPrice = fromTokenDecimals(parseFloat(purchasePrice))
+  // Convert purchase price from purchase asset decimals to display value
+  const normalizedPrice = fromTokenDecimals(parseFloat(purchasePrice), purchaseAssetDecimals ?? 6)
 
   // Fetch fee from API (only when USE_API_FEE is true)
   const { data: apiFee, isLoading: feeLoading } = useListingFee({
@@ -108,12 +110,13 @@ export function ListingPurchasePanel({
 
   // Format price for display (already normalized)
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    const formatted = new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(price)
+    const symbol = purchaseAssetSymbol ?? '$'
+    const separator = symbol === '$' ? '' : ' '
+    return `${symbol}${separator}${formatted}`
   }
 
   const formatAmount = (value: number) => {
@@ -253,7 +256,7 @@ export function ListingPurchasePanel({
               />
               <HStack justify="space-between" mt={2}>
                 <FormHelperText color="text.tertiary" fontSize="xs" m={0}>
-                  Price per token: {formatPrice(normalizedPrice)} {purchaseAssetSymbol}
+                  Price per token: {formatPrice(normalizedPrice)}
                 </FormHelperText>
                 {walletId && purchaseAssetBalance > 0 && (
                   <Text color="text.tertiary" fontSize="xs">
@@ -294,7 +297,7 @@ export function ListingPurchasePanel({
                       Total Cost
                     </Text>
                     <Text fontSize="xl" fontWeight="bold">
-                      {formatPrice(calculateTotal())} {purchaseAssetSymbol}
+                      {formatPrice(calculateTotal())}
                     </Text>
                   </Box>
                 </VStack>

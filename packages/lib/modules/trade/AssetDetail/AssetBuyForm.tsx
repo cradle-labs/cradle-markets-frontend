@@ -11,7 +11,6 @@ import { useUser } from '@clerk/nextjs'
 import { useAccountByLinkedId } from '@repo/lib/cradle-client-ts/hooks/accounts/useAccountByLinkedId'
 import { useWalletByAccountId } from '@repo/lib/cradle-client-ts/hooks/accounts/useWallet'
 import { useAssetBalances } from '@repo/lib/cradle-client-ts/hooks/accounts/useAssetBalances'
-import { useAsset } from '@repo/lib/cradle-client-ts/hooks/assets/useAsset'
 import { placeOrder } from '@repo/lib/actions/orders'
 import { blockInvalidNumberInput, formatTo8Decimals } from '@repo/lib/shared/utils/numbers'
 import { toTokenDecimals, fromTokenDecimals } from '@repo/lib/modules/lend/utils'
@@ -34,7 +33,7 @@ interface PlaceOrderInput {
 export function AssetBuyForm() {
   const { user } = useUser()
   const toast = useToast()
-  const { market, refetch, asset } = useAssetDetail()
+  const { market, refetch, asset, assetOne, assetTwo } = useAssetDetail()
 
   // Calculate current market price from asset data
   const currentMarketPrice = asset?.currentPrice || 1.0
@@ -63,18 +62,6 @@ export function AssetBuyForm() {
   const { data: wallet } = useWalletByAccountId({
     accountId: linkedAccount?.id || '',
     enabled: !!linkedAccount?.id,
-  })
-
-  // Fetch asset_one (the asset we're receiving, e.g., SAF) using its ID
-  const { data: assetOne } = useAsset({
-    assetId: market?.asset_one || '',
-    enabled: !!market?.asset_one,
-  })
-
-  // Fetch asset_two (the asset we're paying with, e.g., cpUSD) using its ID
-  const { data: assetTwo } = useAsset({
-    assetId: market?.asset_two || '',
-    enabled: !!market?.asset_two,
   })
 
   // Format addresses to ensure they have 0x prefix
@@ -507,6 +494,7 @@ export function AssetBuyForm() {
             customUserBalance={payAssetBalanceData?.formatted}
             onChange={handlePayAmountChange}
             placeholder="0.00"
+            quoteSymbol={assetTwo?.symbol}
             value={payAmount}
           />
         </Box>
@@ -554,6 +542,7 @@ export function AssetBuyForm() {
             customUserBalance={receiveAssetBalanceData?.formatted}
             onChange={handleReceiveAmountChange}
             placeholder="0.00"
+            quoteSymbol={assetTwo?.symbol}
             value={receiveAmount}
           />
         </Box>

@@ -68,6 +68,7 @@ type Props = {
   priceMessage?: string
   customUserBalance?: string
   customUsdPrice?: number
+  quoteSymbol?: string // Symbol for the quote currency (e.g., KESN, cpUSD) used for value display
 }
 
 export const TokenInput = forwardRef(
@@ -80,6 +81,7 @@ export const TokenInput = forwardRef(
       onToggleTokenClicked,
       customUserBalance,
       customUsdPrice,
+      quoteSymbol,
       ...inputProps
     }: InputProps & Props,
     ref
@@ -93,8 +95,16 @@ export const TokenInput = forwardRef(
       }
     }
 
-    // Calculate USD value based on input amount and price
-    const usdValue = value && customUsdPrice ? (Number(value) * customUsdPrice).toFixed(2) : '0.00'
+    // Calculate value in quote currency based on input amount and price
+    const quoteValue =
+      value && customUsdPrice ? (Number(value) * customUsdPrice).toFixed(2) : '0.00'
+
+    // Format value with quote symbol (e.g., KESN, cpUSD) or fallback to $
+    const formatQuoteValue = (val: string) => {
+      const symbol = quoteSymbol || '$'
+      const separator = symbol === '$' ? '' : ' '
+      return `${symbol}${separator}${val}`
+    }
 
     return (
       <Box
@@ -164,7 +174,7 @@ export const TokenInput = forwardRef(
 
           <HStack h="4" justify="space-between" w="full">
             <Text color="font.secondary" fontSize="sm" opacity={0.5} variant="secondary">
-              ${usdValue}
+              {formatQuoteValue(quoteValue)}
             </Text>
             <Text color="font.secondary" fontSize="sm">
               Balance: {customUserBalance || '0.00'}

@@ -62,11 +62,13 @@ export function useNav() {
   }
 
   function linkColorFor(path: string) {
-    return pathname === path ? 'font.highlight' : 'font.primary'
+    return isLinkActive(path) ? 'font.highlight' : 'font.primary'
   }
 
   function isLinkActive(path: string) {
-    return pathname === path
+    if (!pathname) return false
+    // Exact match or child route match (e.g., /listings matches /listings/123)
+    return pathname === path || pathname.startsWith(`${path}/`)
   }
 
   return { allAppLinks, getFilteredLinks, linkColorFor, isLinkActive }

@@ -1,4 +1,4 @@
-import { LandingV3Layout } from './_lib/landing-page/LandingV3Layout'
+import { LandingPageLayout } from './_lib/landing-page/LandingPageLayout'
 import { checkHealth } from '@repo/lib/actions/health'
 
 export default async function Home() {
@@ -13,5 +13,5 @@ export default async function Home() {
 
   // Note: Middleware handles redirects for authenticated users
   // This page only shows for non-authenticated users
-  return <LandingV3Layout />
+  return <LandingPageLayout />
 }

@@ -5,40 +5,44 @@ import { useState, useMemo, useEffect } from 'react'
 import { SelectInput, SelectOption } from '../../shared/components/inputs/SelectInput'
 import { requestOnramp } from '@repo/lib/actions/onramp'
 import { blockInvalidNumberInput } from '@repo/lib/shared/utils/numbers'
-import type { Asset } from '@repo/lib/cradle-client-ts/types'
+import { useAssets } from '@repo/lib/cradle-client-ts/hooks/assets'
 
 interface MobileMoneyFormProps {
   walletId?: string
   onClose?: () => void
-  assets?: Asset[]
 }
 
-export function MobileMoneyForm({ walletId, onClose, assets = [] }: MobileMoneyFormProps) {
+const KESN_SYMBOL = 'KESN'
+
+export function MobileMoneyForm({ walletId, onClose }: MobileMoneyFormProps) {
+  const { data: assets = [] } = useAssets()
   const toast = useToast()
   const [selectedAssetId, setSelectedAssetId] = useState<string>('')
   const [amount, setAmount] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Create asset options for the dropdown - only show KESy_TESTNET
-  const assetOptions: SelectOption[] = useMemo(() => {
-    const targetAssetId = '3ba160f6-39c6-4718-b46f-46650b841f74'
-    const filteredAssets = assets.filter(asset => asset.id === targetAssetId)
-    return filteredAssets.map(asset => ({
-      value: asset.id,
-      label: `${asset.symbol} - ${asset.name}`,
-    }))
+  // Find the KESN asset by symbol
+  const kesnAsset = useMemo(() => {
+    return assets.find(asset => asset.symbol === KESN_SYMBOL)
   }, [assets])
 
-  console.log('Asset Options:', assetOptions)
+  // Create asset options for the dropdown - only show KESN
+  const assetOptions: SelectOption[] = useMemo(() => {
+    if (!kesnAsset) return []
+    return [
+      {
+        value: kesnAsset.id,
+        label: `${kesnAsset.symbol} - ${kesnAsset.name}`,
+      },
+    ]
+  }, [kesnAsset])
 
-  // Set default asset if available - specifically KESy_TESTNET
+  // Set default asset if available - specifically KESN
   useEffect(() => {
-    const targetAssetId = '3ba160f6-39c6-4718-b46f-46650b841f74'
-    const targetAsset = assets.find(asset => asset.id === targetAssetId)
-    if (targetAsset && !selectedAssetId) {
-      setSelectedAssetId(targetAsset.id)
+    if (kesnAsset && !selectedAssetId) {
+      setSelectedAssetId(kesnAsset.id)
     }
-  }, [assets, selectedAssetId])
+  }, [kesnAsset, selectedAssetId])
 
   // Get selected asset details
   const selectedAsset = useMemo(() => {

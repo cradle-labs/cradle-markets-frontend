@@ -162,6 +162,8 @@ export const cradleQueryKeys = {
       [...cradleQueryKeys.lendingPools.byId(poolId), 'statistics'] as const,
     userPositions: (poolId: string, walletId: string) =>
       [...cradleQueryKeys.lendingPools.byId(poolId), 'user-positions', walletId] as const,
+    assetMultiplier: (poolId: string, assetId: string) =>
+      [...cradleQueryKeys.lendingPools.byId(poolId), 'multiplier', assetId] as const,
   },
 
   // Loans

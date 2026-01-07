@@ -15,11 +15,11 @@ import {
 } from '@chakra-ui/react'
 import { borrowAsset } from '@repo/lib/actions/lending'
 import { useDepositPosition } from '@repo/lib/cradle-client-ts/hooks/lending/useLendingPool'
+import { useAssetMultiplier } from '@repo/lib/cradle-client-ts/hooks/lending/useAssetMultiplier'
 import { useAssets } from '@repo/lib/cradle-client-ts/hooks'
 import { useAssetBalances } from '@repo/lib/cradle-client-ts/hooks/accounts/useAssetBalances'
 import { SelectInput, SelectOption } from '@repo/lib/shared/components/inputs/SelectInput'
 import { fromBasisPoints, toTokenDecimals, fromTokenDecimals } from './utils'
-import { useTokenizedAssets } from '@repo/lib/modules/trade/TokenizedAssets'
 
 /**
  * Deposit position structure from the API
@@ -39,26 +39,26 @@ interface LendBorrowFormProps {
   assetSymbol?: string
   assetName?: string
   reserveAssetId: string
-  borrowAPY: number
+  borrowAPY?: number
   loanToValue: string
   assetDecimals?: number
   onSuccess?: () => void
+  baseRate: number
 }
 
 export function LendBorrowForm({
   poolId,
   walletId,
   assetSymbol,
-  borrowAPY,
   loanToValue,
   assetDecimals,
   onSuccess,
+  baseRate,
 }: LendBorrowFormProps) {
   const [amount, setAmount] = useState('')
   const [selectedCollateralId, setSelectedCollateralId] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
   const toast = useToast()
-  const { assets: tokenizedAssets, loading: tokenizedAssetsLoading } = useTokenizedAssets()
 
   const formatAmount = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -70,12 +70,10 @@ export function LendBorrowForm({
   // Fetch all assets to get tokenized stock assets for collateral
   const { data: allAssets } = useAssets()
 
-  // Filter for tokenized stock assets (native or bridged, not stablecoin)
+  // Filter only tokenized stock assets
   const collateralAssets = useMemo(() => {
     if (!allAssets) return []
-    return allAssets.filter(
-      asset => asset.asset_type === 'native' || asset.asset_type === 'bridged'
-    )
+    return allAssets.filter(asset => asset.asset_type === 'bridged')
   }, [allAssets])
 
   // Fetch balances for collateral assets to show which ones user has
@@ -98,35 +96,20 @@ export function LendBorrowForm({
 
   const ltvDecimal = useMemo(() => fromBasisPoints(loanToValue), [loanToValue])
 
+  // Fetch collateral price from pool oracle using the multiplier endpoint
+  const { data: priceOracle, isLoading: isPriceLoading } = useAssetMultiplier({
+    poolId,
+    assetId: selectedCollateralId,
+    enabled: !!poolId && !!selectedCollateralId,
+  })
+
   const collateralPrice = useMemo(() => {
-    if (!selectedCollateralAsset) {
-      console.log('[LendBorrowForm] No selected collateral asset yet')
+    if (!priceOracle?.price) {
       return 0
     }
-
-    const priceMatchBySymbol = tokenizedAssets.find(
-      asset => asset.symbol.toLowerCase() === selectedCollateralAsset.symbol?.toLowerCase()
-    )
-    const priceMatchByName = tokenizedAssets.find(
-      asset => asset.name.toLowerCase() === selectedCollateralAsset.name?.toLowerCase()
-    )
-
-    const price = priceMatchBySymbol?.currentPrice ?? priceMatchByName?.currentPrice ?? 0
-
-    console.log('[LendBorrowForm] Collateral pricing lookup', {
-      selectedCollateralAsset: {
-        id: selectedCollateralAsset.id,
-        symbol: selectedCollateralAsset.symbol,
-        name: selectedCollateralAsset.name,
-      },
-      tokenizedAssetsCount: tokenizedAssets.length,
-      matchedBySymbol: priceMatchBySymbol,
-      matchedByName: priceMatchByName,
-      collateralPrice: price,
-    })
-
-    return price
-  }, [selectedCollateralAsset, tokenizedAssets])
+    // Convert price string to number
+    return parseFloat(priceOracle.price)
+  }, [priceOracle])
 
   // Create select options for collateral assets
   const collateralOptions: SelectOption[] = useMemo(() => {
@@ -384,8 +367,7 @@ export function LendBorrowForm({
             </Box>
           )}
           <FormHelperText color="text.tertiary" fontSize="xs">
-            Select a tokenized stock asset (e.g., SAF) to use as collateral. You must have supplied
-            the selected asset to borrow against it.
+            Select a tokenized stock asset (e.g., SAF) to use as collateral.
           </FormHelperText>
         </FormControl>
 
@@ -423,10 +405,10 @@ export function LendBorrowForm({
                 {assetSymbol} based on your {collateralSymbol || 'collateral'} value
               </>
             ) : (
-              `Borrow ${assetSymbol} at ${formatPercentage(borrowAPY)} APY`
+              `Borrow ${assetSymbol} at ${formatPercentage(baseRate)} APY`
             )}
           </FormHelperText>
-          {selectedCollateralId && collateralPrice <= 0 && !tokenizedAssetsLoading && (
+          {selectedCollateralId && collateralPrice <= 0 && !isPriceLoading && (
             <Text color="orange.300" fontSize="xs" mt={1}>
               Collateral price unavailable. Please retry or choose another collateral asset.
             </Text>
@@ -453,10 +435,10 @@ export function LendBorrowForm({
                   Interest Cost
                 </Text>
                 <Text fontSize="lg" fontWeight="semibold">
-                  ${(parseFloat(amount) * borrowAPY).toFixed(2)} / year
+                  ${(parseFloat(amount) * baseRate).toFixed(2)} / year
                 </Text>
                 <Text color="text.tertiary" fontSize="xs">
-                  Based on current APY of {formatPercentage(borrowAPY)}
+                  Based on current APY of {formatPercentage(baseRate)}
                 </Text>
               </Box>
             </VStack>
@@ -469,7 +451,7 @@ export function LendBorrowForm({
             !amount ||
             parseFloat(amount) <= 0 ||
             collateralPrice <= 0 ||
-            tokenizedAssetsLoading ||
+            isPriceLoading ||
             parseFloat(amount) > availableBorrow
           }
           isLoading={isLoading}

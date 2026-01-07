@@ -13,12 +13,13 @@ interface LendingTransaction {
 
 interface PoolActivityCardProps {
   transactions: LendingTransaction[]
+  assetDecimals?: number
 }
 
-export function PoolActivityCard({ transactions }: PoolActivityCardProps) {
+export function PoolActivityCard({ transactions, assetDecimals = 8 }: PoolActivityCardProps) {
   const formatCurrency = (amount: number) => {
-    // Convert from token decimals (8 decimals) to normalized form
-    const normalizedAmount = fromTokenDecimals(amount)
+    // Convert from token decimals to normalized form using actual asset decimals
+    const normalizedAmount = fromTokenDecimals(amount, assetDecimals)
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',

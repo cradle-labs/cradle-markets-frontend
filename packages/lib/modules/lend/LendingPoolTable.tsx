@@ -16,6 +16,7 @@ export interface LendingPoolData extends LendingPool {
   utilization?: number
   supplyAPY?: number
   borrowAPY?: number
+  baseRate?: number
 }
 
 interface LendingPoolTableProps {
@@ -64,8 +65,8 @@ export function LendingPoolTable({ pools, loading, onPoolClick }: LendingPoolTab
           bVal = b.supplyAPY ?? 0
           break
         case 'borrow-apy':
-          aVal = a.borrowAPY ?? 0
-          bVal = b.borrowAPY ?? 0
+          aVal = a.baseRate ?? 0
+          bVal = b.baseRate ?? 0
           break
       }
 

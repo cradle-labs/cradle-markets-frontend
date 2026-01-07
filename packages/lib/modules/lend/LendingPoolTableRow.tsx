@@ -30,12 +30,13 @@ export function LendingPoolTableRow({
   const fallbackColor = useColorModeValue('gray.700', 'gray.200')
 
   const formatCurrency = (amount: number = 0) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    const formatted = new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount)
+    const symbol = pool.asset?.symbol ?? '$'
+    const separator = symbol === '$' ? '' : ' '
+    return `${symbol}${separator}${formatted}`
   }
 
   const formatPercent = (value: number = 0) => {
@@ -137,7 +138,7 @@ export function LendingPoolTableRow({
             </Text>
           </GridItem>
 
-          {/* Base Rate */}
+          {/* Borrow APY using base rate*/}
           <GridItem justifySelf="end">
             <Text fontSize="sm" fontWeight="medium">
               {formatPercent(pool.baseRate)}

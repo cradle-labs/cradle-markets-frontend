@@ -23,6 +23,11 @@ export interface ListingData extends CradleNativeListingRow {
   assetSymbol?: string
   assetIcon?: string | null
   purchaseAssetSymbol?: string
+  purchaseAssetDecimals?: number
+  /**
+   * Decimals for the listed token itself (used for supply metrics)
+   */
+  assetDecimals?: number
   stats?: ListingStats
 }
 
@@ -54,21 +59,22 @@ export function ListingCard({ listing, onClick }: ListingCardProps) {
     cancelled: 'red',
   }
 
-  // Convert from 8 decimals and format as currency
+  // Convert from token decimals and format as currency
   const formatPrice = (price: string) => {
-    const numPrice = fromTokenDecimals(parseFloat(price))
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    const numPrice = fromTokenDecimals(parseFloat(price), listing.purchaseAssetDecimals ?? 6)
+    const formatted = new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(numPrice)
+    const symbol = listing.purchaseAssetSymbol ?? '$'
+    const separator = symbol === '$' ? '' : ' '
+    return `${symbol}${separator}${formatted}`
   }
 
-  // Convert from 8 decimals and format as compact number
+  // Convert from listed asset decimals and format as compact number
   const formatSupply = (supply: string | number) => {
     const numSupply = typeof supply === 'string' ? parseFloat(supply) : supply
-    const normalizedSupply = fromTokenDecimals(numSupply)
+    const normalizedSupply = fromTokenDecimals(numSupply, listing.assetDecimals ?? 6)
     return new Intl.NumberFormat('en-US', {
       notation: 'compact',
       maximumFractionDigits: 1,
@@ -179,7 +185,15 @@ export function ListingCard({ listing, onClick }: ListingCardProps) {
                 •
               </Text>
               <Text color="font.secondary" fontSize="sm">
-                {formatSupply(listing.max_supply)} max supply
+                {(() => {
+                  const formatted = formatSupply(listing.max_supply)
+                  console.log('Max supply:', {
+                    raw: listing.max_supply,
+                    formatted,
+                    assetDecimals: listing.assetDecimals,
+                  })
+                  return `${formatted} max supply`
+                })()}
               </Text>
             </HStack>
           </VStack>

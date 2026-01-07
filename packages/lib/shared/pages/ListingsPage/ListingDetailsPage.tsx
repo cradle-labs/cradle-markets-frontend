@@ -323,6 +323,11 @@ export function ListingDetailsPage({ listingId }: ListingDetailsPageProps) {
         {/* Key Metrics Grid */}
         <ListingMetricsGrid
           maxSupply={listingData.max_supply}
+          purchaseAssetDecimals={
+            listingData.purchaseAsset?.decimals != null
+              ? Number(listingData.purchaseAsset.decimals)
+              : undefined
+          }
           purchaseAssetSymbol={listingData.purchaseAsset?.symbol}
           purchasePrice={listingData.purchase_price}
           stats={listingData.stats}
@@ -460,6 +465,11 @@ export function ListingDetailsPage({ listingId }: ListingDetailsPageProps) {
             assetSymbol={listingData.listedAsset?.symbol}
             listingId={listingData.id}
             onPurchaseSuccess={handleTransactionSuccess}
+            purchaseAssetDecimals={
+              listingData.purchaseAsset?.decimals != null
+                ? Number(listingData.purchaseAsset.decimals)
+                : undefined
+            }
             purchaseAssetId={listingData.purchaseAsset?.id}
             purchaseAssetSymbol={listingData.purchaseAsset?.symbol}
             purchasePrice={listingData.purchase_price}

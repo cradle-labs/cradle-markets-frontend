@@ -142,7 +142,7 @@ export function MarketOrders() {
               Wallet not found
             </Text>
             <Text color="font.secondary" fontSize="sm" textAlign="center">
-              Please connect your wallet to view your orders.
+              Account not found.
             </Text>
           </VStack>
         </Box>

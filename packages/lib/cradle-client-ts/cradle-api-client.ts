@@ -220,8 +220,14 @@ interface CradleNativeListingRow {
   shadow_asset: UUID
 }
 
-// Unknown shapes from backend; kept permissive for now.
-type ListingStats = Record<string, unknown>
+// Listing stats response from GetStats
+interface ListingStats {
+  total_distributed: number
+  remaining: number
+  raised: number
+  balance: number
+  status: string
+}
 type GetPoolStatsOutput = Record<string, unknown>
 type GetUserBorrowPositionOutput = Record<string, unknown>
 type GetUserDepositPositonOutput = Record<string, unknown>

@@ -21,6 +21,7 @@ export function useNav() {
       label: 'Trade',
       roles: ['institutional', 'retail'],
     },
+
     // {
     //   href: '/perps',
     //   label: 'Perps',
@@ -29,6 +30,11 @@ export function useNav() {
     {
       href: '/lend',
       label: 'Lend',
+      roles: ['institutional', 'retail'],
+    },
+    {
+      href: '/listings',
+      label: 'Listings',
       roles: ['institutional', 'retail'],
     },
     {

@@ -204,7 +204,8 @@ export function LendBorrowForm({
     ltvDecimal,
   ])
 
-  const requiredCollateralValueUsd = useMemo(
+  // Value of required collateral in reserve asset (e.g., KESN)
+  const requiredCollateralValue = useMemo(
     () => requiredCollateral * collateralPrice,
     [requiredCollateral, collateralPrice]
   )
@@ -427,7 +428,7 @@ export function LendBorrowForm({
                   {requiredCollateral.toFixed(4)} {collateralSymbol || 'collateral'}
                 </Text>
                 <Text color="text.tertiary" fontSize="xs">
-                  ≈ {requiredCollateralValueUsd.toFixed(2)} {assetSymbol || 'tokens'} based on{' '}
+                  ≈ {requiredCollateralValue.toFixed(2)} {assetSymbol || 'tokens'} based on{' '}
                   {formatPercentage(ltvDecimal)} LTV
                 </Text>
               </Box>

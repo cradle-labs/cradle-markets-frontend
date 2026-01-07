@@ -109,19 +109,23 @@ export default clerkMiddleware(async (auth, req) => {
         metadata: sessionClaims?.metadata,
       })
 
-      // If on /select-role and role already exists (or can be fetched), redirect to /trade
-      if (req.nextUrl.pathname === '/select-role' && userId) {
-        if (!userRole) {
-          try {
-            const { clerkClient } = await import('@clerk/nextjs/server')
-            const client = await clerkClient()
-            const user = await client.users.getUser(userId)
-            userRole = user.publicMetadata?.role as string | undefined
-          } catch (error) {
-            console.error('Error fetching user metadata on /select-role:', error)
-            // Continue execution even if user fetch fails
-          }
+      // If no role in session claims, fetch from Clerk API directly
+      // This handles the case where role was just set but session hasn't refreshed yet
+      if (!userRole && userId) {
+        try {
+          const { clerkClient } = await import('@clerk/nextjs/server')
+          const client = await clerkClient()
+          const user = await client.users.getUser(userId)
+          userRole = user.publicMetadata?.role as string | undefined
+          console.log('Fetched fresh role from Clerk API:', { userRole })
+        } catch (error) {
+          console.error('Error fetching user metadata:', error)
+          // Continue execution even if user fetch fails
         }
+      }
+
+      // If on /select-role and role already exists, redirect to /trade
+      if (req.nextUrl.pathname === '/select-role' && userId) {
         if (userRole === 'institutional' || userRole === 'retail') {
           return NextResponse.redirect(new URL('/trade', req.url))
         }

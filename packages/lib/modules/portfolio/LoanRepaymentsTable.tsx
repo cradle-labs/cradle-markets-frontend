@@ -248,7 +248,8 @@ function LoanRepaymentRowsWithCallback({
               </Td>
               <Td isNumeric>
                 <Text fontSize="sm" fontWeight="semibold">
-                  ${fromTokenDecimals(parseFloat(repayment.repayment_amount)).toFixed(2)}
+                  {fromTokenDecimals(parseFloat(repayment.repayment_amount), 6).toFixed(2)}{' '}
+                  {borrowedAsset?.symbol || ''}
                 </Text>
               </Td>
               <Td>

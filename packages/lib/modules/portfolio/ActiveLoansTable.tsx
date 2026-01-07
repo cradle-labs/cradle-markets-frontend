@@ -200,6 +200,7 @@ export function ActiveLoansSection({
                 {activeLoans.map(loan => {
                   const pool = poolMap.get(loan.pool)
                   const collateralAsset = assetMap.get(loan.collateral_asset)
+                  const reserveAsset = pool ? assetMap.get(pool.reserve_asset) : undefined
 
                   return (
                     <LoanTableRow
@@ -209,6 +210,7 @@ export function ActiveLoansSection({
                       loan={loan}
                       onRepayClick={handleRepayClick}
                       pool={pool}
+                      reserveAsset={reserveAsset}
                     />
                   )
                 })}
@@ -259,6 +261,7 @@ export function ActiveLoansSection({
                 {repaidLoans.map(loan => {
                   const pool = poolMap.get(loan.pool)
                   const collateralAsset = assetMap.get(loan.collateral_asset)
+                  const reserveAsset = pool ? assetMap.get(pool.reserve_asset) : undefined
 
                   return (
                     <RepaidLoanTableRow
@@ -267,6 +270,7 @@ export function ActiveLoansSection({
                       key={loan.id}
                       loan={loan}
                       pool={pool}
+                      reserveAsset={reserveAsset}
                     />
                   )
                 })}
@@ -324,6 +328,14 @@ interface LoanTableRowProps {
         icon?: string | null
       }
     | undefined
+  reserveAsset:
+    | {
+        id: string
+        name: string
+        symbol: string
+        icon?: string | null
+      }
+    | undefined
   onRepayClick: (loan: LoanTableRowProps['loan']) => void
   formatDate: (dateString: string) => string
 }
@@ -332,6 +344,7 @@ function LoanTableRow({
   loan,
   pool,
   collateralAsset,
+  reserveAsset,
   onRepayClick,
   formatDate,
 }: LoanTableRowProps) {
@@ -359,8 +372,9 @@ function LoanTableRow({
   }
 
   // Get current debt and collateral amount from loan position
+  // KESN has 6 decimal places
   const currentDebt = loanPosition?.current_dept
-    ? fromTokenDecimals(parseFloat(String(loanPosition.current_dept)))
+    ? fromTokenDecimals(parseFloat(String(loanPosition.current_dept)), 6)
     : 0
 
   const collateralAmount = loanPosition?.collateral_amount
@@ -403,7 +417,7 @@ function LoanTableRow({
           <Skeleton h="20px" w="80px" />
         ) : (
           <Text fontSize="sm" fontWeight="semibold">
-            {collateralAmount.toFixed(2)}
+            {collateralAmount.toFixed(2)} {collateralAsset?.symbol || ''}
           </Text>
         )}
       </Td>
@@ -412,7 +426,7 @@ function LoanTableRow({
           <Skeleton h="20px" w="80px" />
         ) : (
           <Text fontSize="sm" fontWeight="bold">
-            ${currentDebt.toFixed(2)}
+            {currentDebt.toFixed(2)} {reserveAsset?.symbol || ''}
           </Text>
         )}
       </Td>
@@ -484,12 +498,26 @@ interface RepaidLoanTableRowProps {
         icon?: string | null
       }
     | undefined
+  reserveAsset:
+    | {
+        id: string
+        name: string
+        symbol: string
+        icon?: string | null
+      }
+    | undefined
   formatDate: (dateString: string) => string
 }
 
-function RepaidLoanTableRow({ loan, pool, collateralAsset, formatDate }: RepaidLoanTableRowProps) {
-  // Convert principal amount from token decimals to display format
-  const principalAmount = parseFloat(loan.principal_amount) / 100000000 // 8 decimal places
+function RepaidLoanTableRow({
+  loan,
+  pool,
+  collateralAsset,
+  reserveAsset,
+  formatDate,
+}: RepaidLoanTableRowProps) {
+  // Convert principal amount from token decimals to display format (6 decimals for KESN)
+  const principalAmount = fromTokenDecimals(parseFloat(loan.principal_amount), 6)
 
   return (
     <Tr>
@@ -519,7 +547,7 @@ function RepaidLoanTableRow({ loan, pool, collateralAsset, formatDate }: RepaidL
       </Td>
       <Td isNumeric>
         <Text fontSize="sm" fontWeight="semibold">
-          ${principalAmount.toFixed(2)}
+          {principalAmount.toFixed(2)} {reserveAsset?.symbol || ''}
         </Text>
       </Td>
       <Td>

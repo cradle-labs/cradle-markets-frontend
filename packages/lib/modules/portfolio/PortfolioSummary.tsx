@@ -125,7 +125,7 @@ function AssetCard({ asset }: AssetCardProps) {
             </Text>
             {asset.value !== undefined && asset.value > 0 && (
               <Text color="font.secondary" fontSize="xs">
-                ${fNum('fiat', asset.value, { abbreviated: false })}
+                {fNum('fiat', asset.value, { abbreviated: false })} KESN
               </Text>
             )}
           </>

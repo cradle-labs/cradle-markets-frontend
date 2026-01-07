@@ -138,6 +138,13 @@ export function ListingPurchasePanel({
     return subtotal + feeAmount
   }
 
+  // Check if user has insufficient funds
+  const insufficientFunds = useMemo(() => {
+    if (!amount || parseFloat(amount) <= 0) return false
+    const total = calculateTotal()
+    return total > purchaseAssetBalance
+  }, [amount, purchaseAssetBalance, normalizedPrice])
+
   const handlePurchase = async () => {
     if (!walletId || !amount) return
 
@@ -236,6 +243,17 @@ export function ListingPurchasePanel({
               </Alert>
             )}
 
+            {insufficientFunds && (
+              <Alert borderRadius="md" status="warning">
+                <AlertIcon />
+                <AlertDescription fontSize="sm">
+                  Insufficient {purchaseAssetSymbol} balance. You need{' '}
+                  {formatPrice(calculateTotal())} but only have {formatPrice(purchaseAssetBalance)}{' '}
+                  available.
+                </AlertDescription>
+              </Alert>
+            )}
+
             <FormControl isRequired>
               <HStack justify="space-between" mb={2}>
                 <FormLabel color="font.secondary" fontSize="sm" fontWeight="medium" mb={0}>
@@ -305,14 +323,18 @@ export function ListingPurchasePanel({
             )}
 
             <Button
-              isDisabled={isDisabled || !amount || parseFloat(amount) <= 0}
+              isDisabled={isDisabled || !amount || parseFloat(amount) <= 0 || insufficientFunds}
               isLoading={isPurchasing}
               size="lg"
               type="submit"
               variant="primary"
               w="full"
             >
-              {status !== 'open' ? 'Offering Not Available' : 'Invest Now'}
+              {status !== 'open'
+                ? 'Offering Not Available'
+                : insufficientFunds
+                  ? 'Insufficient Balance'
+                  : 'Invest Now'}
             </Button>
           </VStack>
         </Box>

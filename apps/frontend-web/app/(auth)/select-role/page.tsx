@@ -47,7 +47,7 @@ export default function SelectRolePage() {
 
       // Use hard navigation to ensure session is fully refreshed
       // This prevents redirect loops caused by stale JWT tokens
-      window.location.href = '/trade'
+      router.push('/trade')
     } else if (state.partialSuccess) {
       // Show warning toast for partial success
       toast({

@@ -45,8 +45,8 @@ export default function SelectRolePage() {
         isClosable: true,
       })
 
-      // Navigate to trade page
-      router.push('/trade')
+      // Navigate to trade page with full page reload to ensure session refresh
+      window.location.href = '/trade'
     } else if (state.partialSuccess) {
       // Show warning toast for partial success
       toast({

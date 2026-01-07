@@ -427,8 +427,8 @@ export function LendBorrowForm({
                   {requiredCollateral.toFixed(4)} {collateralSymbol || 'collateral'}
                 </Text>
                 <Text color="text.tertiary" fontSize="xs">
-                  ≈ ${requiredCollateralValueUsd.toFixed(2)} based on {formatPercentage(ltvDecimal)}{' '}
-                  LTV
+                  ≈ {requiredCollateralValueUsd.toFixed(2)} {assetSymbol || 'tokens'} based on{' '}
+                  {formatPercentage(ltvDecimal)} LTV
                 </Text>
               </Box>
               <Box mt={2}>
@@ -436,7 +436,7 @@ export function LendBorrowForm({
                   Interest Cost
                 </Text>
                 <Text fontSize="lg" fontWeight="semibold">
-                  ${(parseFloat(amount) * baseRate).toFixed(2)} / year
+                  {(parseFloat(amount) * baseRate).toFixed(2)} {assetSymbol || 'tokens'} / year
                 </Text>
                 <Text color="text.tertiary" fontSize="xs">
                   Based on current APY of {formatPercentage(baseRate)}

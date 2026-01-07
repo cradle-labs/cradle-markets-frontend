@@ -173,12 +173,23 @@ const PortfolioSummary = ({
     return map
   }, [apiBalances])
 
-  // Group assets by type
-  const nativeAssets = assets?.filter(asset => asset.asset_type === 'native') || []
+  // Helper to filter out shadow assets (not relevant on frontend)
+  const isNotShadowAsset = (asset: Asset) => {
+    const name = asset.name?.toLowerCase() || ''
+    const symbol = asset.symbol?.toLowerCase() || ''
+    return !name.includes('shadow') && !symbol.includes('shadow')
+  }
+
+  // Group assets by type (excluding shadow assets)
+  const nativeAssets =
+    assets?.filter(asset => asset.asset_type === 'native' && isNotShadowAsset(asset)) || []
   // Filter for yield_bearing assets
-  const yieldAssets = assets?.filter(asset => asset.asset_type === 'yield_bearing') || []
-  const bridgedAssets = assets?.filter(asset => asset.asset_type === 'bridged') || []
-  const stableAssets = assets?.filter(asset => asset.asset_type === 'stablecoin') || []
+  const yieldAssets =
+    assets?.filter(asset => asset.asset_type === 'yield_bearing' && isNotShadowAsset(asset)) || []
+  const bridgedAssets =
+    assets?.filter(asset => asset.asset_type === 'bridged' && isNotShadowAsset(asset)) || []
+  const stableAssets =
+    assets?.filter(asset => asset.asset_type === 'stablecoin' && isNotShadowAsset(asset)) || []
 
   // Combine bridged assets with native assets for display
   const tokenizedAssets = [...bridgedAssets, ...nativeAssets]

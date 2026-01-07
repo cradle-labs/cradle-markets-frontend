@@ -24,6 +24,7 @@ const isRetailRoute = createRouteMatcher(['/retail(.*)'])
 const isSharedRoute = createRouteMatcher([
   '/trade(.*)',
   '/lend(.*)',
+  '/listings(.*)',
   '/portfolio(.*)',
   '/perps(.*)',
   '/faucet(.*)',

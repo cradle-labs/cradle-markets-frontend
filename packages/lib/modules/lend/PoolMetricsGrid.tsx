@@ -24,6 +24,8 @@ export function PoolMetricsGrid({
   assetSymbol,
 }: PoolMetricsGridProps) {
   const borrowRateHelpText = borrowAPY != null ? 'Current rate' : 'Base rate'
+  console.log('assetSymbol', assetSymbol)
+  console.log('totalSupplied', totalSupplied)
 
   const formatCurrency = (amount: number) => {
     const formatted = new Intl.NumberFormat('en-US', {

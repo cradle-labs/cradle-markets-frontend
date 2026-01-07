@@ -62,6 +62,7 @@ export type {
   GetUserBorrowPositionOutput,
   GetUserDepositPositonOutput,
   RepaymentAmount,
+  PriceOracle,
   UUID,
   Big,
 } from './cradle-api-client'

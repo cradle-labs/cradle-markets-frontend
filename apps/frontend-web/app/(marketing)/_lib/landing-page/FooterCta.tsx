@@ -1,6 +1,6 @@
 'use client'
 
-import { Box, Text, Button, Center, HStack, VStack, Link } from '@chakra-ui/react'
+import { Box, Text, Button, Center, VStack, Link } from '@chakra-ui/react'
 import Noise from '@repo/lib/shared/components/layout/Noise'
 import { RadialPattern } from './shared/RadialPattern'
 import { WordsPullUp } from '@repo/lib/shared/components/animations/WordsPullUp'
@@ -101,47 +101,30 @@ export function FooterCta() {
             letterSpacing="-0.04rem"
             lineHeight={1}
             pr={{ base: 0.8, lg: 0.9 }}
-            text="Build on Cradle"
+            text="Join the Waitlist"
           />
           <Box>
             <Text color="font.secondary" textAlign="center" w="38ch">
-              Launch faster with the most comprehensive RWA platform built for African securities.
-              Get day-1 access to tokenized NSE stocks via Cradle's integrated trading, lending, and
-              stable asset infrastructure.
+              Be among the first to access tokenized NSE stocks. Get early access to Cradle's
+              trading, lending, and stable asset infrastructure built for African securities.
             </Text>
           </Box>
-          <HStack justifyContent="center" ref={ref} spacing="md">
-            <MotionButton
-              animate={shouldAnimate ? { opacity: 1 } : {}}
-              as={Link}
-              href="https://docs.cradleprotocol.com"
-              initial={{ opacity: 0 }}
-              rel="noopener"
-              rightIcon={<ArrowUpRight size="14px" />}
-              size={{ base: 'md', lg: 'lg' }}
-              target="_blank"
-              transition={{ duration: 0.5, delay: 0.4, ease: 'easeInOut' }}
-              variant="primary"
-              w={{ base: '150px', lg: '180px' }}
-            >
-              View docs
-            </MotionButton>
-            <MotionButton
-              animate={shouldAnimate ? { opacity: 1 } : {}}
-              as={Link}
-              href="https://api.cradleprotocol.com"
-              initial={{ opacity: 0 }}
-              rel="noopener"
-              rightIcon={<ArrowUpRight size="14px" />}
-              size={{ base: 'md', lg: 'lg' }}
-              target="_blank"
-              transition={{ duration: 0.5, delay: 0.4, ease: 'easeInOut' }}
-              variant="secondary"
-              w={{ base: '150px', lg: '180px' }}
-            >
-              Explore API
-            </MotionButton>
-          </HStack>
+          <MotionButton
+            animate={shouldAnimate ? { opacity: 1 } : {}}
+            as={Link}
+            href="https://waitlist.cradlemarkets.com"
+            initial={{ opacity: 0 }}
+            ref={ref}
+            rel="noopener"
+            rightIcon={<ArrowUpRight size="14px" />}
+            size={{ base: 'md', lg: 'lg' }}
+            target="_blank"
+            transition={{ duration: 0.5, delay: 0.4, ease: 'easeInOut' }}
+            variant="primary"
+            w={{ base: '150px', lg: '180px' }}
+          >
+            Join Waitlist
+          </MotionButton>
         </VStack>
       </Center>
     </Noise>

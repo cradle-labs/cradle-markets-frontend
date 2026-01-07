@@ -20,6 +20,7 @@ import type {
   GetUserBorrowPositionOutput,
   GetUserDepositPositonOutput,
   RepaymentAmount,
+  PriceOracle,
 } from '../cradle-client-ts/cradle-api-client'
 
 // =============================================================================
@@ -91,6 +92,14 @@ export async function getLoanRepayments(loanId: string): Promise<LoanRepayment[]
 export async function getRepaymentAmount(loanId: string): Promise<RepaymentAmount> {
   const client = getCradleClient()
   return executeCradleOperation(() => client.getRepaymentAmount(loanId))
+}
+
+/**
+ * Get asset multiplier (price) from the pool oracle
+ */
+export async function getAssetMultiplier(poolId: string, assetId: string): Promise<PriceOracle> {
+  const client = getCradleClient()
+  return executeCradleOperation(() => client.getMultiplier(poolId, assetId))
 }
 
 // =============================================================================

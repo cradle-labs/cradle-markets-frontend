@@ -82,7 +82,7 @@ export function LendSupplyForm({
     if (!walletId) {
       toast({
         title: 'Wallet Required',
-        description: 'Please connect your wallet to supply liquidity',
+        description: 'Account not found.',
         status: 'warning',
         duration: 5000,
         isClosable: true,

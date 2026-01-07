@@ -23,6 +23,14 @@ export interface TokenizedAssetData {
   dailyChange: number
   dailyChangePercent: number
   priceHistory: Array<[number, number]> // [timestamp, price] pairs
+  /**
+   * Quote asset used for pricing this market (e.g., KESN)
+   */
+  quoteAssetSymbol?: string
+  quoteAssetDecimals?: number
+  /**
+   * Optional full OHLCV history for detailed charts
+   */
   timeHistoryData?: Array<{
     timestamp: number
     open: number
@@ -113,12 +121,13 @@ export function TokenizedAssetCard({ asset, onClick }: TokenizedAssetCardProps) 
   )
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    const formatted = new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(price)
+    const symbol = asset.quoteAssetSymbol ?? '$'
+    const separator = symbol === '$' ? '' : ' '
+    return `${symbol}${separator}${formatted}`
   }
 
   const formatChange = (change: number) => {

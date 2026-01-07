@@ -72,9 +72,22 @@ export function TradingChart({ symbol = 'SHARES/USDC', data, onCrosshairMove }: 
   const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
   const { colorMode } = useColorMode()
 
+  // Extract quote asset symbol from symbol prop (e.g., "SAF/KESN" -> "KESN")
+  const quoteSymbol = symbol.includes('/') ? symbol.split('/')[1] : '$'
+
   const [activeTimeFrame, setActiveTimeFrame] = useState<TimeFrame>('1D')
   const [currentPrice, setCurrentPrice] = useState<number | null>(null)
   const [chartData, setChartData] = useState<ChartData[]>([])
+
+  // Format price with quote asset symbol
+  const formatPrice = (price: number) => {
+    const formatted = new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4,
+    }).format(price)
+    const separator = quoteSymbol === '$' ? '' : ' '
+    return `${quoteSymbol}${separator}${formatted}`
+  }
 
   // Memoize the crosshair move handler to prevent unnecessary re-renders
   const handleCrosshairMove = useCallback(
@@ -271,11 +284,11 @@ export function TradingChart({ symbol = 'SHARES/USDC', data, onCrosshairMove }: 
             </Text>
             <HStack spacing={2}>
               <Text fontSize="2xl" fontWeight="bold">
-                ${safeCurrentPrice.toFixed(4)}
+                {formatPrice(safeCurrentPrice)}
               </Text>
               <Text color={priceChange >= 0 ? 'green.400' : 'red.400'} fontSize="sm">
                 {priceChange >= 0 ? '+' : ''}
-                {priceChange.toFixed(4)} ({priceChangePercent >= 0 ? '+' : ''}
+                {formatPrice(priceChange)} ({priceChangePercent >= 0 ? '+' : ''}
                 {priceChangePercent.toFixed(2)}%)
               </Text>
             </HStack>

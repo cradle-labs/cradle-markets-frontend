@@ -93,7 +93,8 @@ export function useAssetChartLogic(asset: TokenizedAssetData): AssetChartContext
     return convertToCandlestickData(asset.priceHistory)
   }, [asset.priceHistory, asset.timeHistoryData])
 
-  const symbol = `${asset.symbol}/cpUSD`
+  const quote = asset.quoteAssetSymbol ?? 'cpUSD'
+  const symbol = `${asset.symbol}/${quote}`
 
   return {
     candlestickData,

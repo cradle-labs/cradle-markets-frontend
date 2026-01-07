@@ -101,12 +101,13 @@ export function TokenizedAssetTableRow({
   )
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    const formatted = new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(price)
+    const symbol = asset.quoteAssetSymbol ?? '$'
+    const separator = symbol === '$' ? '' : ' '
+    return `${symbol}${separator}${formatted}`
   }
 
   const formatChange = (change: number) => {
@@ -120,12 +121,13 @@ export function TokenizedAssetTableRow({
   }
 
   const formatVolume = (vol: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    const formatted = new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(vol)
+    const symbol = asset.quoteAssetSymbol ?? '$'
+    const separator = symbol === '$' ? '' : ' '
+    return `${symbol}${separator}${formatted}`
   }
 
   return (

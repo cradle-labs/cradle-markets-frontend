@@ -214,7 +214,7 @@ export function LendBorrowForm({
     if (!walletId) {
       toast({
         title: 'Wallet Required',
-        description: 'Please connect your wallet to borrow',
+        description: 'Account not found.',
         status: 'warning',
         duration: 5000,
         isClosable: true,

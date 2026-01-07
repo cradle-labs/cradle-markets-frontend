@@ -9,8 +9,8 @@ import type { TimeHistoryDataPoint } from '@repo/lib/actions/time-history'
 
 // Time history configuration - single config for all markets
 const TIME_HISTORY_CONFIG = {
-  duration_secs: '94608000', // 1 month
-  interval: '1week' as const,
+  duration_secs: '604800', // 1 month
+  interval: '15min' as const,
 }
 
 // Fetch time history data using the Time Series server action
@@ -78,11 +78,12 @@ function transformMarketsToAssets(
 
   return spotMarkets
     .map((market, index) => {
-      // Find the primary asset (asset_one) for this market
-      const asset = assets.find(a => a.id === market.asset_one)
+      // Find the primary base asset (asset_one) and quote asset (asset_two) for this market
+      const baseAsset = assets.find(a => a.id === market.asset_one)
+      const quoteAsset = assets.find(a => a.id === market.asset_two)
 
-      if (!asset) {
-        console.warn(`Asset not found for market ${market.id}`)
+      if (!baseAsset) {
+        console.warn(`Base asset not found for market ${market.id}`)
         return null
       }
 
@@ -99,9 +100,9 @@ function transformMarketsToAssets(
         console.warn(`No time history data for market ${market.id} - showing without chart`)
         return {
           id: market.id,
-          symbol: asset.symbol,
-          name: asset.name,
-          logo: asset.icon,
+          symbol: baseAsset.symbol,
+          name: baseAsset.name,
+          logo: baseAsset.icon,
           currentPrice: 0,
           dailyChange: 0,
           dailyChangePercent: 0,
@@ -138,13 +139,15 @@ function transformMarketsToAssets(
 
       return {
         id: market.id,
-        symbol: asset.symbol,
-        name: asset.name,
-        logo: asset.icon,
+        symbol: baseAsset.symbol,
+        name: baseAsset.name,
+        logo: baseAsset.icon,
         currentPrice,
         dailyChange,
         dailyChangePercent,
         priceHistory,
+        quoteAssetSymbol: quoteAsset?.symbol,
+        quoteAssetDecimals: quoteAsset?.decimals != null ? Number(quoteAsset.decimals) : undefined,
         timeHistoryData,
       }
     })

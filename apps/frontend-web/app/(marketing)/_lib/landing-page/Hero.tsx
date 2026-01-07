@@ -146,36 +146,13 @@ export function Hero() {
                     : {}
                 }
                 as={Link}
-                href="https://docs.cradleprotocol.com"
+                href="/trade"
                 initial={{ opacity: 0 }}
                 rel="noopener"
                 rightIcon={<ArrowUpRight size="14px" />}
                 size="lg"
-                target="_blank"
                 transition={{ duration: 2, delay: 1.2 }}
                 variant="primary"
-              >
-                View docs
-              </MotionButton>
-
-              <MotionButton
-                animate={
-                  shouldAnimate
-                    ? {
-                        opacity: 1,
-                        willChange: 'opacity',
-                      }
-                    : {}
-                }
-                as={Link}
-                href="https://cradleprotocol.com/sign-up"
-                initial={{ opacity: 0 }}
-                rel="noopener"
-                rightIcon={<ArrowUpRight size="14px" />}
-                size="lg"
-                target="_blank"
-                transition={{ duration: 2, delay: 1.2 }}
-                variant="secondary"
               >
                 Start trading
               </MotionButton>

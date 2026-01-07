@@ -8,7 +8,8 @@ interface PoolMetricsGridProps {
   totalBorrowed: number
   activeLoansCount: number
   supplyAPY: number
-  borrowAPY: number
+  borrowAPY?: number
+  baseRate: number
 }
 
 export function PoolMetricsGrid({
@@ -18,6 +19,7 @@ export function PoolMetricsGrid({
   activeLoansCount,
   supplyAPY,
   borrowAPY,
+  baseRate,
 }: PoolMetricsGridProps) {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -27,6 +29,9 @@ export function PoolMetricsGrid({
       maximumFractionDigits: 0,
     }).format(amount)
   }
+
+  console.log('baseRate', baseRate)
+  console.log('borrowAPY', borrowAPY)
 
   const formatPercentage = (value: number) => {
     return `${(value * 100).toFixed(2)}%`
@@ -78,9 +83,9 @@ export function PoolMetricsGrid({
             Borrow APY
           </StatLabel>
           <StatNumber color="orange.500" fontSize="2xl">
-            {formatPercentage(borrowAPY)}
+            {formatPercentage(baseRate)}
           </StatNumber>
-          <StatHelpText color="text.tertiary">Current rate</StatHelpText>
+          <StatHelpText color="text.tertiary">Base rate</StatHelpText>
         </Stat>
       </Card>
     </Grid>

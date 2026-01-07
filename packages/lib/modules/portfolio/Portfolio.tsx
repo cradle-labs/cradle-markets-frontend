@@ -322,7 +322,7 @@ export default function Portfolio() {
             </Text>
           </DrawerHeader>
           <DrawerBody overflowY="auto" pb={6}>
-            <MobileMoneyForm assets={assets || []} onClose={onClose} walletId={wallet?.id} />
+            <MobileMoneyForm onClose={onClose} walletId={wallet?.id} />
           </DrawerBody>
         </DrawerContent>
       </Drawer>

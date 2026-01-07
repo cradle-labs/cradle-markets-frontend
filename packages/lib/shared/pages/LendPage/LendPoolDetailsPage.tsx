@@ -43,7 +43,6 @@ import {
   fromBasisPoints,
   fromTokenDecimals,
 } from '@repo/lib/modules/lend'
-import { TokenizedAssetProvider } from '@repo/lib/modules/trade/TokenizedAssets'
 
 interface LendPoolDetailsPageProps {
   poolId: string
@@ -66,7 +65,7 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
 
   // Fetch pool data
   const { data: pool, isLoading: isLoadingPool } = useLendingPool({ poolId })
-
+  console.log('pool', pool)
   // Fetch pool stats (metrics)
   const {
     data: poolStats,
@@ -113,15 +112,16 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
   const poolData = useMemo(() => {
     if (!pool) return null
 
-    // Convert token amounts from decimals (8 decimals) to normalized form
+    // Convert token amounts from decimals to normalized form using actual asset decimals
     // Note: poolStats uses 'utilization', 'supply_rate', 'borrow_rate' (not 'utilization_rate', 'supply_apy', 'borrow_apy')
+    const assetDecimals = asset?.decimals ?? 8
     const totalSupplied =
       poolStats?.total_supplied != null
-        ? fromTokenDecimals(Number(poolStats.total_supplied as string | number))
+        ? fromTokenDecimals(Number(poolStats.total_supplied as string | number), assetDecimals)
         : 0
     const totalBorrowed =
       poolStats?.total_borrowed != null
-        ? fromTokenDecimals(Number(poolStats.total_borrowed as string | number))
+        ? fromTokenDecimals(Number(poolStats.total_borrowed as string | number), assetDecimals)
         : 0
     const utilization =
       poolStats?.utilization != null ? fromBasisPoints(poolStats.utilization as string | number) : 0
@@ -131,7 +131,7 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
       poolStats?.borrow_rate != null ? fromBasisPoints(poolStats.borrow_rate as string | number) : 0
     const availableLiquidity =
       poolStats?.liquidity != null
-        ? fromTokenDecimals(Number(poolStats.liquidity as string | number))
+        ? fromTokenDecimals(Number(poolStats.liquidity as string | number), assetDecimals)
         : totalSupplied - totalBorrowed
 
     return {
@@ -147,6 +147,7 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
       loans,
     }
   }, [pool, poolStats, asset, transactions, loans])
+  console.log('poolData', poolData)
 
   const fallbackBg = useColorModeValue('gray.100', 'gray.700')
   const fallbackColor = useColorModeValue('gray.600', 'gray.300')
@@ -343,6 +344,7 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
         <PoolMetricsGrid
           activeLoansCount={poolData.loans.filter((l: Loan) => l.status === 'active').length}
           availableLiquidity={poolData.availableLiquidity}
+          baseRate={fromBasisPoints(poolData.base_rate)}
           borrowAPY={poolData.borrowAPY}
           supplyAPY={poolData.supplyAPY}
           totalBorrowed={poolData.totalBorrowed}
@@ -370,25 +372,24 @@ export function LendPoolDetailsPage({ poolId }: LendPoolDetailsPageProps) {
             slope1={poolData.slope1}
             slope2={poolData.slope2}
           />
-          <TokenizedAssetProvider>
-            <LendTradingPanel
-              assetDecimals={
-                poolData.asset?.decimals != null ? Number(poolData.asset.decimals) : undefined
-              }
-              assetName={poolData.asset?.name}
-              assetSymbol={poolData.asset?.symbol}
-              borrowAPY={poolData.borrowAPY}
-              loanToValue={poolData.loan_to_value}
-              onTransactionSuccess={() => {
-                refetchTransactions()
-                refetchPoolStats()
-              }}
-              poolId={poolData.id}
-              reserveAssetId={poolData.reserve_asset}
-              supplyAPY={poolData.supplyAPY}
-              walletId={wallet?.id}
-            />
-          </TokenizedAssetProvider>
+          <LendTradingPanel
+            assetDecimals={
+              poolData.asset?.decimals != null ? Number(poolData.asset.decimals) : undefined
+            }
+            assetName={poolData.asset?.name}
+            assetSymbol={poolData.asset?.symbol}
+            baseRate={fromBasisPoints(poolData.base_rate)}
+            borrowAPY={poolData.borrowAPY}
+            loanToValue={poolData.loan_to_value}
+            onTransactionSuccess={() => {
+              refetchTransactions()
+              refetchPoolStats()
+            }}
+            poolId={poolData.id}
+            reserveAssetId={poolData.reserve_asset}
+            supplyAPY={poolData.supplyAPY}
+            walletId={wallet?.id}
+          />
         </Grid>
 
         {/* Recent Activity */}

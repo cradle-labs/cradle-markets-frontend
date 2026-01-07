@@ -137,10 +137,10 @@ export function LendingPoolTableRow({
             </Text>
           </GridItem>
 
-          {/* Borrow APY */}
+          {/* Base Rate */}
           <GridItem justifySelf="end">
             <Text fontSize="sm" fontWeight="medium">
-              {formatPercent(pool.borrowAPY)}
+              {formatPercent(pool.baseRate)}
             </Text>
           </GridItem>
         </Grid>

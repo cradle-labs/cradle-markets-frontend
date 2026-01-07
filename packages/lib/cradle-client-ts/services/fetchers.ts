@@ -31,6 +31,7 @@ import type {
   RepaymentAmount,
   CradleNativeListingRow,
   ListingStats,
+  PriceOracle,
 } from '../cradle-api-client'
 
 // =============================================================================
@@ -211,6 +212,11 @@ export async function fetchLoanRepayments(loanId: string): Promise<LoanRepayment
 export async function fetchRepaymentAmount(loanId: string): Promise<RepaymentAmount> {
   const { getRepaymentAmount } = await import('../../actions/lending')
   return getRepaymentAmount(loanId)
+}
+
+export async function fetchAssetMultiplier(poolId: string, assetId: string): Promise<PriceOracle> {
+  const { getAssetMultiplier } = await import('../../actions/lending')
+  return getAssetMultiplier(poolId, assetId)
 }
 
 // =============================================================================

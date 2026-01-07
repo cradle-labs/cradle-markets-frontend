@@ -38,17 +38,19 @@ export function LendDetails() {
     return lendingPools.map((pool, index) => {
       const asset = assets.find(a => a.id === pool.reserve_asset)
       const poolStats = snapshotQueries[index]?.data
+      console.log('poolStats', poolStats)
 
       // Get metrics from poolStats or use defaults
-      // Convert token amounts from decimals (8 decimals) to normalized form
+      // Convert token amounts from decimals to normalized form using actual asset decimals
       // Note: poolStats uses 'utilization', 'supply_rate', 'borrow_rate' (not 'utilization_rate', 'supply_apy', 'borrow_apy')
+      const assetDecimals = asset?.decimals ?? 8
       const totalSupplied =
         poolStats?.total_supplied != null
-          ? fromTokenDecimals(Number(poolStats.total_supplied as string | number))
+          ? fromTokenDecimals(Number(poolStats.total_supplied as string | number), assetDecimals)
           : 0
       const totalBorrowed =
         poolStats?.total_borrowed != null
-          ? fromTokenDecimals(Number(poolStats.total_borrowed as string | number))
+          ? fromTokenDecimals(Number(poolStats.total_borrowed as string | number), assetDecimals)
           : 0
       const utilization =
         poolStats?.utilization != null
@@ -62,6 +64,10 @@ export function LendDetails() {
         poolStats?.borrow_rate != null
           ? fromBasisPoints(poolStats.borrow_rate as string | number)
           : 0
+      const baseRate =
+        pool.base_rate != null ? fromBasisPoints(pool.base_rate as string | number) : 0
+
+      console.log('baseRate', baseRate)
 
       return {
         ...pool,
@@ -71,6 +77,7 @@ export function LendDetails() {
         utilization,
         supplyAPY,
         borrowAPY,
+        baseRate,
       }
     })
   }, [lendingPools, assets, snapshotQueries])

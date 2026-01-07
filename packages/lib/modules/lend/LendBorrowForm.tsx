@@ -108,9 +108,10 @@ export function LendBorrowForm({
     if (!priceOracle?.price) {
       return 0
     }
-    // Convert price string to number and adjust for asset decimals
-    return fromTokenDecimals(parseFloat(priceOracle.price), selectedCollateralAsset?.decimals ?? 8)
-  }, [priceOracle, selectedCollateralAsset])
+    // Oracle returns price in KESN smallest units per collateral unit
+    // Divide by KESN decimals (6) to get human-readable KESN per collateral
+    return fromTokenDecimals(parseFloat(priceOracle.price), assetDecimals ?? 6)
+  }, [priceOracle, assetDecimals])
 
   // Create select options for collateral assets
   const collateralOptions: SelectOption[] = useMemo(() => {
@@ -194,7 +195,7 @@ export function LendBorrowForm({
   const calculateRequiredCollateral = () => {
     const borrowAmount = parseFloat(amount)
     if (!borrowAmount || borrowAmount <= 0 || collateralPrice <= 0 || ltvDecimal <= 0) return 0
-    // Required collateral in selected asset units = borrowAmount (cpUSD) / (price * LTV)
+    // Required collateral = borrowAmount (KESN) / (price in KESN per collateral * LTV)
     return borrowAmount / (collateralPrice * ltvDecimal)
   }
 
@@ -204,8 +205,7 @@ export function LendBorrowForm({
     ltvDecimal,
   ])
 
-  // Value of required collateral in reserve asset (e.g., KESN)
-  const requiredCollateralValue = useMemo(
+  const requiredCollateralValueUsd = useMemo(
     () => requiredCollateral * collateralPrice,
     [requiredCollateral, collateralPrice]
   )
@@ -278,6 +278,17 @@ export function LendBorrowForm({
       const collateralBalanceData = collateralBalances.find(b => b.assetId === selectedCollateralId)
       const collateralAssetDecimals =
         collateralBalanceData?.data?.decimals ?? selectedCollateralAsset?.decimals ?? 8
+      console.log('collateralAssetDecimals', collateralAssetDecimals)
+      console.log('requiredCollateral', requiredCollateral)
+      console.log('collateralPrice', collateralPrice)
+      console.log('ltvDecimal', ltvDecimal)
+      console.log('collateralBalance', collateralBalance)
+      console.log('availableBorrow', availableBorrow)
+      console.log('amount', amount)
+      console.log('walletId', walletId)
+      console.log('poolId', poolId)
+      console.log('selectedCollateralId', selectedCollateralId)
+      console.log('selectedCollateralAsset', selectedCollateralAsset)
 
       // The amount field should be the required collateral amount (in collateral asset units)
       // Convert required collateral from normalized form to token decimals
@@ -428,7 +439,7 @@ export function LendBorrowForm({
                   {requiredCollateral.toFixed(4)} {collateralSymbol || 'collateral'}
                 </Text>
                 <Text color="text.tertiary" fontSize="xs">
-                  ≈ {requiredCollateralValue.toFixed(2)} {assetSymbol || 'tokens'} based on{' '}
+                  ≈ {requiredCollateralValueUsd.toFixed(2)} {assetSymbol || 'tokens'} based on{' '}
                   {formatPercentage(ltvDecimal)} LTV
                 </Text>
               </Box>

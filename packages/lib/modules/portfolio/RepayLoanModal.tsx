@@ -92,8 +92,8 @@ export function RepayLoanModal({ isOpen, onClose, loan, walletId, asset }: Repay
     setIsSubmitting(true)
 
     try {
-      // Convert the amount to token decimals (8 decimals)
-      const amountInTokenDecimals = toTokenDecimals(parseFloat(repayAmount))
+      // Convert the amount to token decimals (6 decimals for KESN)
+      const amountInTokenDecimals = toTokenDecimals(parseFloat(repayAmount), 6)
 
       const result = await repayBorrow({
         wallet: walletId,
@@ -158,8 +158,9 @@ export function RepayLoanModal({ isOpen, onClose, loan, walletId, asset }: Repay
     }
   }
 
+  // KESN has 6 decimal places
   const currentDebt = loanPosition?.current_dept
-    ? fromTokenDecimals(parseFloat(String(loanPosition.current_dept)))
+    ? fromTokenDecimals(parseFloat(String(loanPosition.current_dept)), 6)
     : 0
 
   // Health factor is stored in 18 decimals (like Wei), so divide by 10^18
@@ -206,7 +207,7 @@ export function RepayLoanModal({ isOpen, onClose, loan, walletId, asset }: Repay
                 ) : (
                   <HStack spacing={1}>
                     <Text fontSize="xl" fontWeight="bold">
-                      ${formatNumberWithCommas(currentDebt, 2)}
+                      {formatNumberWithCommas(currentDebt, 2)}
                     </Text>
                     <Text color="font.secondary" fontSize="sm" fontWeight="medium">
                       {asset?.symbol || ''}

@@ -102,14 +102,15 @@ export function LendBorrowForm({
     assetId: selectedCollateralId,
     enabled: !!poolId && !!selectedCollateralId,
   })
+  console.log('price oracle', priceOracle)
 
   const collateralPrice = useMemo(() => {
     if (!priceOracle?.price) {
       return 0
     }
-    // Convert price string to number
-    return parseFloat(priceOracle.price)
-  }, [priceOracle])
+    // Convert price string to number and adjust for asset decimals
+    return fromTokenDecimals(parseFloat(priceOracle.price), selectedCollateralAsset?.decimals ?? 8)
+  }, [priceOracle, selectedCollateralAsset])
 
   // Create select options for collateral assets
   const collateralOptions: SelectOption[] = useMemo(() => {

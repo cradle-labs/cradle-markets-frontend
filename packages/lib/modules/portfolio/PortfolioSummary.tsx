@@ -39,9 +39,10 @@ interface PortfolioSummaryProps {
 
 interface AssetCardProps {
   asset: AssetBalance
+  showValue?: boolean
 }
 
-function AssetCard({ asset }: AssetCardProps) {
+function AssetCard({ asset, showValue = true }: AssetCardProps) {
   const cardBg = useColorModeValue('background.level1', 'background.level1')
   const fallbackBg = useColorModeValue('background.level2', 'background.level2')
   const fallbackColor = useColorModeValue('font.secondary', 'font.secondary')
@@ -123,7 +124,7 @@ function AssetCard({ asset }: AssetCardProps) {
             <Text fontSize="sm" fontWeight="semibold">
               {displayBalance}
             </Text>
-            {asset.value !== undefined && asset.value > 0 && (
+            {showValue && asset.value !== undefined && asset.value > 0 && (
               <Text color="font.secondary" fontSize="xs">
                 {fNum('fiat', asset.value, { abbreviated: false })} KESN
               </Text>
@@ -396,7 +397,7 @@ const PortfolioSummary = ({
               ) : stableAssetBalances.length > 0 ? (
                 <VStack spacing={3} w="full">
                   {stableAssetBalances.map(asset => (
-                    <AssetCard asset={asset} key={asset.id} />
+                    <AssetCard asset={asset} key={asset.id} showValue={false} />
                   ))}
                 </VStack>
               ) : (

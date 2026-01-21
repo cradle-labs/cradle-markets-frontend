@@ -125,6 +125,8 @@ export function TokenizedAssetCard({ asset, onClick }: TokenizedAssetCardProps) 
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(price)
+    // Use quoteAssetSymbol (e.g., KESN, cpUSD) - matches logic from AssetHeader and AssetInfo
+    console.log('asset.quoteAssetSymbol', asset.quoteAssetSymbol)
     const symbol = asset.quoteAssetSymbol ?? '$'
     const separator = symbol === '$' ? '' : ' '
     return `${symbol}${separator}${formatted}`

@@ -9,8 +9,8 @@ import type { TimeHistoryDataPoint } from '@repo/lib/actions/time-history'
 
 // Time history configuration - single config for all markets
 const TIME_HISTORY_CONFIG = {
-  duration_secs: '604800', // 1 month
-  interval: '15min' as const,
+  duration_secs: '7776000', // 1 month
+  interval: '1day' as const,
 }
 
 // Fetch time history data using the Time Series server action

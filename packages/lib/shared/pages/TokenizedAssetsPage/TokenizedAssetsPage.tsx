@@ -62,25 +62,16 @@ function TokenizedAssetsContent({ onAssetClick }: TokenizedAssetsContentProps) {
       )
     }
 
-    // Apply category filter (mock implementation)
+    // Apply category filter
     if (selectedCategory !== 'all') {
-      // In a real app, assets would have category metadata
       filtered = filtered.filter(asset => {
-        // Simple mock categorization for NSE stocks
-        if (selectedCategory === 'technology') {
-          return ['Safaricom'].some(name => asset.name.toLowerCase().includes(name.toLowerCase()))
+        const marketName = asset.marketName || ''
+        if (selectedCategory === 'equities') {
+          return marketName.endsWith('/KESN')
         }
-        if (selectedCategory === 'financials') {
-          return ['Equity Bank', 'KCB', 'Co-operative Bank', 'NCBA', 'Standard Chartered'].some(
-            name => asset.name.toLowerCase().includes(name.toLowerCase())
-          )
+        if (selectedCategory === 'forex') {
+          return marketName.startsWith('KES/')
         }
-        if (selectedCategory === 'consumer') {
-          return ['EABL', 'BAT', 'Bamburi', 'Crown Paints'].some(name =>
-            asset.name.toLowerCase().includes(name.toLowerCase())
-          )
-        }
-
         return true
       })
     }

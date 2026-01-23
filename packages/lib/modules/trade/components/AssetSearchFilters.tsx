@@ -24,15 +24,7 @@ import { getSelectStyles } from '@repo/lib/shared/services/chakra/custom/chakra-
 import { useIsMounted } from '@repo/lib/shared/hooks/useIsMounted'
 
 export type ViewMode = 'grid' | 'list'
-export type AssetCategory =
-  | 'all'
-  | 'etf'
-  | 'technology'
-  | 'consumer'
-  | 'financials'
-  | 'large-cap'
-  | 'growth'
-  | 'value'
+export type AssetCategory = 'all' | 'equities' | 'forex'
 export type SortOption =
   | 'most-popular'
   | 'price-asc'
@@ -56,13 +48,8 @@ interface AssetSearchFiltersProps {
 
 const assetCategories: Array<{ value: AssetCategory; label: string }> = [
   { value: 'all', label: 'All assets' },
-  { value: 'etf', label: 'ETF' },
-  { value: 'technology', label: 'Technology' },
-  { value: 'consumer', label: 'Consumer' },
-  { value: 'financials', label: 'Financials' },
-  { value: 'large-cap', label: 'Large Cap' },
-  { value: 'growth', label: 'Growth' },
-  { value: 'value', label: 'Value' },
+  { value: 'equities', label: 'Equities' },
+  { value: 'forex', label: 'Forex' },
 ]
 
 interface SortSelectOption extends OptionBase {

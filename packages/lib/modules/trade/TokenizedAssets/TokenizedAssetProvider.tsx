@@ -107,6 +107,7 @@ function transformMarketsToAssets(
           dailyChange: 0,
           dailyChangePercent: 0,
           priceHistory: [], // Empty array = no chart
+          marketName: market.name,
           timeHistoryData: [],
         }
       }
@@ -146,6 +147,7 @@ function transformMarketsToAssets(
         dailyChange,
         dailyChangePercent,
         priceHistory,
+        marketName: market.name,
         quoteAssetSymbol: quoteAsset?.symbol,
         quoteAssetDecimals: quoteAsset?.decimals != null ? Number(quoteAsset.decimals) : undefined,
         timeHistoryData,

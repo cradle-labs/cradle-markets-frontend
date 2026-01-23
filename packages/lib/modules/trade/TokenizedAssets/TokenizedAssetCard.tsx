@@ -24,6 +24,10 @@ export interface TokenizedAssetData {
   dailyChangePercent: number
   priceHistory: Array<[number, number]> // [timestamp, price] pairs
   /**
+   * Market pair name (e.g., "SCOM/KESN" or "KES/UGX")
+   */
+  marketName?: string
+  /**
    * Quote asset used for pricing this market (e.g., KESN)
    */
   quoteAssetSymbol?: string

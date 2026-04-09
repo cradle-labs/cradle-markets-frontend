@@ -45,11 +45,11 @@ export async function setRole(prevState: any, formData: FormData): Promise<SetRo
       })
 
       // Create Cradle account
-      const accountType: CradleAccountType = role === 'institutional' ? 'institutional' : 'retail'
+      const accountType: CradleAccountType = role === 'institutional' ? 'Institutional' : 'Retail'
       const accountResult = await createAccount({
         linked_account_id: userId,
         account_type: accountType,
-        status: 'verified',
+        status: 'Verified',
       })
 
       if (!accountResult.success) {

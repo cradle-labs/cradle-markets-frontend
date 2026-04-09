@@ -19,8 +19,8 @@ function AssetTradingContent() {
   }
 
   return (
-    <Box bg="background.level0" h="full" w="full">
-      <Box borderBottom="1px solid" borderColor="border.base" px={3} py={2}>
+    <Box bg="background.level0" display="flex" flexDirection="column" h="full" overflow="hidden" w="full">
+      <Box borderBottom="1px solid" borderColor="border.base" flexShrink={0} px={3} py={2}>
         <ButtonGroup
           currentOption={activeTab}
           groupId="trading-tabs"
@@ -30,7 +30,7 @@ function AssetTradingContent() {
         />
       </Box>
 
-      <Box overflowY="auto" px={3} py={3}>
+      <Box flex={1} minH={0} overflowY="auto" px={3} py={3}>
         <VStack spacing={3} w="full">
           {activeTab.value === AssetTradingTab.BUY ? <AssetBuyForm /> : <AssetSellForm />}
         </VStack>

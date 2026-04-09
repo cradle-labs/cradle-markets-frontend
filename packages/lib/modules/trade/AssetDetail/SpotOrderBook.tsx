@@ -22,7 +22,7 @@ function formatNum(value: number, decimals: number): string {
 }
 
 export function SpotOrderBook() {
-  const { orders, market, assetOne, assetTwo } = useAssetDetail()
+  const { orders, market, assetOne, assetTwo, setSelectedOrderBookPrice } = useAssetDetail()
 
   const baseDecimals = assetOne?.decimals != null ? Number(assetOne.decimals) : 6
   const quoteDecimals = assetTwo?.decimals != null ? Number(assetTwo.decimals) : 6
@@ -160,7 +160,7 @@ export function SpotOrderBook() {
       </Grid>
 
       {/* Asks (sell orders) */}
-      <Box flex={1} overflow="hidden" w="full">
+      <Box flex={1} overflowY="auto" w="full">
         {paddedAsks.map((ask, idx) => {
           if (!ask) {
             return (
@@ -184,11 +184,14 @@ export function SpotOrderBook() {
           const pct = (ask.total / maxAskTotal) * 100
           return (
             <Grid
+              _hover={{ bg: 'rgba(239, 68, 68, 0.04)' }}
+              cursor="pointer"
               fontFamily="mono"
               fontSize="11px"
               gap={2}
               key={`ask-${idx}`}
               lineHeight="tight"
+              onClick={() => setSelectedOrderBookPrice(ask.price)}
               position="relative"
               px={3}
               py="2px"
@@ -249,7 +252,7 @@ export function SpotOrderBook() {
       </Box>
 
       {/* Bids (buy orders) */}
-      <Box flex={1} overflow="hidden" w="full">
+      <Box flex={1} overflowY="auto" w="full">
         {paddedBids.map((bid, idx) => {
           if (!bid) {
             return (
@@ -273,11 +276,14 @@ export function SpotOrderBook() {
           const pct = (bid.total / maxBidTotal) * 100
           return (
             <Grid
+              _hover={{ bg: 'rgba(34, 197, 94, 0.04)' }}
+              cursor="pointer"
               fontFamily="mono"
               fontSize="11px"
               gap={2}
               key={`bid-${idx}`}
               lineHeight="tight"
+              onClick={() => setSelectedOrderBookPrice(bid.price)}
               position="relative"
               px={3}
               py="2px"

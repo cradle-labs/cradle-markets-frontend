@@ -24,19 +24,27 @@ function AssetDetailContent() {
   }
 
   return (
-    <Box bg="background.level0" display="flex" flexDirection="column" minH="100vh" w="full">
+    <Box
+      bg="background.level0"
+      display="flex"
+      flexDirection="column"
+      h="calc(100vh - 72px)"
+      overflow="hidden"
+      w="full"
+    >
       {/* Top: Market info bar */}
       <MarketInfoBar asset={asset} />
 
-      {/* Main grid: Chart + Order Book (top), Orders + Trading Panel (bottom) */}
+      {/* Main grid — fills remaining viewport, no page scroll */}
       <Grid
         flex={1}
+        minH={0}
         templateColumns={{ base: '1fr', lg: '1fr 280px' }}
-        templateRows="minmax(450px, 1fr) minmax(300px, auto)"
+        templateRows="60% 40%"
         w="full"
       >
         {/* Top-left: Chart */}
-        <GridItem borderBottom="1px solid" borderColor="border.base" overflow="hidden">
+        <GridItem borderBottom="1px solid" borderColor="border.base" minH={0} overflow="hidden">
           <AssetChart asset={asset} />
         </GridItem>
 
@@ -44,14 +52,15 @@ function AssetDetailContent() {
         <GridItem
           borderBottom="1px solid"
           borderColor="border.base"
-          display={{ base: 'none', lg: 'block' }}
+          display={{ base: 'none', lg: 'flex' }}
+          minH={0}
           overflow="hidden"
         >
           <SpotOrderBook />
         </GridItem>
 
         {/* Bottom-left: Market Orders */}
-        <GridItem overflow="auto" p={0}>
+        <GridItem display="flex" flexDirection="column" minH={0} overflow="hidden">
           <MarketOrders />
         </GridItem>
 
@@ -59,8 +68,10 @@ function AssetDetailContent() {
         <GridItem
           borderColor="border.base"
           borderLeft="1px solid"
-          display={{ base: 'none', lg: 'block' }}
-          overflow="auto"
+          display={{ base: 'none', lg: 'flex' }}
+          flexDirection="column"
+          minH={0}
+          overflow="hidden"
         >
           <AssetTradingPanel asset={asset} />
         </GridItem>
@@ -71,11 +82,19 @@ function AssetDetailContent() {
 
 function AssetDetailSkeleton() {
   return (
-    <Box bg="background.level0" minH="100vh" w="full">
+    <Box
+      bg="background.level0"
+      display="flex"
+      flexDirection="column"
+      h="calc(100vh - 72px)"
+      overflow="hidden"
+      w="full"
+    >
       {/* Info bar skeleton */}
       <HStack
         borderBottom="1px solid"
         borderColor="border.base"
+        flexShrink={0}
         h="56px"
         px={4}
         spacing={6}
@@ -90,22 +109,13 @@ function AssetDetailSkeleton() {
 
       <Grid
         flex={1}
-        h="calc(100vh - 56px)"
+        minH={0}
         templateColumns={{ base: '1fr', lg: '1fr 280px' }}
-        templateRows="1fr auto"
+        templateRows="60% 40%"
       >
-        {/* Chart skeleton */}
         <GridItem borderBottom="1px solid" borderColor="border.base" p={4}>
-          <VStack align="start" h="full" spacing={4}>
-            <HStack spacing={2}>
-              <Skeleton h="20px" w="80px" />
-              <Skeleton h="20px" w="60px" />
-            </HStack>
-            <Skeleton flex={1} w="full" />
-          </VStack>
+          <Skeleton h="full" w="full" />
         </GridItem>
-
-        {/* Order book skeleton */}
         <GridItem
           borderBottom="1px solid"
           borderColor="border.base"
@@ -114,16 +124,13 @@ function AssetDetailSkeleton() {
           p={2}
         >
           <VStack spacing={1}>
-            <Skeleton h="20px" w="full" />
-            {Array.from({ length: 10 }).map((_, i) => (
-              <Skeleton h="16px" key={i} w="full" />
+            {Array.from({ length: 12 }).map((_, i) => (
+              <Skeleton h="14px" key={i} w="full" />
             ))}
           </VStack>
         </GridItem>
-
-        {/* Bottom skeleton */}
         <GridItem p={4}>
-          <Skeleton h="200px" w="full" />
+          <Skeleton h="full" w="full" />
         </GridItem>
         <GridItem
           borderColor="border.base"
@@ -131,7 +138,7 @@ function AssetDetailSkeleton() {
           display={{ base: 'none', lg: 'block' }}
           p={4}
         >
-          <Skeleton h="300px" w="full" />
+          <Skeleton h="full" w="full" />
         </GridItem>
       </Grid>
     </Box>
@@ -140,7 +147,7 @@ function AssetDetailSkeleton() {
 
 function AssetDetailError({ error }: { error: string | null }) {
   return (
-    <VStack py={8} spacing={4}>
+    <VStack h="calc(100vh - 72px)" justify="center" spacing={4}>
       <Box color="red.500" fontSize="lg" fontWeight="semibold">
         Error loading asset
       </Box>

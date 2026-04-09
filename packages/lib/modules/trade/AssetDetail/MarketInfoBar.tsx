@@ -1,9 +1,11 @@
 'use client'
 
-import { Box, HStack, Text, Image, Divider } from '@chakra-ui/react'
+import { Box, HStack, Text, Image, Divider, Tooltip, IconButton } from '@chakra-ui/react'
+import { ArrowLeft } from 'react-feather'
 import { TokenizedAssetData } from '../TokenizedAssets/TokenizedAssetCard'
 import { useAssetDetail } from './AssetDetailProvider'
 import { useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 
 interface MarketInfoBarProps {
   asset: TokenizedAssetData
@@ -11,6 +13,7 @@ interface MarketInfoBarProps {
 
 export function MarketInfoBar({ asset }: MarketInfoBarProps) {
   const { assetTwo, market } = useAssetDetail()
+  const router = useRouter()
   const isPositive = asset.dailyChange >= 0
   const quoteSymbol = assetTwo?.symbol ?? asset.quoteAssetSymbol ?? '$'
 
@@ -21,7 +24,6 @@ export function MarketInfoBar({ asset }: MarketInfoBarProps) {
     }).format(price)
   }
 
-  // Calculate 24h high/low/volume from timeHistoryData
   const { high24h, low24h, volume24h } = useMemo(() => {
     if (!asset.timeHistoryData || asset.timeHistoryData.length === 0) {
       return { high24h: 0, low24h: 0, volume24h: 0 }
@@ -30,8 +32,6 @@ export function MarketInfoBar({ asset }: MarketInfoBarProps) {
     const now = Date.now() / 1000
     const dayAgo = now - 86400
     const recentData = asset.timeHistoryData.filter(d => d.timestamp >= dayAgo)
-
-    // If no data in last 24h, use all available data
     const data = recentData.length > 0 ? recentData : asset.timeHistoryData
 
     return {
@@ -54,25 +54,36 @@ export function MarketInfoBar({ asset }: MarketInfoBarProps) {
       bg="background.level0"
       borderBottom="1px solid"
       borderColor="border.base"
-      h="56px"
-      px={4}
+      flexShrink={0}
+      h="48px"
+      px={2}
       spacing={0}
       w="full"
     >
+      {/* Back button */}
+      <IconButton
+        aria-label="Back to markets"
+        icon={<ArrowLeft size={16} />}
+        mr={1}
+        onClick={() => router.push('/trade')}
+        size="sm"
+        variant="ghost"
+      />
+
       {/* Market pair with icon */}
-      <HStack minW="180px" spacing={2}>
+      <HStack minW="140px" spacing={2}>
         <Image
           alt={asset.name}
           borderRadius="full"
-          boxSize="24px"
+          boxSize="20px"
           fallback={
             <Box
               alignItems="center"
               bg="gray.600"
               borderRadius="full"
-              boxSize="24px"
+              boxSize="20px"
               display="flex"
-              fontSize="xs"
+              fontSize="2xs"
               fontWeight="bold"
               justifyContent="center"
             >
@@ -81,79 +92,86 @@ export function MarketInfoBar({ asset }: MarketInfoBarProps) {
           }
           src={asset.logo}
         />
-        <Text fontSize="md" fontWeight="bold">
+        <Text fontSize="sm" fontWeight="bold">
           {pairName}
         </Text>
       </HStack>
 
-      <Divider h="32px" orientation="vertical" />
+      <Divider h="28px" orientation="vertical" />
 
       {/* Last price */}
-      <Box minW="120px" px={4}>
+      <Box px={3}>
         <Text
           color={isPositive ? 'green.400' : 'red.400'}
           fontFamily="mono"
-          fontSize="lg"
+          fontSize="md"
           fontWeight="bold"
         >
           {formatPrice(asset.currentPrice, 4)}
         </Text>
       </Box>
 
-      <Divider h="32px" orientation="vertical" />
+      <Divider h="28px" orientation="vertical" />
 
       {/* 24h Change */}
-      <Box px={4}>
-        <Text color="font.secondary" fontSize="2xs" lineHeight="1">
-          24h Change
-        </Text>
-        <Text
-          color={isPositive ? 'green.400' : 'red.400'}
-          fontFamily="mono"
-          fontSize="sm"
-          fontWeight="medium"
-        >
-          {isPositive ? '+' : ''}
-          {formatPrice(asset.dailyChange, 4)} {isPositive ? '+' : ''}
-          {asset.dailyChangePercent.toFixed(2)}%
-        </Text>
-      </Box>
+      <Tooltip hasArrow label="Price change in last 24 hours" placement="bottom">
+        <Box px={3}>
+          <Text color="font.secondary" fontSize="2xs" lineHeight="1">
+            24h Change
+          </Text>
+          <Text
+            color={isPositive ? 'green.400' : 'red.400'}
+            fontFamily="mono"
+            fontSize="xs"
+            fontWeight="medium"
+          >
+            {isPositive ? '+' : ''}
+            {asset.dailyChangePercent.toFixed(2)}%
+          </Text>
+        </Box>
+      </Tooltip>
 
-      <Divider h="32px" orientation="vertical" />
+      <Divider display={{ base: 'none', xl: 'block' }} h="28px" orientation="vertical" />
 
-      {/* 24h High */}
-      <Box px={4}>
-        <Text color="font.secondary" fontSize="2xs" lineHeight="1">
-          24h High
-        </Text>
-        <Text fontFamily="mono" fontSize="sm" fontWeight="medium">
-          {high24h > 0 ? formatPrice(high24h, 4) : '--'}
-        </Text>
-      </Box>
+      {/* 24h High — hide on smaller screens */}
+      <Tooltip hasArrow label="Highest price in last 24 hours" placement="bottom">
+        <Box display={{ base: 'none', xl: 'block' }} px={3}>
+          <Text color="font.secondary" fontSize="2xs" lineHeight="1">
+            24h High
+          </Text>
+          <Text fontFamily="mono" fontSize="xs" fontWeight="medium">
+            {high24h > 0 ? formatPrice(high24h, 4) : '--'}
+          </Text>
+        </Box>
+      </Tooltip>
 
-      <Divider h="32px" orientation="vertical" />
+      <Divider display={{ base: 'none', xl: 'block' }} h="28px" orientation="vertical" />
 
-      {/* 24h Low */}
-      <Box px={4}>
-        <Text color="font.secondary" fontSize="2xs" lineHeight="1">
-          24h Low
-        </Text>
-        <Text fontFamily="mono" fontSize="sm" fontWeight="medium">
-          {low24h > 0 ? formatPrice(low24h, 4) : '--'}
-        </Text>
-      </Box>
+      {/* 24h Low — hide on smaller screens */}
+      <Tooltip hasArrow label="Lowest price in last 24 hours" placement="bottom">
+        <Box display={{ base: 'none', xl: 'block' }} px={3}>
+          <Text color="font.secondary" fontSize="2xs" lineHeight="1">
+            24h Low
+          </Text>
+          <Text fontFamily="mono" fontSize="xs" fontWeight="medium">
+            {low24h > 0 ? formatPrice(low24h, 4) : '--'}
+          </Text>
+        </Box>
+      </Tooltip>
 
-      <Divider h="32px" orientation="vertical" />
+      <Divider display={{ base: 'none', xl: 'block' }} h="28px" orientation="vertical" />
 
-      {/* 24h Volume */}
-      <Box px={4}>
-        <Text color="font.secondary" fontSize="2xs" lineHeight="1">
-          24h Volume
-        </Text>
-        <Text fontFamily="mono" fontSize="sm" fontWeight="medium">
-          {volume24h > 0 ? formatVolume(volume24h) : '--'}
-        </Text>
-      </Box>
+      {/* 24h Volume — hide on smaller screens */}
+      <Tooltip hasArrow label="Total trading volume in last 24 hours" placement="bottom">
+        <Box display={{ base: 'none', xl: 'block' }} px={3}>
+          <Text color="font.secondary" fontSize="2xs" lineHeight="1">
+            24h Volume
+          </Text>
+          <Text fontFamily="mono" fontSize="xs" fontWeight="medium">
+            {volume24h > 0 ? formatVolume(volume24h) : '--'}
+          </Text>
+        </Box>
+      </Tooltip>
     </HStack>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, ReactNode, useMemo } from 'react'
+import { createContext, useContext, ReactNode, useMemo, useState, useCallback } from 'react'
 import { useQueries } from '@tanstack/react-query'
 import { TokenizedAssetData } from '../TokenizedAssets/TokenizedAssetCard'
 import { useMarket } from '@repo/lib/cradle-client-ts/hooks/markets/useMarket'
@@ -45,6 +45,9 @@ interface AssetDetailContextType {
   loading: boolean
   error: string | null
   refetch: () => void
+  /** Price selected from order book click — forms should use this as limit price */
+  selectedOrderBookPrice: number | null
+  setSelectedOrderBookPrice: (price: number | null) => void
 }
 
 const AssetDetailContext = createContext<AssetDetailContextType | undefined>(undefined)
@@ -215,6 +218,12 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
     }
   }, [market, primaryAsset, secondaryAsset, allTimeHistoryData, marketId])
 
+  // Order book click-to-fill state
+  const [selectedOrderBookPrice, setSelectedOrderBookPrice] = useState<number | null>(null)
+  const handleSetSelectedOrderBookPrice = useCallback((price: number | null) => {
+    setSelectedOrderBookPrice(price)
+  }, [])
+
   const refetch = () => {
     refetchMarket()
     refetchAssetOne()
@@ -232,6 +241,8 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
     loading,
     error,
     refetch,
+    selectedOrderBookPrice,
+    setSelectedOrderBookPrice: handleSetSelectedOrderBookPrice,
   }
 
   return <AssetDetailContext.Provider value={value}>{children}</AssetDetailContext.Provider>

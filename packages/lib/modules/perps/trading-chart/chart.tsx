@@ -11,6 +11,7 @@ import {
   CandlestickSeries,
   HistogramSeries,
   HistogramData,
+  LineStyle,
 } from 'lightweight-charts'
 
 export interface CandlestickDataWithVolume extends CandlestickData {
@@ -45,6 +46,14 @@ export function TradingChart({
   const quoteSymbol = symbol.includes('/') ? symbol.split('/')[1] : '$'
 
   const [currentPrice, setCurrentPrice] = useState<number | null>(null)
+  const [crosshairOhlcv, setCrosshairOhlcv] = useState<{
+    open: number
+    high: number
+    low: number
+    close: number
+    volume: number
+  } | null>(null)
+  const priceLineRef = useRef<ReturnType<ISeriesApi<'Candlestick'>['createPriceLine']> | null>(null)
 
   const formatPrice = (price: number) => {
     const formatted = new Intl.NumberFormat('en-US', {
@@ -53,6 +62,13 @@ export function TradingChart({
     }).format(price)
     const separator = quoteSymbol === '$' ? '' : ' '
     return `${quoteSymbol}${separator}${formatted}`
+  }
+
+  const formatVolume = (vol: number): string => {
+    if (vol >= 1_000_000_000) return `${(vol / 1_000_000_000).toFixed(1)}B`
+    if (vol >= 1_000_000) return `${(vol / 1_000_000).toFixed(1)}M`
+    if (vol >= 1_000) return `${(vol / 1_000).toFixed(1)}K`
+    return vol.toFixed(0)
   }
 
   const handleCrosshairMove = useCallback(
@@ -146,17 +162,31 @@ export function TradingChart({
       try {
         if (param.time && param.seriesData) {
           const seriesData = param.seriesData.get(candlestickSeries)
+          const volData = param.seriesData.get(volumeSeries)
           if (seriesData && typeof seriesData === 'object' && 'close' in seriesData) {
             const candleData = seriesData as CandlestickData
+            const volume =
+              volData && typeof volData === 'object' && 'value' in volData
+                ? (volData as HistogramData).value
+                : 0
             setCurrentPrice(candleData.close)
+            setCrosshairOhlcv({
+              open: candleData.open,
+              high: candleData.high,
+              low: candleData.low,
+              close: candleData.close,
+              volume,
+            })
             handleCrosshairMove(candleData.close, param.time)
           }
         } else {
           setCurrentPrice(null)
+          setCrosshairOhlcv(null)
           handleCrosshairMove(null, null)
         }
       } catch {
         setCurrentPrice(null)
+        setCrosshairOhlcv(null)
       }
     })
 
@@ -203,8 +233,26 @@ export function TradingChart({
     candlestickSeriesRef.current.setData(formattedCandles)
     volumeSeriesRef.current.setData(volumeData)
 
+    // Remove previous price line if it exists
+    if (priceLineRef.current && candlestickSeriesRef.current) {
+      candlestickSeriesRef.current.removePriceLine(priceLineRef.current)
+      priceLineRef.current = null
+    }
+
     if (formattedCandles.length > 0) {
-      setCurrentPrice(formattedCandles[formattedCandles.length - 1].close)
+      const lastCandle = formattedCandles[formattedCandles.length - 1]
+      setCurrentPrice(lastCandle.close)
+
+      // Add a horizontal price line at the latest close
+      const isUp = lastCandle.close >= lastCandle.open
+      priceLineRef.current = candlestickSeriesRef.current.createPriceLine({
+        price: lastCandle.close,
+        color: isUp ? '#22c55e' : '#ef4444',
+        lineWidth: 1,
+        lineStyle: LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: '',
+      })
     }
 
     if (chartRef.current) {
@@ -226,6 +274,17 @@ export function TradingChart({
     latestCandle && prevCandle && prevCandle.close !== 0
       ? (priceChange / prevCandle.close) * 100
       : 0
+
+  // OHLCV values: use crosshair data when hovering, otherwise fall back to latest candle
+  const displayOhlcv = crosshairOhlcv ?? (latestCandle
+    ? {
+        open: latestCandle.open,
+        high: latestCandle.high,
+        low: latestCandle.low,
+        close: latestCandle.close,
+        volume: latestCandle.volume ?? 0,
+      }
+    : null)
 
   return (
     <Box bg="background.level0" display="flex" flexDirection="column" h="full" w="full">
@@ -259,6 +318,40 @@ export function TradingChart({
             {priceChange >= 0 ? '+' : ''}
             {priceChangePercent.toFixed(2)}%
           </Text>
+          {displayOhlcv && (
+            <HStack spacing={2}>
+              <Text color="font.secondary" fontFamily="mono" fontSize="xs">
+                O:{' '}
+                <Text as="span" color="font.primary">
+                  {formatPrice(displayOhlcv.open)}
+                </Text>
+              </Text>
+              <Text color="font.secondary" fontFamily="mono" fontSize="xs">
+                H:{' '}
+                <Text as="span" color="font.primary">
+                  {formatPrice(displayOhlcv.high)}
+                </Text>
+              </Text>
+              <Text color="font.secondary" fontFamily="mono" fontSize="xs">
+                L:{' '}
+                <Text as="span" color="font.primary">
+                  {formatPrice(displayOhlcv.low)}
+                </Text>
+              </Text>
+              <Text color="font.secondary" fontFamily="mono" fontSize="xs">
+                C:{' '}
+                <Text as="span" color="font.primary">
+                  {formatPrice(displayOhlcv.close)}
+                </Text>
+              </Text>
+              <Text color="font.secondary" fontFamily="mono" fontSize="xs">
+                V:{' '}
+                <Text as="span" color="font.primary">
+                  {formatVolume(displayOhlcv.volume)}
+                </Text>
+              </Text>
+            </HStack>
+          )}
         </HStack>
 
         {/* Timeframe buttons */}

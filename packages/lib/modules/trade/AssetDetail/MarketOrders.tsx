@@ -196,9 +196,9 @@ export function MarketOrders() {
   )
 
   return (
-    <Box bg="background.level0" h="full" w="full">
+    <Box bg="background.level0" display="flex" flexDirection="column" h="full" overflow="hidden" w="full">
       {/* Header */}
-      <HStack borderBottom="1px solid" borderColor="border.base" px={4} py={2}>
+      <HStack borderBottom="1px solid" borderColor="border.base" flexShrink={0} px={4} py={2}>
         <Text fontSize="sm" fontWeight="semibold">
           My Orders
         </Text>
@@ -223,8 +223,8 @@ export function MarketOrders() {
           </Text>
         </VStack>
       ) : (
-        <Box px={2}>
-          <Tabs index={activeTab} onChange={handleTabChange} size="sm">
+        <Box display="flex" flex={1} flexDirection="column" minH={0} overflow="hidden" px={2}>
+          <Tabs display="flex" flex={1} flexDirection="column" index={activeTab} minH={0} onChange={handleTabChange} overflow="hidden" size="sm">
             <TabList borderBottom="1px solid" borderColor="border.base">
               <Tab fontSize="xs" py={2}>
                 Open ({openOrders.length})
@@ -234,7 +234,7 @@ export function MarketOrders() {
               </Tab>
             </TabList>
 
-            <TabPanels>
+            <TabPanels flex={1} minH={0} overflowY="auto">
               <TabPanel p={0} pt={1}>
                 {openOrders.length === 0 ? (
                   <Text color="font.secondary" fontSize="xs" py={4} textAlign="center">

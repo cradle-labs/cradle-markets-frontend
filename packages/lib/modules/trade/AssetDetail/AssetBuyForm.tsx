@@ -33,7 +33,7 @@ interface PlaceOrderInput {
 export function AssetBuyForm() {
   const { user } = useUser()
   const toast = useToast()
-  const { market, refetch, asset, assetOne, assetTwo } = useAssetDetail()
+  const { market, refetch, asset, assetOne, assetTwo, selectedOrderBookPrice, setSelectedOrderBookPrice } = useAssetDetail()
 
   // Calculate current market price from asset data
   const currentMarketPrice = asset?.currentPrice || 1.0
@@ -52,6 +52,20 @@ export function AssetBuyForm() {
       setLimitPrice(currentMarketPrice.toFixed(4))
     }
   }, [currentMarketPrice])
+
+  // When order book price is clicked, switch to limit and fill price
+  useEffect(() => {
+    if (selectedOrderBookPrice !== null) {
+      setOrderType('limit')
+      setLimitPrice(selectedOrderBookPrice.toFixed(4))
+      // Recalculate receive amount if pay amount exists
+      if (payAmount && Number(payAmount) > 0) {
+        const calculatedReceive = (Number(payAmount) / selectedOrderBookPrice).toFixed(4)
+        setReceiveAmount(calculatedReceive as HumanAmount)
+      }
+      setSelectedOrderBookPrice(null) // Reset after consuming
+    }
+  }, [selectedOrderBookPrice])
 
   // Get user's Cradle account and wallet
   const { data: linkedAccount } = useAccountByLinkedId({
@@ -261,7 +275,7 @@ export function AssetBuyForm() {
   const isConnected = !!wallet
 
   return (
-    <VStack spacing={4} w="full">
+    <VStack spacing={3} w="full">
       {/* Order Type Selector */}
       <HStack borderBottom="1px solid" borderColor="border.base" spacing={0} w="full">
         <Button
@@ -498,6 +512,31 @@ export function AssetBuyForm() {
             value={payAmount}
           />
         </Box>
+        <HStack spacing={1} w="full">
+          {[25, 50, 75, 100].map(pct => (
+            <Button
+              key={pct}
+              size="xs"
+              variant="outline"
+              flex={1}
+              onClick={() => {
+                if (!payAssetBalanceData) return
+                const balance = fromTokenDecimals(
+                  BigInt(payAssetBalanceData.balance),
+                  payAssetBalanceData.decimals
+                )
+                const newPay = (balance * pct / 100).toFixed(4)
+                setPayAmount(newPay as HumanAmount)
+                const price = Number(getPrice())
+                if (price > 0) {
+                  setReceiveAmount((Number(newPay) / price).toFixed(4) as HumanAmount)
+                }
+              }}
+            >
+              {pct}%
+            </Button>
+          ))}
+        </HStack>
       </VStack>
 
       {/* Arrow */}

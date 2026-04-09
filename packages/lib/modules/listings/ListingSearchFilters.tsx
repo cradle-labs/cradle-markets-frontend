@@ -24,7 +24,7 @@ import { getSelectStyles } from '@repo/lib/shared/services/chakra/custom/chakra-
 import { useIsMounted } from '@repo/lib/shared/hooks/useIsMounted'
 
 export type ViewMode = 'grid' | 'list'
-export type ListingCategory = 'all' | 'Open' | 'Pending' | 'Closed' | 'Paused'
+export type ListingCategory = 'all' | 'Open' | 'Pending' | 'Closed' | 'Paused' | 'open' | 'pending' | 'closed' | 'paused'
 export type SortOption =
   | 'most-popular'
   | 'price-asc'

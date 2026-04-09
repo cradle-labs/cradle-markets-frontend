@@ -95,7 +95,7 @@ export function ListingMetricsGrid({
           <StatLabel color="text.secondary" fontSize="sm">
             Remaining Supply
           </StatLabel>
-          <StatNumber color={status === 'Open' ? 'green.500' : 'gray.500'} fontSize="2xl">
+          <StatNumber color={status?.toLowerCase() === 'open' ? 'green.500' : 'gray.500'} fontSize="2xl">
             {formatNumber(remainingSupply)}
           </StatNumber>
           <StatHelpText color="text.tertiary">Tokens available</StatHelpText>

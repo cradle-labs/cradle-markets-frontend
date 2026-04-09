@@ -12,14 +12,14 @@ interface ApiResponse<T> {
   error?: string
 }
 
-// Core enums — casing matches backend API responses exactly
-type CradleAccountType = 'Retail' | 'Institutional' | 'System'
-type CradleAccountStatus = 'Unverified' | 'Verified' | 'Suspended' | 'Closed'
-type CradleWalletStatus = 'Active' | 'Inactive' | 'Suspended'
-type AssetType = 'Bridged' | 'Native' | 'yield_bearing' | 'chain_native' | 'stablecoin' | 'Volatile'
-type MarketStatus = 'Active' | 'InActive' | 'Suspended'
-type MarketType = 'Spot' | 'Derivative' | 'Futures'
-type MarketRegulation = 'Regulated' | 'Unregulated'
+// Core enums — accept both casings for robustness (API may return either)
+type CradleAccountType = 'Retail' | 'Institutional' | 'System' | 'retail' | 'institutional' | 'system'
+type CradleAccountStatus = 'Unverified' | 'Verified' | 'Suspended' | 'Closed' | 'unverified' | 'verified' | 'suspended' | 'closed'
+type CradleWalletStatus = 'Active' | 'Inactive' | 'Suspended' | 'active' | 'inactive' | 'suspended'
+type AssetType = 'Bridged' | 'Native' | 'yield_bearing' | 'chain_native' | 'stablecoin' | 'Volatile' | 'bridged' | 'native' | 'volatile'
+type MarketStatus = 'Active' | 'InActive' | 'Suspended' | 'active' | 'inactive' | 'suspended'
+type MarketType = 'Spot' | 'Derivative' | 'Futures' | 'spot' | 'derivative' | 'futures'
+type MarketRegulation = 'Regulated' | 'Unregulated' | 'regulated' | 'unregulated'
 type FillMode = 'fill-or-kill' | 'immediate-or-cancel' | 'good-till-cancel'
 type OrderStatus = 'open' | 'closed' | 'cancelled'
 type OrderType = 'limit' | 'market'
@@ -36,9 +36,9 @@ type TimeSeriesInterval =
   | '1day'
   | '1week'
 type DataProviderType = 'order_book' | 'exchange' | 'aggregated'
-type LoanStatus = 'Active' | 'Repaid' | 'Liquidated'
+type LoanStatus = 'Active' | 'Repaid' | 'Liquidated' | 'active' | 'repaid' | 'liquidated'
 type PoolTransactionType = 'supply' | 'withdraw'
-type ListingStatus = 'Pending' | 'Open' | 'Closed' | 'Paused' | 'Cancelled'
+type ListingStatus = 'Pending' | 'Open' | 'Closed' | 'Paused' | 'Cancelled' | 'pending' | 'open' | 'closed' | 'paused' | 'cancelled'
 type OrderFillStatus = 'Partial' | 'Filled' | 'Cancelled'
 
 // Records

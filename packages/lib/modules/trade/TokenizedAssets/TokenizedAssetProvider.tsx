@@ -67,7 +67,7 @@ function transformMarketsToAssets(
   timeHistoryResults: Array<{ data?: TimeHistoryDataPoint[]; error: any }>
 ): TokenizedAssetData[] {
   // Only get spot markets (not futures or derivatives) for the main trading page
-  const spotMarkets = markets.filter(market => market.market_type === 'Spot')
+  const spotMarkets = markets.filter(market => market.market_type?.toLowerCase() === 'spot')
 
   return spotMarkets
     .map((market, index) => {
@@ -160,7 +160,7 @@ export function TokenizedAssetProvider({ children }: TokenizedAssetProviderProps
 
   // Filter spot markets for time history fetching
   const spotMarkets = useMemo(
-    () => markets.filter(market => market.market_type === 'Spot'),
+    () => markets.filter(market => market.market_type?.toLowerCase() === 'spot'),
     [markets]
   )
 

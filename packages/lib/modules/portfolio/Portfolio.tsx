@@ -272,7 +272,7 @@ export default function Portfolio() {
                 </HStack>
                 {/* {wallet.status && (
                   <Badge
-                    colorScheme={wallet.status === 'Active' ? 'green' : wallet.status === 'Suspended' ? 'red' : 'gray'}
+                    colorScheme={wallet.status?.toLowerCase() === 'active' ? 'green' : wallet.status?.toLowerCase() === 'suspended' ? 'red' : 'gray'}
                     fontSize="xs"
                     px={2}
                     py={1}

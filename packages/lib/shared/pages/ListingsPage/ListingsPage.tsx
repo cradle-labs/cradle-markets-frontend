@@ -61,7 +61,7 @@ function ListingsContent({ onListingClick }: ListingsContentProps) {
 
     // Apply category/status filter
     if (selectedCategory !== 'all') {
-      filtered = filtered.filter(listing => listing.status === selectedCategory)
+      filtered = filtered.filter(listing => listing.status?.toLowerCase() === selectedCategory.toLowerCase())
     }
 
     // Apply sorting

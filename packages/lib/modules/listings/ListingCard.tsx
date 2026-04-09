@@ -41,7 +41,7 @@ export function ListingCard({ listing, onClick }: ListingCardProps) {
   const fallbackColor = useColorModeValue('gray.700', 'gray.200')
 
   // Status color based on listing status
-  const isOpen = listing.status === 'open'
+  const isOpen = listing.status === 'Open'
   const statusColor = useColorModeValue(
     isOpen ? 'green.500' : 'gray.500',
     isOpen ? 'green.400' : 'gray.400'

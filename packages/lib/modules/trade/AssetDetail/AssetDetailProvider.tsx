@@ -63,7 +63,6 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
     refetch: refetchMarket,
   } = useMarket({ marketId })
 
-  console.log('Market:', market)
   // Fetch primary asset data (asset_one from the market)
   const {
     data: primaryAsset,
@@ -74,8 +73,6 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
     assetId: market?.asset_one || '',
     enabled: !!market?.asset_one,
   })
-
-  console.log('primaryAsset', primaryAsset)
 
   // Fetch secondary asset data (asset_two from the market)
   const {
@@ -105,12 +102,7 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
           duration_secs: config.duration_secs,
           interval: config.interval,
         }
-        console.log(`[Time History] ${period} payload:`, payload)
         const result = await fetchTimeHistory(payload)
-        console.log(`[Time History] ${period} response:`, {
-          dataPoints: result?.length || 0,
-          sample: result?.slice(0, 2), // First 2 items
-        })
         return result
       },
       enabled: !!market?.asset_one,
@@ -131,28 +123,14 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
     timeHistoryQueries.forEach((query, index) => {
       const period = periodNames[index]
       if (query.data && Array.isArray(query.data)) {
-        console.log(`[allData] Adding ${query.data.length} data points from ${period} period`)
         allData.push(...query.data)
-      } else {
-        console.log(
-          `[allData] No data from ${period} period (isLoading: ${query.isLoading}, hasError: ${!!query.error})`
-        )
       }
-    })
-
-    console.log('[allData] Total combined data points:', allData.length)
-    console.log('[allData] Breakdown by timestamp:', {
-      uniqueTimestamps: new Set(allData.map(d => d.timestamp)).size,
-      allData: allData,
     })
 
     // Remove duplicates and sort by timestamp
     const uniqueData = Array.from(
       new Map(allData.map(item => [item.timestamp, item])).values()
     ).sort((a, b) => a.timestamp - b.timestamp)
-    console.log('uniqueData', uniqueData)
-
-    console.log('Combined time history data:', uniqueData.length, 'data points')
     return uniqueData
   }, [timeHistoryQueries])
 
@@ -173,28 +151,12 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
   // Aggregate error states (time history and orders are optional)
   const error = marketError?.message || assetOneError?.message || assetTwoError?.message || null
 
-  // Log time history errors as warnings
-  const timeHistoryErrors = timeHistoryQueries.filter(q => q.error)
-  if (timeHistoryErrors.length > 0) {
-    console.warn(`Time history fetch failed for market ${marketId}:`, timeHistoryErrors)
-  }
-
   // Transform data into TokenizedAssetData format
   const asset = useMemo((): TokenizedAssetData | null => {
     if (!market || !primaryAsset) return null
 
-    console.log('Transforming asset detail data:')
-    console.log('- Market:', market)
-    console.log('- Primary Asset:', primaryAsset)
-    console.log('- Combined Time History:', allTimeHistoryData.length, 'data points')
-
     // If no time history data, return asset with empty chart data
     if (allTimeHistoryData.length === 0) {
-      console.warn(
-        'No time history data available for market:',
-        marketId,
-        '- showing details without chart'
-      )
       return {
         id: market.id,
         symbol: primaryAsset.symbol,

@@ -51,7 +51,6 @@ interface TokenizedAssetCardProps {
 }
 
 export function TokenizedAssetCard({ asset, onClick }: TokenizedAssetCardProps) {
-  console.log('asset', asset)
   const isPositive = asset.dailyChange >= 0
   const changeColor = useColorModeValue(
     isPositive ? 'green.500' : 'red.500',
@@ -130,7 +129,6 @@ export function TokenizedAssetCard({ asset, onClick }: TokenizedAssetCardProps) 
       maximumFractionDigits: 2,
     }).format(price)
     // Use quoteAssetSymbol (e.g., KESN, cpUSD) - matches logic from AssetHeader and AssetInfo
-    console.log('asset.quoteAssetSymbol', asset.quoteAssetSymbol)
     const symbol = asset.quoteAssetSymbol ?? '$'
     const separator = symbol === '$' ? '' : ' '
     return `${symbol}${separator}${formatted}`

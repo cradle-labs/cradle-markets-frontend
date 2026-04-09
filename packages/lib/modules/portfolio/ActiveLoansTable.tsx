@@ -95,13 +95,13 @@ export function ActiveLoansSection({
 
   // Filter for active loans only
   const activeLoans = useMemo(() => {
-    return loans.filter(loan => loan.status === 'active')
+    return loans.filter(loan => loan.status === 'Active')
   }, [loans])
   console.log('activeLoans', activeLoans)
 
   // Filter for repaid loans only
   const repaidLoans = useMemo(() => {
-    return loans.filter(loan => loan.status === 'repaid')
+    return loans.filter(loan => loan.status === 'Repaid')
   }, [loans])
 
   // Tab options

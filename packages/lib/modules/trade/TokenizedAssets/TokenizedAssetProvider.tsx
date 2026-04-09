@@ -9,8 +9,8 @@ import type { TimeHistoryDataPoint } from '@repo/lib/actions/time-history'
 
 // Time history configuration - single config for all markets
 const TIME_HISTORY_CONFIG = {
-  duration_secs: '7776000', // 1 month
-  interval: '1day' as const,
+  duration_secs: '94608000', // ~3 years (all time)
+  interval: '1week' as const,
 }
 
 // Fetch time history data using the Time Series server action
@@ -28,10 +28,8 @@ async function fetchTimeHistory(params: {
     duration_secs: Number(params.duration_secs),
     interval: params.interval,
   }
-  console.log('paramPayload', paramPayload)
   // Use the new time series action and adapt its output
   const timeSeriesRecords = await getTimeSeriesHistory(paramPayload)
-  console.log('timeSeriesRecords', timeSeriesRecords)
   // Map TimeSeriesRecord -> TimeHistoryDataPoint
   return timeSeriesRecords.map(record => {
     const timestamp = Math.floor(new Date(record.start_time).getTime() / 1000)
@@ -68,13 +66,8 @@ function transformMarketsToAssets(
   assets: any[],
   timeHistoryResults: Array<{ data?: TimeHistoryDataPoint[]; error: any }>
 ): TokenizedAssetData[] {
-  console.log('Markets from API:', markets)
-  console.log('Assets from API:', assets)
-  console.log('Time history results:', timeHistoryResults)
-
   // Only get spot markets (not futures or derivatives) for the main trading page
-  const spotMarkets = markets.filter(market => market.market_type === 'spot')
-  console.log('Spot markets:', spotMarkets)
+  const spotMarkets = markets.filter(market => market.market_type === 'Spot')
 
   return spotMarkets
     .map((market, index) => {
@@ -83,7 +76,6 @@ function transformMarketsToAssets(
       const quoteAsset = assets.find(a => a.id === market.asset_two)
 
       if (!baseAsset) {
-        console.warn(`Base asset not found for market ${market.id}`)
         return null
       }
 
@@ -91,13 +83,8 @@ function transformMarketsToAssets(
       const timeHistoryResult = timeHistoryResults[index]
       const timeHistoryData = timeHistoryResult?.data || []
 
-      if (timeHistoryResult?.error) {
-        console.warn(`Time history fetch failed for market ${market.id}:`, timeHistoryResult.error)
-      }
-
       // If no time history data, show market without chart data
       if (timeHistoryData.length === 0) {
-        console.warn(`No time history data for market ${market.id} - showing without chart`)
         return {
           id: market.id,
           symbol: baseAsset.symbol,
@@ -173,7 +160,7 @@ export function TokenizedAssetProvider({ children }: TokenizedAssetProviderProps
 
   // Filter spot markets for time history fetching
   const spotMarkets = useMemo(
-    () => markets.filter(market => market.market_type === 'spot'),
+    () => markets.filter(market => market.market_type === 'Spot'),
     [markets]
   )
 
@@ -194,12 +181,7 @@ export function TokenizedAssetProvider({ children }: TokenizedAssetProviderProps
           duration_secs: TIME_HISTORY_CONFIG.duration_secs,
           interval: TIME_HISTORY_CONFIG.interval,
         }
-        console.log(`[Time History] Market ${marketIndex} (${market.id}) payload:`, payload)
         const result = await fetchTimeHistory(payload)
-        console.log(`[Time History] Market ${marketIndex} (${market.id}) response:`, {
-          dataPoints: result?.length || 0,
-          sample: result?.slice(0, 2), // First 2 items
-        })
         return result
       },
       enabled: !!market.id && !!market.asset_one && assets.length > 0,
@@ -219,18 +201,6 @@ export function TokenizedAssetProvider({ children }: TokenizedAssetProviderProps
   // Transform data using useMemo - no useEffect needed with TanStack Query
   const transformedAssets = useMemo(() => {
     if (!loading && markets.length > 0 && assets.length > 0) {
-      console.log('Raw data received:')
-      console.log('- Markets:', markets)
-      console.log('- Assets:', assets)
-      console.log(
-        '- Time history queries:',
-        timeHistoryQueries.map(q => ({
-          isLoading: q.isLoading,
-          isError: q.isError,
-          dataLength: q.data?.length || 0,
-        }))
-      )
-
       // Extract time history results
       const timeHistoryResults = timeHistoryQueries.map(query => ({
         data: query.data,
@@ -238,7 +208,6 @@ export function TokenizedAssetProvider({ children }: TokenizedAssetProviderProps
       }))
 
       const transformed = transformMarketsToAssets(markets, assets, timeHistoryResults)
-      console.log('Transformed assets:', transformed)
       return transformed
     }
     return []

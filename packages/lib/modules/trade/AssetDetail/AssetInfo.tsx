@@ -53,10 +53,6 @@ The token is backed by the underlying asset and maintains a 1:1 ratio with the o
 export function AssetInfo({ asset }: AssetInfoProps) {
   const { market, assetTwo } = useAssetDetail()
   const info = getAssetInfo(asset)
-  console.log('market', market)
-  console.log('info', info)
-  console.log('asset', asset)
-
   // Get quote asset symbol for formatting (e.g., KESN, cpUSD)
   const quoteSymbol = assetTwo?.symbol || asset.quoteAssetSymbol || '$'
 

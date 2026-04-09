@@ -73,7 +73,7 @@ export function LendBorrowForm({
   // Filter only tokenized stock assets
   const collateralAssets = useMemo(() => {
     if (!allAssets) return []
-    return allAssets.filter(asset => asset.asset_type === 'bridged')
+    return allAssets.filter(asset => asset.asset_type === 'Bridged')
   }, [allAssets])
 
   // Fetch balances for collateral assets to show which ones user has

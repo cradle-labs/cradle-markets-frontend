@@ -1,12 +1,24 @@
 'use client'
 
-import { Box, Grid, GridItem, HStack, Skeleton, Text, VStack } from '@chakra-ui/react'
+import {
+  Accordion,
+  AccordionButton,
+  AccordionIcon,
+  AccordionItem,
+  AccordionPanel,
+  Box,
+  HStack,
+  Skeleton,
+  Text,
+  VStack,
+} from '@chakra-ui/react'
 import { AssetDetailProvider, useAssetDetail } from './AssetDetailProvider'
 import { MarketInfoBar } from './MarketInfoBar'
 import { AssetChart } from './AssetChart'
 import { AssetTradingPanel } from './AssetTradingPanel'
 import { MarketOrders } from './MarketOrders'
 import { SpotOrderBook } from './SpotOrderBook'
+import { AssetInfo } from './AssetInfo'
 
 interface AssetDetailPageProps {
   marketId: string
@@ -24,78 +36,136 @@ function AssetDetailContent() {
   }
 
   return (
-    <Box
-      bg="background.level0"
-      display="flex"
-      flexDirection="column"
-      h="calc(100vh - 72px)"
-      overflow="hidden"
-      w="full"
-    >
-      {/* Top: Market info bar */}
-      <MarketInfoBar asset={asset} />
-
-      {/* Main grid — fills remaining viewport, no page scroll */}
-      <Grid
-        flex={1}
-        minH={0}
-        templateColumns={{ base: '1fr', lg: '1fr 280px' }}
-        templateRows="60% 40%"
-        w="full"
+    <Box bg="background.level0" w="full">
+      {/* Top: Market info bar — sticky at top of viewport */}
+      <Box
+        bg="background.level0"
+        borderBottom="1px solid"
+        borderColor="border.base"
+        position="sticky"
+        top="72px"
+        zIndex={10}
       >
-        {/* Top-left: Chart */}
-        <GridItem borderBottom="1px solid" borderColor="border.base" minH={0} overflow="hidden">
+        <MarketInfoBar asset={asset} />
+      </Box>
+
+      {/* Primary area: Chart + Trading Panel side by side
+          Chart is large and prominent on the left (70%)
+          Trading panel is unmissable on the right (30%) with bold Buy/Sell toggle */}
+      <Box
+        borderBottom="1px solid"
+        borderColor="border.base"
+        display={{ base: 'block', lg: 'grid' }}
+        gridTemplateColumns={{ lg: 'minmax(0, 1fr) 380px' }}
+        minH={{ base: 'auto', lg: 'calc(100vh - 72px - 48px - 200px)' }}
+      >
+        {/* Chart — takes most of the viewport */}
+        <Box
+          borderColor="border.base"
+          borderRight={{ base: 'none', lg: '1px solid' }}
+          h={{ base: '400px', lg: 'full' }}
+          minH="400px"
+          overflow="hidden"
+        >
           <AssetChart asset={asset} />
-        </GridItem>
+        </Box>
 
-        {/* Top-right: Order Book */}
-        <GridItem
-          borderBottom="1px solid"
-          borderColor="border.base"
-          display={{ base: 'none', lg: 'flex' }}
-          minH={0}
-          overflow="hidden"
-        >
-          <SpotOrderBook />
-        </GridItem>
-
-        {/* Bottom-left: Market Orders */}
-        <GridItem display="flex" flexDirection="column" minH={0} overflow="hidden">
-          <MarketOrders />
-        </GridItem>
-
-        {/* Bottom-right: Trading Panel */}
-        <GridItem
-          borderColor="border.base"
-          borderLeft="1px solid"
-          display={{ base: 'none', lg: 'flex' }}
-          flexDirection="column"
-          minH={0}
-          overflow="hidden"
-        >
+        {/* Trading Panel — prominent, full-height on desktop */}
+        <Box h={{ base: 'auto', lg: 'full' }} overflow="hidden">
           <AssetTradingPanel asset={asset} />
-        </GridItem>
-      </Grid>
+        </Box>
+      </Box>
+
+      {/* Secondary area: Collapsible accordion sections
+          Default: Order Book and My Orders open, Market Info closed */}
+      <Accordion allowMultiple defaultIndex={[0, 1]}>
+        <AccordionItem border="none" borderBottom="1px solid" borderColor="border.base">
+          <h3>
+            <AccordionButton
+              _hover={{ bg: 'background.level1' }}
+              bg="background.level0"
+              px={4}
+              py={3}
+            >
+              <HStack flex={1} spacing={3} textAlign="left">
+                <Text fontSize="sm" fontWeight="semibold">
+                  Order Book
+                </Text>
+                <Text color="font.secondary" fontSize="xs">
+                  Bids and asks for this market
+                </Text>
+              </HStack>
+              <AccordionIcon />
+            </AccordionButton>
+          </h3>
+          <AccordionPanel maxH="500px" overflow="hidden" p={0}>
+            <Box h="500px">
+              <SpotOrderBook />
+            </Box>
+          </AccordionPanel>
+        </AccordionItem>
+
+        <AccordionItem border="none" borderBottom="1px solid" borderColor="border.base">
+          <h3>
+            <AccordionButton
+              _hover={{ bg: 'background.level1' }}
+              bg="background.level0"
+              px={4}
+              py={3}
+            >
+              <HStack flex={1} spacing={3} textAlign="left">
+                <Text fontSize="sm" fontWeight="semibold">
+                  My Orders
+                </Text>
+                <Text color="font.secondary" fontSize="xs">
+                  Your open and closed orders for this market
+                </Text>
+              </HStack>
+              <AccordionIcon />
+            </AccordionButton>
+          </h3>
+          <AccordionPanel maxH="500px" overflow="hidden" p={0}>
+            <Box h="500px">
+              <MarketOrders />
+            </Box>
+          </AccordionPanel>
+        </AccordionItem>
+
+        <AccordionItem border="none">
+          <h3>
+            <AccordionButton
+              _hover={{ bg: 'background.level1' }}
+              bg="background.level0"
+              px={4}
+              py={3}
+            >
+              <HStack flex={1} spacing={3} textAlign="left">
+                <Text fontSize="sm" fontWeight="semibold">
+                  About {asset.name}
+                </Text>
+                <Text color="font.secondary" fontSize="xs">
+                  Market details and asset information
+                </Text>
+              </HStack>
+              <AccordionIcon />
+            </AccordionButton>
+          </h3>
+          <AccordionPanel p={4}>
+            <AssetInfo asset={asset} />
+          </AccordionPanel>
+        </AccordionItem>
+      </Accordion>
     </Box>
   )
 }
 
 function AssetDetailSkeleton() {
   return (
-    <Box
-      bg="background.level0"
-      display="flex"
-      flexDirection="column"
-      h="calc(100vh - 72px)"
-      overflow="hidden"
-      w="full"
-    >
-      {/* Info bar skeleton */}
+    <Box bg="background.level0" w="full">
       <HStack
         borderBottom="1px solid"
         borderColor="border.base"
-        flexShrink={0}
-        h="56px"
+        h="48px"
         px={4}
         spacing={6}
       >
@@ -103,44 +173,28 @@ function AssetDetailSkeleton() {
         <Skeleton h="24px" w="100px" />
         <Skeleton h="16px" w="80px" />
         <Skeleton h="16px" w="80px" />
-        <Skeleton h="16px" w="80px" />
-        <Skeleton h="16px" w="80px" />
       </HStack>
 
-      <Grid
-        flex={1}
-        minH={0}
-        templateColumns={{ base: '1fr', lg: '1fr 280px' }}
-        templateRows="60% 40%"
+      <Box
+        borderBottom="1px solid"
+        borderColor="border.base"
+        display="grid"
+        gridTemplateColumns={{ base: '1fr', lg: 'minmax(0, 1fr) 380px' }}
+        h="calc(100vh - 72px - 48px - 200px)"
+        minH="500px"
       >
-        <GridItem borderBottom="1px solid" borderColor="border.base" p={4}>
+        <Box borderRight="1px solid" borderColor="border.base" p={4}>
           <Skeleton h="full" w="full" />
-        </GridItem>
-        <GridItem
-          borderBottom="1px solid"
-          borderColor="border.base"
-          borderLeft="1px solid"
-          display={{ base: 'none', lg: 'block' }}
-          p={2}
-        >
-          <VStack spacing={1}>
-            {Array.from({ length: 12 }).map((_, i) => (
-              <Skeleton h="14px" key={i} w="full" />
-            ))}
+        </Box>
+        <Box p={4}>
+          <VStack align="stretch" spacing={4}>
+            <Skeleton h="40px" w="full" />
+            <Skeleton h="80px" w="full" />
+            <Skeleton h="80px" w="full" />
+            <Skeleton h="50px" w="full" />
           </VStack>
-        </GridItem>
-        <GridItem p={4}>
-          <Skeleton h="full" w="full" />
-        </GridItem>
-        <GridItem
-          borderColor="border.base"
-          borderLeft="1px solid"
-          display={{ base: 'none', lg: 'block' }}
-          p={4}
-        >
-          <Skeleton h="full" w="full" />
-        </GridItem>
-      </Grid>
+        </Box>
+      </Box>
     </Box>
   )
 }

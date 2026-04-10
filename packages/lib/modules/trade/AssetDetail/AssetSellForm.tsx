@@ -605,14 +605,19 @@ export function AssetSellForm() {
         </HStack>
       </VStack>
       <Button
+        _disabled={{ bg: 'background.level2', color: 'font.tertiary', cursor: 'not-allowed' }}
+        _hover={{ bg: 'red.600' }}
+        bg="red.500"
+        color="white"
+        fontSize="md"
+        fontWeight="bold"
+        h="48px"
         isDisabled={!market || !assetOne || !assetTwo || Number(sellAmount) <= 0}
         isLoading={isSubmitting}
         onClick={handleSubmitOrder}
-        size="lg"
-        variant="primary"
         w="full"
       >
-        {orderType === 'market' ? 'Sell at Market' : 'Place Limit Order'}
+        {orderType === 'market' ? `Sell ${assetOne?.symbol || ''}` : 'Place Limit Sell'}
       </Button>
     </VStack>
   )

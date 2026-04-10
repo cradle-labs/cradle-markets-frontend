@@ -5,15 +5,18 @@ import { useQueries } from '@tanstack/react-query'
 import { TokenizedAssetData } from './TokenizedAssetCard'
 import { useMarkets } from '@repo/lib/cradle-client-ts/hooks/markets/useMarkets'
 import { useAssets } from '@repo/lib/cradle-client-ts/hooks/assets/useAssets'
+import { useOrders } from '@repo/lib/cradle-client-ts/hooks/orders/useOrders'
+import type { Order } from '@repo/lib/cradle-client-ts/types'
 import type { TimeHistoryDataPoint } from '@repo/lib/actions/time-history'
+import { computePriceFromOrders } from '../shared/price-fallback'
 
-// Time history configuration - single config for all markets
+// Fetch everything — use 1day interval which is more likely to have aggregated data
+// than 1week, while still giving us broad coverage
 const TIME_HISTORY_CONFIG = {
-  duration_secs: '94608000', // ~3 years (all time)
-  interval: '1week' as const,
+  duration_secs: '94608000', // ~3 years
+  interval: '1day' as const,
 }
 
-// Fetch time history data using the Time Series server action
 async function fetchTimeHistory(params: {
   market: string
   asset_id: string
@@ -28,12 +31,9 @@ async function fetchTimeHistory(params: {
     duration_secs: Number(params.duration_secs),
     interval: params.interval,
   }
-  // Use the new time series action and adapt its output
   const timeSeriesRecords = await getTimeSeriesHistory(paramPayload)
-  // Map TimeSeriesRecord -> TimeHistoryDataPoint
   return timeSeriesRecords.map(record => {
     const timestamp = Math.floor(new Date(record.start_time).getTime() / 1000)
-
     return {
       timestamp,
       open: Number(record.open),
@@ -59,98 +59,100 @@ interface TokenizedAssetProviderProps {
 }
 
 /**
- * Transform markets and assets data from real API into TokenizedAssetData format
+ * Transform markets into TokenizedAssetData, using time-series when available
+ * and falling back to order book data for markets with no trade history.
  */
 function transformMarketsToAssets(
   markets: any[],
   assets: any[],
-  timeHistoryResults: Array<{ data?: TimeHistoryDataPoint[]; error: any }>
+  timeHistoryResults: Array<{ data?: TimeHistoryDataPoint[]; error: any }>,
+  orders: Order[]
 ): TokenizedAssetData[] {
-  // Only get spot markets (not futures or derivatives) for the main trading page
   const spotMarkets = markets.filter(market => market.market_type?.toLowerCase() === 'spot')
 
   return spotMarkets
     .map((market, index) => {
-      // Find the primary base asset (asset_one) and quote asset (asset_two) for this market
       const baseAsset = assets.find(a => a.id === market.asset_one)
       const quoteAsset = assets.find(a => a.id === market.asset_two)
 
-      if (!baseAsset) {
-        return null
-      }
+      if (!baseAsset) return null
 
-      // Get time history data for this market (matches by index)
       const timeHistoryResult = timeHistoryResults[index]
       const timeHistoryData = timeHistoryResult?.data || []
 
-      // If no time history data, show market without chart data
-      if (timeHistoryData.length === 0) {
-        return {
-          id: market.id,
-          symbol: baseAsset.symbol,
-          name: baseAsset.name,
-          logo: baseAsset.icon,
-          currentPrice: 0,
-          dailyChange: 0,
-          dailyChangePercent: 0,
-          priceHistory: [], // Empty array = no chart
-          marketName: market.name,
-          timeHistoryData: [],
-        }
-      }
-
-      // Convert time history to price history format
-      const priceHistory: Array<[number, number]> = timeHistoryData.map(point => [
-        point.timestamp * 1000,
-        point.close,
-      ])
-
-      // Calculate current price from the latest data
-      const latestDataPoint = timeHistoryData[timeHistoryData.length - 1]
-      const currentPrice = typeof latestDataPoint?.close === 'number' ? latestDataPoint.close : 0
-
-      // Find data point from ~24 hours ago for daily change
-      const dayAgo = Date.now() / 1000 - 86400
-      const dayAgoData = timeHistoryData.find(point => point.timestamp >= dayAgo)
-      const previousPrice = dayAgoData
-        ? typeof dayAgoData.close === 'number'
-          ? dayAgoData.close
-          : currentPrice
-        : timeHistoryData.length > 1
-          ? typeof timeHistoryData[0].close === 'number'
-            ? timeHistoryData[0].close
-            : currentPrice
-          : currentPrice
-
-      const dailyChange = currentPrice - previousPrice
-      const dailyChangePercent = previousPrice !== 0 ? (dailyChange / previousPrice) * 100 : 0
-
-      return {
+      // Base object
+      const base = {
         id: market.id,
         symbol: baseAsset.symbol,
         name: baseAsset.name,
         logo: baseAsset.icon,
-        currentPrice,
-        dailyChange,
-        dailyChangePercent,
-        priceHistory,
         marketName: market.name,
         quoteAssetSymbol: quoteAsset?.symbol,
         quoteAssetDecimals: quoteAsset?.decimals != null ? Number(quoteAsset.decimals) : undefined,
-        timeHistoryData,
+      }
+
+      // If we have time-series data, use it
+      if (timeHistoryData.length > 0) {
+        const priceHistory: Array<[number, number]> = timeHistoryData.map(point => [
+          point.timestamp * 1000,
+          point.close,
+        ])
+
+        const latestDataPoint = timeHistoryData[timeHistoryData.length - 1]
+        const currentPrice = typeof latestDataPoint?.close === 'number' ? latestDataPoint.close : 0
+
+        const dayAgo = Date.now() / 1000 - 86400
+        const dayAgoData = timeHistoryData.find(point => point.timestamp >= dayAgo)
+        const previousPrice = dayAgoData
+          ? typeof dayAgoData.close === 'number'
+            ? dayAgoData.close
+            : currentPrice
+          : timeHistoryData.length > 1
+            ? typeof timeHistoryData[0].close === 'number'
+              ? timeHistoryData[0].close
+              : currentPrice
+            : currentPrice
+
+        const dailyChange = currentPrice - previousPrice
+        const dailyChangePercent = previousPrice !== 0 ? (dailyChange / previousPrice) * 100 : 0
+
+        return {
+          ...base,
+          currentPrice,
+          dailyChange,
+          dailyChangePercent,
+          priceHistory,
+          timeHistoryData,
+        }
+      }
+
+      // Fallback: compute price from open orders
+      const { currentPrice: fallbackPrice } = computePriceFromOrders(
+        orders,
+        market.id,
+        market.asset_one
+      )
+
+      return {
+        ...base,
+        currentPrice: fallbackPrice,
+        dailyChange: 0,
+        dailyChangePercent: 0,
+        priceHistory: [],
+        timeHistoryData: [],
       }
     })
     .filter(Boolean) as TokenizedAssetData[]
 }
 
 export function TokenizedAssetProvider({ children }: TokenizedAssetProviderProps) {
-  // Fetch real data from API using TanStack Query hooks
   const {
     data: markets = [],
     isLoading: marketsLoading,
     error: marketsError,
     refetch: refetchMarkets,
   } = useMarkets()
+
   const {
     data: assets = [],
     isLoading: assetsLoading,
@@ -158,15 +160,20 @@ export function TokenizedAssetProvider({ children }: TokenizedAssetProviderProps
     refetch: refetchAssets,
   } = useAssets()
 
-  // Filter spot markets for time history fetching
+  // Fetch all orders once as price fallback source
+  const {
+    data: orders = [],
+    isLoading: ordersLoading,
+    refetch: refetchOrders,
+  } = useOrders()
+
   const spotMarkets = useMemo(
     () => markets.filter(market => market.market_type?.toLowerCase() === 'spot'),
     [markets]
   )
 
-  // Fetch time history for each spot market using useQueries
   const timeHistoryQueries = useQueries({
-    queries: spotMarkets.map((market, marketIndex) => ({
+    queries: spotMarkets.map(market => ({
       queryKey: [
         'time-history',
         market.id,
@@ -175,47 +182,40 @@ export function TokenizedAssetProvider({ children }: TokenizedAssetProviderProps
         TIME_HISTORY_CONFIG.interval,
       ],
       queryFn: async () => {
-        const payload = {
+        return fetchTimeHistory({
           market: market.id,
           asset_id: market.asset_one,
           duration_secs: TIME_HISTORY_CONFIG.duration_secs,
           interval: TIME_HISTORY_CONFIG.interval,
-        }
-        const result = await fetchTimeHistory(payload)
-        return result
+        })
       },
       enabled: !!market.id && !!market.asset_one && assets.length > 0,
-      staleTime: 1000 * 60 * 30, // 30 minutes - historical data doesn't change
-      gcTime: 1000 * 60 * 60, // 1 hour
-      retry: false, // Don't retry on failure, just use fallback
+      staleTime: 1000 * 60 * 30,
+      gcTime: 1000 * 60 * 60,
+      retry: false,
     })),
   })
 
-  // Aggregate loading states
   const timeHistoryLoading = timeHistoryQueries.some(query => query.isLoading)
-  const loading = marketsLoading || assetsLoading || timeHistoryLoading
+  const loading = marketsLoading || assetsLoading || ordersLoading || timeHistoryLoading
 
-  // Aggregate error states (only for markets and assets - time history is optional)
   const error = marketsError?.message || assetsError?.message || null
 
-  // Transform data using useMemo - no useEffect needed with TanStack Query
   const transformedAssets = useMemo(() => {
     if (!loading && markets.length > 0 && assets.length > 0) {
-      // Extract time history results
       const timeHistoryResults = timeHistoryQueries.map(query => ({
         data: query.data,
         error: query.error,
       }))
-
-      const transformed = transformMarketsToAssets(markets, assets, timeHistoryResults)
-      return transformed
+      return transformMarketsToAssets(markets, assets, timeHistoryResults, orders)
     }
     return []
-  }, [markets, assets, timeHistoryQueries, loading])
+  }, [markets, assets, timeHistoryQueries, orders, loading])
 
   const refetch = () => {
     refetchMarkets()
     refetchAssets()
+    refetchOrders()
     timeHistoryQueries.forEach(query => query.refetch())
   }
 

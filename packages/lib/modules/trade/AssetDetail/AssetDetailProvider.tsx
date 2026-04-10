@@ -8,6 +8,7 @@ import { useAsset } from '@repo/lib/cradle-client-ts/hooks/assets/useAsset'
 import { useOrders } from '@repo/lib/cradle-client-ts/hooks/orders/useOrders'
 import type { Market, Order } from '@repo/lib/cradle-client-ts/types'
 import type { TimeHistoryDataPoint } from '@repo/lib/actions/time-history'
+import { computePriceFromOrders } from '../shared/price-fallback'
 
 // Import the fetcher function
 async function fetchTimeHistory(params: {
@@ -158,17 +159,22 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
   const asset = useMemo((): TokenizedAssetData | null => {
     if (!market || !primaryAsset) return null
 
-    // If no time history data, return asset with empty chart data
+    // If no time history data, fall back to order book price
     if (allTimeHistoryData.length === 0) {
+      const { currentPrice: fallbackPrice } = computePriceFromOrders(
+        orders,
+        market.id,
+        market.asset_one
+      )
       return {
         id: market.id,
         symbol: primaryAsset.symbol,
         name: primaryAsset.name,
         logo: primaryAsset.icon ?? '',
-        currentPrice: 0,
+        currentPrice: fallbackPrice,
         dailyChange: 0,
         dailyChangePercent: 0,
-        priceHistory: [], // Empty array = no chart
+        priceHistory: [],
         quoteAssetSymbol: secondaryAsset?.symbol,
         quoteAssetDecimals:
           secondaryAsset?.decimals != null ? Number(secondaryAsset.decimals) : undefined,
@@ -216,7 +222,7 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
         secondaryAsset?.decimals != null ? Number(secondaryAsset.decimals) : undefined,
       timeHistoryData: allTimeHistoryData, // Pass full OHLC data for candlestick chart
     }
-  }, [market, primaryAsset, secondaryAsset, allTimeHistoryData, marketId])
+  }, [market, primaryAsset, secondaryAsset, allTimeHistoryData, orders, marketId])
 
   // Order book click-to-fill state
   const [selectedOrderBookPrice, setSelectedOrderBookPrice] = useState<number | null>(null)

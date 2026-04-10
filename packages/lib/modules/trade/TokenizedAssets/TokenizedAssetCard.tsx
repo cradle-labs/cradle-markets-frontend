@@ -206,22 +206,29 @@ export function TokenizedAssetCard({ asset, onClick }: TokenizedAssetCardProps) 
           <VStack align="start" spacing={2}>
             {/* Current price - large, bold */}
             <Text fontSize="2xl" fontWeight="bold">
-              {formatPrice(asset.currentPrice)}
+              {asset.currentPrice > 0 ? formatPrice(asset.currentPrice) : '—'}
             </Text>
-            {/* 24H change - colored line with arrow, dollar change, percentage, and 24H label */}
-            <HStack spacing={1}>
-              {isPositive ? (
-                <ChevronUpIcon color={changeColor} h={4} w={4} />
-              ) : (
-                <ChevronDownIcon color={changeColor} h={4} w={4} />
-              )}
-              <Text color={changeColor} fontSize="sm" fontWeight="medium">
-                {formatChange(asset.dailyChange)} ({formatChangePercent(asset.dailyChangePercent)})
-              </Text>
+            {/* 24H change - only show when we have data */}
+            {asset.currentPrice > 0 && asset.dailyChange !== 0 ? (
+              <HStack spacing={1}>
+                {isPositive ? (
+                  <ChevronUpIcon color={changeColor} h={4} w={4} />
+                ) : (
+                  <ChevronDownIcon color={changeColor} h={4} w={4} />
+                )}
+                <Text color={changeColor} fontSize="sm" fontWeight="medium">
+                  {formatChange(asset.dailyChange)} (
+                  {formatChangePercent(asset.dailyChangePercent)})
+                </Text>
+                <Text color="font.secondary" fontSize="sm">
+                  24H
+                </Text>
+              </HStack>
+            ) : (
               <Text color="font.secondary" fontSize="sm">
-                24H
+                {asset.currentPrice > 0 ? 'Limited history' : 'No trading data'}
               </Text>
-            </HStack>
+            )}
           </VStack>
 
           {/* 3. Chart (Bottom Area) - stretches across bottom width with soft background tint */}

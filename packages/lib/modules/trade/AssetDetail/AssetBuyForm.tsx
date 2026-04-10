@@ -608,16 +608,21 @@ export function AssetBuyForm() {
         </HStack>
       </VStack>
 
-      {/* Action Button */}
+      {/* Action Button — prominent green */}
       <Button
+        _disabled={{ bg: 'background.level2', color: 'font.tertiary', cursor: 'not-allowed' }}
+        _hover={{ bg: 'green.600' }}
+        bg="green.500"
+        color="white"
+        fontSize="md"
+        fontWeight="bold"
+        h="48px"
         isDisabled={!market || !assetOne || !assetTwo || Number(payAmount) <= 0}
         isLoading={isSubmitting}
         onClick={handleSubmitOrder}
-        size="lg"
-        variant="primary"
         w="full"
       >
-        {orderType === 'market' ? 'Buy at Market' : 'Place Limit Order'}
+        {orderType === 'market' ? `Buy ${assetOne?.symbol || ''}` : 'Place Limit Buy'}
       </Button>
     </VStack>
   )

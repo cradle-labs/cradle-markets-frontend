@@ -1,15 +1,22 @@
 'use client'
 
-import { createContext, useContext, ReactNode, useMemo } from 'react'
-import { useQueries } from '@tanstack/react-query'
+import { createContext, useContext, ReactNode, useMemo, useState, useCallback } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { TokenizedAssetData } from '../TokenizedAssets/TokenizedAssetCard'
 import { useMarket } from '@repo/lib/cradle-client-ts/hooks/markets/useMarket'
 import { useAsset } from '@repo/lib/cradle-client-ts/hooks/assets/useAsset'
 import { useOrders } from '@repo/lib/cradle-client-ts/hooks/orders/useOrders'
 import type { Market, Order } from '@repo/lib/cradle-client-ts/types'
 import type { TimeHistoryDataPoint } from '@repo/lib/actions/time-history'
+import { computePriceFromOrders } from '../shared/price-fallback'
 
-// Import the fetcher function
+// Fetch all-time data with a 1-day interval — gives us good coverage
+// without needing multiple queries. The chart filters client-side per timeframe.
+const TIME_HISTORY_CONFIG = {
+  duration_secs: '94608000', // ~3 years
+  interval: '1day' as const,
+}
+
 async function fetchTimeHistory(params: {
   market: string
   asset_id: string
@@ -18,22 +25,6 @@ async function fetchTimeHistory(params: {
 }): Promise<TimeHistoryDataPoint[]> {
   const { getTimeHistory } = await import('@repo/lib/actions/time-history')
   return getTimeHistory(params)
-}
-
-// Configuration for different time periods
-interface TimeConfig {
-  duration_secs: string
-  interval: '15secs' | '1min' | '5min' | '15min' | '30min' | '1hr' | '4hr' | '1day' | '1week'
-}
-
-const TIME_CONFIGS: Record<string, TimeConfig> = {
-  REALTIME: { duration_secs: '900', interval: '15secs' }, // 15 minutes: 15-second intervals for live chart
-  '1D': { duration_secs: '86400', interval: '15min' }, // 1 day: 15-minute intervals
-  '1W': { duration_secs: '604800', interval: '15min' }, // 1 week: 15-minute intervals
-  '1M': { duration_secs: '2592000', interval: '4hr' }, // 1 month: 4-hour intervals
-  '3M': { duration_secs: '7776000', interval: '1day' }, // 3 months: daily intervals
-  '1Y': { duration_secs: '31536000', interval: '1week' }, // 1 year: weekly intervals
-  ALL: { duration_secs: '94608000', interval: '1week' }, // 3 years: weekly intervals
 }
 
 interface AssetDetailContextType {
@@ -45,6 +36,9 @@ interface AssetDetailContextType {
   loading: boolean
   error: string | null
   refetch: () => void
+  /** Price selected from order book click — forms should use this as limit price */
+  selectedOrderBookPrice: number | null
+  setSelectedOrderBookPrice: (price: number | null) => void
 }
 
 const AssetDetailContext = createContext<AssetDetailContextType | undefined>(undefined)
@@ -63,7 +57,6 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
     refetch: refetchMarket,
   } = useMarket({ marketId })
 
-  console.log('Market:', market)
   // Fetch primary asset data (asset_one from the market)
   const {
     data: primaryAsset,
@@ -74,8 +67,6 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
     assetId: market?.asset_one || '',
     enabled: !!market?.asset_one,
   })
-
-  console.log('primaryAsset', primaryAsset)
 
   // Fetch secondary asset data (asset_two from the market)
   const {
@@ -88,73 +79,38 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
     enabled: !!market?.asset_two,
   })
 
-  // Fetch time history data for all chart periods
-  const timeHistoryQueries = useQueries({
-    queries: Object.entries(TIME_CONFIGS).map(([period, config]) => ({
-      queryKey: [
-        'time-history',
-        marketId,
-        market?.asset_one,
-        config.duration_secs,
-        config.interval,
-      ],
-      queryFn: async () => {
-        const payload = {
-          market: marketId,
-          asset_id: market?.asset_one || '',
-          duration_secs: config.duration_secs,
-          interval: config.interval,
-        }
-        console.log(`[Time History] ${period} payload:`, payload)
-        const result = await fetchTimeHistory(payload)
-        console.log(`[Time History] ${period} response:`, {
-          dataPoints: result?.length || 0,
-          sample: result?.slice(0, 2), // First 2 items
-        })
-        return result
-      },
-      enabled: !!market?.asset_one,
-      // For REALTIME data, refetch every 15 seconds
-      refetchInterval: (period === 'REALTIME' ? 15000 : false) as number | false,
-      // Historical data doesn't change, so cache it much longer
-      staleTime: period === 'REALTIME' ? 0 : 1000 * 60 * 30, // No stale time for realtime, 30 minutes for historical data
-      gcTime: period === 'REALTIME' ? 1000 * 60 * 5 : 1000 * 60 * 60, // 5 minutes for realtime, 1 hour for historical data
-      retry: false,
-    })),
+  // Single all-time query — chart filters client-side per timeframe
+  const {
+    data: timeHistoryData = [],
+    isLoading: timeHistoryLoading,
+    refetch: refetchTimeHistory,
+  } = useQuery({
+    queryKey: [
+      'time-history',
+      marketId,
+      market?.asset_one,
+      TIME_HISTORY_CONFIG.duration_secs,
+      TIME_HISTORY_CONFIG.interval,
+    ],
+    queryFn: async () => {
+      return fetchTimeHistory({
+        market: marketId,
+        asset_id: market?.asset_one || '',
+        duration_secs: TIME_HISTORY_CONFIG.duration_secs,
+        interval: TIME_HISTORY_CONFIG.interval,
+      })
+    },
+    enabled: !!market?.asset_one,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 60, // 1 hour
+    retry: false,
   })
 
-  // Combine all time history data and sort by timestamp
+  // Sort by timestamp ascending
   const allTimeHistoryData = useMemo(() => {
-    const allData: TimeHistoryDataPoint[] = []
-    const periodNames = Object.keys(TIME_CONFIGS)
-
-    timeHistoryQueries.forEach((query, index) => {
-      const period = periodNames[index]
-      if (query.data && Array.isArray(query.data)) {
-        console.log(`[allData] Adding ${query.data.length} data points from ${period} period`)
-        allData.push(...query.data)
-      } else {
-        console.log(
-          `[allData] No data from ${period} period (isLoading: ${query.isLoading}, hasError: ${!!query.error})`
-        )
-      }
-    })
-
-    console.log('[allData] Total combined data points:', allData.length)
-    console.log('[allData] Breakdown by timestamp:', {
-      uniqueTimestamps: new Set(allData.map(d => d.timestamp)).size,
-      allData: allData,
-    })
-
-    // Remove duplicates and sort by timestamp
-    const uniqueData = Array.from(
-      new Map(allData.map(item => [item.timestamp, item])).values()
-    ).sort((a, b) => a.timestamp - b.timestamp)
-    console.log('uniqueData', uniqueData)
-
-    console.log('Combined time history data:', uniqueData.length, 'data points')
-    return uniqueData
-  }, [timeHistoryQueries])
+    if (!timeHistoryData || !Array.isArray(timeHistoryData)) return []
+    return [...timeHistoryData].sort((a, b) => a.timestamp - b.timestamp)
+  }, [timeHistoryData])
 
   // Fetch orders for this market
   const {
@@ -166,44 +122,32 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
   })
 
   // Aggregate loading states
-  const timeHistoryLoading = timeHistoryQueries.some(q => q.isLoading)
   const loading =
     marketLoading || assetOneLoading || assetTwoLoading || timeHistoryLoading || ordersLoading
 
   // Aggregate error states (time history and orders are optional)
   const error = marketError?.message || assetOneError?.message || assetTwoError?.message || null
 
-  // Log time history errors as warnings
-  const timeHistoryErrors = timeHistoryQueries.filter(q => q.error)
-  if (timeHistoryErrors.length > 0) {
-    console.warn(`Time history fetch failed for market ${marketId}:`, timeHistoryErrors)
-  }
-
   // Transform data into TokenizedAssetData format
   const asset = useMemo((): TokenizedAssetData | null => {
     if (!market || !primaryAsset) return null
 
-    console.log('Transforming asset detail data:')
-    console.log('- Market:', market)
-    console.log('- Primary Asset:', primaryAsset)
-    console.log('- Combined Time History:', allTimeHistoryData.length, 'data points')
-
-    // If no time history data, return asset with empty chart data
+    // If no time history data, fall back to order book price
     if (allTimeHistoryData.length === 0) {
-      console.warn(
-        'No time history data available for market:',
-        marketId,
-        '- showing details without chart'
+      const { currentPrice: fallbackPrice } = computePriceFromOrders(
+        orders,
+        market.id,
+        market.asset_one
       )
       return {
         id: market.id,
         symbol: primaryAsset.symbol,
         name: primaryAsset.name,
         logo: primaryAsset.icon ?? '',
-        currentPrice: 0,
+        currentPrice: fallbackPrice,
         dailyChange: 0,
         dailyChangePercent: 0,
-        priceHistory: [], // Empty array = no chart
+        priceHistory: [],
         quoteAssetSymbol: secondaryAsset?.symbol,
         quoteAssetDecimals:
           secondaryAsset?.decimals != null ? Number(secondaryAsset.decimals) : undefined,
@@ -251,13 +195,19 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
         secondaryAsset?.decimals != null ? Number(secondaryAsset.decimals) : undefined,
       timeHistoryData: allTimeHistoryData, // Pass full OHLC data for candlestick chart
     }
-  }, [market, primaryAsset, secondaryAsset, allTimeHistoryData, marketId])
+  }, [market, primaryAsset, secondaryAsset, allTimeHistoryData, orders, marketId])
+
+  // Order book click-to-fill state
+  const [selectedOrderBookPrice, setSelectedOrderBookPrice] = useState<number | null>(null)
+  const handleSetSelectedOrderBookPrice = useCallback((price: number | null) => {
+    setSelectedOrderBookPrice(price)
+  }, [])
 
   const refetch = () => {
     refetchMarket()
     refetchAssetOne()
     refetchAssetTwo()
-    timeHistoryQueries.forEach(query => query.refetch())
+    refetchTimeHistory()
     refetchOrders()
   }
 
@@ -270,6 +220,8 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
     loading,
     error,
     refetch,
+    selectedOrderBookPrice,
+    setSelectedOrderBookPrice: handleSetSelectedOrderBookPrice,
   }
 
   return <AssetDetailContext.Provider value={value}>{children}</AssetDetailContext.Provider>

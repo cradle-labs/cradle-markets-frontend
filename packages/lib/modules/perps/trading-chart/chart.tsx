@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { Box, HStack, VStack, Text, useColorMode } from '@chakra-ui/react'
+import { Box, HStack, Text, useColorMode } from '@chakra-ui/react'
 import {
   createChart,
   IChartApi,
@@ -9,77 +9,52 @@ import {
   CandlestickData,
   Time,
   CandlestickSeries,
+  HistogramSeries,
+  HistogramData,
+  LineStyle,
 } from 'lightweight-charts'
-import { NoisyCard } from '@repo/lib/shared/components/containers/NoisyCard'
-import ButtonGroup from '@repo/lib/shared/components/btns/button-group/ButtonGroup'
+
+export interface CandlestickDataWithVolume extends CandlestickData {
+  volume?: number
+}
 
 export interface TradingChartProps {
   symbol?: string
-  data?: CandlestickData[]
+  data?: CandlestickDataWithVolume[]
   selectedPrice?: number | null
   selectedTime?: Time | null
   onCrosshairMove?: (price: number | null, time: Time | null) => void
+  onTimeFrameChange?: (timeFrame: string) => void
+  activeTimeFrame?: string
 }
 
-type ChartData = {
-  time: string
-  open: number
-  high: number
-  low: number
-  close: number
-  volume: number
-}
+const TIME_FRAMES = ['1D', '1W', '1M', '3M', '1Y', 'ALL'] as const
 
-type TimeFrame = '1H' | '4H' | '1D' | '1W' | '1M'
-
-// Simulated data generator for demo purposes
-const generateSimulatedData = (days: number): ChartData[] => {
-  const data: ChartData[] = []
-  const now = new Date()
-  let currentPrice = 100 // Starting price for tokenized share
-
-  for (let i = days - 1; i >= 0; i--) {
-    const time = new Date(now.getTime() - i * 24 * 60 * 60 * 1000)
-
-    // Random price movement
-    const volatility = 0.02 // 2% daily volatility
-    const change = (Math.random() - 0.5) * 2 * volatility
-
-    const open = currentPrice
-    const close = open * (1 + change)
-    const high = Math.max(open, close) * (1 + Math.random() * 0.01)
-    const low = Math.min(open, close) * (1 - Math.random() * 0.01)
-    const volume = Math.random() * 1000000 + 100000
-
-    data.push({
-      time: time.toISOString().split('T')[0],
-      open: Number(open.toFixed(4)),
-      high: Number(high.toFixed(4)),
-      low: Number(low.toFixed(4)),
-      close: Number(close.toFixed(4)),
-      volume: Number(volume.toFixed(0)),
-    })
-
-    currentPrice = close
-  }
-
-  return data
-}
-
-export function TradingChart({ symbol = 'SHARES/USDC', data, onCrosshairMove }: TradingChartProps) {
+export function TradingChart({
+  symbol = 'SHARES/USDC',
+  data,
+  onCrosshairMove,
+  onTimeFrameChange,
+  activeTimeFrame = '1M',
+}: TradingChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const candlestickSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
+  const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null)
   const { colorMode } = useColorMode()
 
-  // Extract quote asset symbol from symbol prop (e.g., "SAF/KESN" -> "KESN")
   const quoteSymbol = symbol.includes('/') ? symbol.split('/')[1] : '$'
 
-  const [activeTimeFrame, setActiveTimeFrame] = useState<TimeFrame>('1D')
   const [currentPrice, setCurrentPrice] = useState<number | null>(null)
-  const [chartData, setChartData] = useState<ChartData[]>([])
+  const [crosshairOhlcv, setCrosshairOhlcv] = useState<{
+    open: number
+    high: number
+    low: number
+    close: number
+    volume: number
+  } | null>(null)
+  const priceLineRef = useRef<ReturnType<ISeriesApi<'Candlestick'>['createPriceLine']> | null>(null)
 
-  // Format price with quote asset symbol
   const formatPrice = (price: number) => {
     const formatted = new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 2,
@@ -89,7 +64,13 @@ export function TradingChart({ symbol = 'SHARES/USDC', data, onCrosshairMove }: 
     return `${quoteSymbol}${separator}${formatted}`
   }
 
-  // Memoize the crosshair move handler to prevent unnecessary re-renders
+  const formatVolume = (vol: number): string => {
+    if (vol >= 1_000_000_000) return `${(vol / 1_000_000_000).toFixed(1)}B`
+    if (vol >= 1_000_000) return `${(vol / 1_000_000).toFixed(1)}M`
+    if (vol >= 1_000) return `${(vol / 1_000).toFixed(1)}K`
+    return vol.toFixed(0)
+  }
+
   const handleCrosshairMove = useCallback(
     (price: number | null, time: Time | null) => {
       onCrosshairMove?.(price, time)
@@ -97,119 +78,123 @@ export function TradingChart({ symbol = 'SHARES/USDC', data, onCrosshairMove }: 
     [onCrosshairMove]
   )
 
-  // Generate or use provided data
-  useEffect(() => {
-    if (data) {
-      setChartData(
-        data.map(d => ({
-          time: d.time as string,
-          open: d.open,
-          high: d.high,
-          low: d.low,
-          close: d.close,
-          volume: 0, // Volume not provided in CandlestickData
-        }))
-      )
-    } else {
-      // Generate simulated data based on timeframe
-      const days =
-        activeTimeFrame === '1H'
-          ? 7
-          : activeTimeFrame === '4H'
-            ? 30
-            : activeTimeFrame === '1D'
-              ? 90
-              : activeTimeFrame === '1W'
-                ? 365
-                : 730
-      setChartData(generateSimulatedData(days))
-    }
-  }, [data, activeTimeFrame])
-
   // Initialize chart
   useEffect(() => {
     if (!chartContainerRef.current) return
 
+    const isDark = colorMode === 'dark'
+    const textColor = isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)'
+    const gridColor = isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.06)'
+    const borderColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.1)'
+    const crosshairColor = isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'
+
     const chart = createChart(chartContainerRef.current, {
       width: chartContainerRef.current.clientWidth,
-      height: 400,
+      height: chartContainerRef.current.clientHeight || 420,
       layout: {
         background: { color: 'transparent' },
-        textColor: colorMode === 'dark' ? '#ffffff' : '#000000',
+        textColor,
+        fontSize: 11,
       },
       grid: {
-        vertLines: {
-          color: colorMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-        },
-        horzLines: {
-          color: colorMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-        },
+        vertLines: { color: gridColor },
+        horzLines: { color: gridColor },
       },
       crosshair: {
-        mode: 0, // Normal mode instead of magnet mode
+        mode: 0,
         vertLine: {
           width: 1,
-          color: colorMode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-          style: 0,
+          color: crosshairColor,
+          style: 2,
+          labelBackgroundColor: isDark ? '#2D3748' : '#E2E8F0',
         },
         horzLine: {
           width: 1,
-          color: colorMode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-          style: 0,
+          color: crosshairColor,
+          style: 2,
+          labelBackgroundColor: isDark ? '#2D3748' : '#E2E8F0',
         },
       },
       rightPriceScale: {
-        borderColor: colorMode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+        borderColor,
+        scaleMargins: {
+          top: 0.05,
+          bottom: 0.25, // Leave space for volume
+        },
       },
       timeScale: {
-        borderColor: colorMode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+        borderColor,
         timeVisible: true,
         secondsVisible: false,
         fixLeftEdge: true,
         fixRightEdge: true,
-        lockVisibleTimeRangeOnResize: true,
       },
     })
 
     const candlestickSeries = chart.addSeries(CandlestickSeries, {
-      upColor: '#4ade80',
+      upColor: '#22c55e',
       downColor: '#ef4444',
       borderVisible: true,
-      borderUpColor: '#4ade80',
+      borderUpColor: '#22c55e',
       borderDownColor: '#ef4444',
       wickVisible: true,
-      wickUpColor: '#4ade80',
+      wickUpColor: '#22c55e',
       wickDownColor: '#ef4444',
+    })
+
+    const volumeSeries = chart.addSeries(HistogramSeries, {
+      priceFormat: { type: 'volume' },
+      priceScaleId: 'volume',
+    })
+
+    chart.priceScale('volume').applyOptions({
+      scaleMargins: {
+        top: 0.85,
+        bottom: 0,
+      },
     })
 
     chartRef.current = chart
     candlestickSeriesRef.current = candlestickSeries
+    volumeSeriesRef.current = volumeSeries
 
-    // Handle crosshair movement with improved error handling
     chart.subscribeCrosshairMove(param => {
       try {
         if (param.time && param.seriesData) {
           const seriesData = param.seriesData.get(candlestickSeries)
+          const volData = param.seriesData.get(volumeSeries)
           if (seriesData && typeof seriesData === 'object' && 'close' in seriesData) {
             const candleData = seriesData as CandlestickData
+            const volume =
+              volData && typeof volData === 'object' && 'value' in volData
+                ? (volData as HistogramData).value
+                : 0
             setCurrentPrice(candleData.close)
+            setCrosshairOhlcv({
+              open: candleData.open,
+              high: candleData.high,
+              low: candleData.low,
+              close: candleData.close,
+              volume,
+            })
             handleCrosshairMove(candleData.close, param.time)
           }
         } else {
           setCurrentPrice(null)
+          setCrosshairOhlcv(null)
           handleCrosshairMove(null, null)
         }
-      } catch (error) {
-        console.warn('Chart crosshair move error:', error)
+      } catch {
         setCurrentPrice(null)
+        setCrosshairOhlcv(null)
       }
     })
 
-    // Handle resize
     const handleResize = () => {
       if (chartContainerRef.current) {
         chart.applyOptions({
           width: chartContainerRef.current.clientWidth,
+          height: chartContainerRef.current.clientHeight || 420,
         })
       }
     }
@@ -227,115 +212,173 @@ export function TradingChart({ symbol = 'SHARES/USDC', data, onCrosshairMove }: 
 
   // Update chart data
   useEffect(() => {
-    if (candlestickSeriesRef.current && chartData.length > 0) {
-      const formattedData = chartData.map(d => ({
-        time: d.time as Time,
-        open: d.open,
-        high: d.high,
-        low: d.low,
-        close: d.close,
-      }))
+    if (!candlestickSeriesRef.current || !volumeSeriesRef.current || !data || data.length === 0)
+      return
 
-      candlestickSeriesRef.current.setData(formattedData)
+    const formattedCandles: CandlestickData[] = data.map(d => ({
+      time: d.time,
+      open: d.open,
+      high: d.high,
+      low: d.low,
+      close: d.close,
+    }))
 
-      // Set current price to latest close
-      if (formattedData.length > 0) {
-        setCurrentPrice(formattedData[formattedData.length - 1].close)
-      }
+    const volumeData: HistogramData[] = data.map(d => ({
+      time: d.time,
+      value: d.volume ?? 0,
+      color:
+        d.close >= d.open ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)',
+    }))
 
-      // Fit content to ensure all candlesticks are visible
-      if (chartRef.current) {
-        chartRef.current.timeScale().fitContent()
-      }
+    candlestickSeriesRef.current.setData(formattedCandles)
+    volumeSeriesRef.current.setData(volumeData)
+
+    // Remove previous price line if it exists
+    if (priceLineRef.current && candlestickSeriesRef.current) {
+      candlestickSeriesRef.current.removePriceLine(priceLineRef.current)
+      priceLineRef.current = null
     }
-  }, [chartData])
 
-  const handleTimeFrameChange = (option: any) => {
-    setActiveTimeFrame(option.value)
-  }
+    if (formattedCandles.length > 0) {
+      const lastCandle = formattedCandles[formattedCandles.length - 1]
+      setCurrentPrice(lastCandle.close)
 
-  const latestData = chartData[chartData.length - 1]
+      // Add a horizontal price line at the latest close
+      const isUp = lastCandle.close >= lastCandle.open
+      priceLineRef.current = candlestickSeriesRef.current.createPriceLine({
+        price: lastCandle.close,
+        color: isUp ? '#22c55e' : '#ef4444',
+        lineWidth: 1,
+        lineStyle: LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: '',
+      })
+    }
 
-  // Safely parse price values
-  const safeCurrentPrice =
+    if (chartRef.current) {
+      chartRef.current.timeScale().fitContent()
+    }
+  }, [data])
+
+  const latestCandle = data && data.length > 0 ? data[data.length - 1] : null
+  const prevCandle = data && data.length > 1 ? data[data.length - 2] : null
+
+  const displayPrice =
     typeof currentPrice === 'number'
       ? currentPrice
-      : latestData?.close && typeof latestData.close === 'number'
-        ? latestData.close
-        : 0
+      : latestCandle?.close ?? 0
 
   const priceChange =
-    latestData && chartData.length > 1
-      ? latestData.close - chartData[chartData.length - 2].close
-      : 0
+    latestCandle && prevCandle ? latestCandle.close - prevCandle.close : 0
   const priceChangePercent =
-    latestData && chartData.length > 1
-      ? (priceChange / chartData[chartData.length - 2].close) * 100
+    latestCandle && prevCandle && prevCandle.close !== 0
+      ? (priceChange / prevCandle.close) * 100
       : 0
+
+  // OHLCV values: use crosshair data when hovering, otherwise fall back to latest candle
+  const displayOhlcv = crosshairOhlcv ?? (latestCandle
+    ? {
+        open: latestCandle.open,
+        high: latestCandle.high,
+        low: latestCandle.low,
+        close: latestCandle.close,
+        volume: latestCandle.volume ?? 0,
+      }
+    : null)
 
   return (
-    <NoisyCard>
-      <VStack h="full" p={{ base: 'sm', md: 'md' }} spacing={4} w="full">
-        {/* Header with price info and timeframe buttons */}
-        <HStack justify="space-between" w="full" wrap="wrap">
-          <VStack align="start" spacing={1}>
-            <Text fontSize="lg" fontWeight="bold">
-              {symbol}
-            </Text>
+    <Box bg="background.level0" display="flex" flexDirection="column" h="full" w="full">
+      {/* Chart header */}
+      <HStack
+        borderBottom="1px solid"
+        borderColor="border.base"
+        justify="space-between"
+        px={3}
+        py={2}
+        w="full"
+        wrap="wrap"
+      >
+        <HStack spacing={3}>
+          <Text fontSize="sm" fontWeight="semibold">
+            {symbol}
+          </Text>
+          <Text
+            color={priceChange >= 0 ? 'green.400' : 'red.400'}
+            fontFamily="mono"
+            fontSize="sm"
+            fontWeight="bold"
+          >
+            {formatPrice(displayPrice)}
+          </Text>
+          <Text
+            color={priceChange >= 0 ? 'green.400' : 'red.400'}
+            fontFamily="mono"
+            fontSize="xs"
+          >
+            {priceChange >= 0 ? '+' : ''}
+            {priceChangePercent.toFixed(2)}%
+          </Text>
+          {displayOhlcv && (
             <HStack spacing={2}>
-              <Text fontSize="2xl" fontWeight="bold">
-                {formatPrice(safeCurrentPrice)}
+              <Text color="font.secondary" fontFamily="mono" fontSize="xs">
+                O:{' '}
+                <Text as="span" color="font.primary">
+                  {formatPrice(displayOhlcv.open)}
+                </Text>
               </Text>
-              <Text color={priceChange >= 0 ? 'green.400' : 'red.400'} fontSize="sm">
-                {priceChange >= 0 ? '+' : ''}
-                {formatPrice(priceChange)} ({priceChangePercent >= 0 ? '+' : ''}
-                {priceChangePercent.toFixed(2)}%)
+              <Text color="font.secondary" fontFamily="mono" fontSize="xs">
+                H:{' '}
+                <Text as="span" color="font.primary">
+                  {formatPrice(displayOhlcv.high)}
+                </Text>
+              </Text>
+              <Text color="font.secondary" fontFamily="mono" fontSize="xs">
+                L:{' '}
+                <Text as="span" color="font.primary">
+                  {formatPrice(displayOhlcv.low)}
+                </Text>
+              </Text>
+              <Text color="font.secondary" fontFamily="mono" fontSize="xs">
+                C:{' '}
+                <Text as="span" color="font.primary">
+                  {formatPrice(displayOhlcv.close)}
+                </Text>
+              </Text>
+              <Text color="font.secondary" fontFamily="mono" fontSize="xs">
+                V:{' '}
+                <Text as="span" color="font.primary">
+                  {formatVolume(displayOhlcv.volume)}
+                </Text>
               </Text>
             </HStack>
-          </VStack>
-
-          <ButtonGroup
-            currentOption={{ label: activeTimeFrame, value: activeTimeFrame }}
-            groupId="timeframe"
-            onChange={handleTimeFrameChange}
-            options={[
-              { label: '1H', value: '1H' },
-              { label: '4H', value: '4H' },
-              { label: '1D', value: '1D' },
-              { label: '1W', value: '1W' },
-              { label: '1M', value: '1M' },
-            ]}
-            size="sm"
-          />
+          )}
         </HStack>
 
-        {/* Chart container with isolation */}
-        <Box
-          h="400px"
-          position="relative"
-          ref={chartContainerRef}
-          sx={{
-            '& *': {
-              pointerEvents: 'auto',
-            },
-            '&:hover': {
-              transform: 'none',
-            },
-            '& canvas': {
-              position: 'relative',
-              zIndex: 2,
-            },
-          }}
-          w="full"
-          zIndex={1}
-        />
-
-        {/* Chart info */}
-        <HStack color="gray.500" fontSize="sm" justify="space-between" w="full">
-          <Text>Volume: {latestData?.volume.toLocaleString() || 'N/A'}</Text>
+        {/* Timeframe buttons */}
+        <HStack spacing={0}>
+          {TIME_FRAMES.map(tf => (
+            <Box
+              _hover={{ color: 'font.primary', bg: 'background.level1' }}
+              bg={activeTimeFrame === tf ? 'background.level2' : 'transparent'}
+              borderRadius="sm"
+              color={activeTimeFrame === tf ? 'font.primary' : 'font.secondary'}
+              cursor="pointer"
+              fontSize="xs"
+              fontWeight={activeTimeFrame === tf ? 'bold' : 'medium'}
+              key={tf}
+              onClick={() => onTimeFrameChange?.(tf)}
+              px={2}
+              py={1}
+            >
+              {tf}
+            </Box>
+          ))}
         </HStack>
-      </VStack>
-    </NoisyCard>
+      </HStack>
+
+      {/* Chart canvas */}
+      <Box flex={1} minH="300px" ref={chartContainerRef} w="full" />
+    </Box>
   )
 }
 

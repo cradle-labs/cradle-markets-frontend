@@ -1,40 +1,31 @@
 'use client'
 
-import { Box, HStack, VStack, Skeleton } from '@chakra-ui/react'
-import { DefaultPageContainer } from '@repo/lib/shared/components/containers/DefaultPageContainer'
-import FadeInOnView from '@repo/lib/shared/components/containers/FadeInOnView'
-import Noise from '@repo/lib/shared/components/layout/Noise'
-import { RadialPattern } from '@repo/lib/shared/components/zen/RadialPattern'
+import {
+  Accordion,
+  AccordionButton,
+  AccordionIcon,
+  AccordionItem,
+  AccordionPanel,
+  Box,
+  HStack,
+  Skeleton,
+  Text,
+  VStack,
+} from '@chakra-ui/react'
 import { AssetDetailProvider, useAssetDetail } from './AssetDetailProvider'
-import { AssetBreadcrumbs } from './AssetBreadcrumbs'
-import { AssetHeader } from './AssetHeader'
+import { MarketInfoBar } from './MarketInfoBar'
 import { AssetChart } from './AssetChart'
 import { AssetTradingPanel } from './AssetTradingPanel'
-import { AssetInfo } from './AssetInfo'
 import { MarketOrders } from './MarketOrders'
-import ButtonGroup, {
-  ButtonGroupOption,
-} from '@repo/lib/shared/components/btns/button-group/ButtonGroup'
-import { useState } from 'react'
+import { SpotOrderBook } from './SpotOrderBook'
+import { AssetInfo } from './AssetInfo'
 
 interface AssetDetailPageProps {
   marketId: string
 }
 
-enum ContentTab {
-  DETAILS = 'details',
-  ORDERS = 'orders',
-}
-
-const contentTabs: ButtonGroupOption[] = [
-  { value: ContentTab.DETAILS, label: 'Asset Details' },
-  { value: ContentTab.ORDERS, label: 'Market Orders' },
-]
-
 function AssetDetailContent() {
   const { asset, loading, error } = useAssetDetail()
-  console.log('Asset:', asset)
-  const [activeTab, setActiveTab] = useState<ButtonGroupOption>(contentTabs[0])
 
   if (loading) {
     return <AssetDetailSkeleton />
@@ -45,278 +36,170 @@ function AssetDetailContent() {
   }
 
   return (
-    <>
-      {/* Header Section with Breadcrumbs */}
-      <Box borderBottom="1px solid" borderColor="border.base">
-        <Noise
-          backgroundColor="background.level0WithOpacity"
-          overflow="hidden"
-          position="relative"
-          shadow="innerBase"
-        >
-          <DefaultPageContainer
-            noVerticalPadding
-            pb={['xl', 'xl', '10']}
-            pr={{ base: '0 !important', md: 'md !important' }}
-          >
-            <Box display={{ base: 'none', md: 'block' }}>
-              <RadialPattern
-                circleCount={8}
-                height={600}
-                innerHeight={150}
-                innerWidth={500}
-                padding="15px"
-                position="absolute"
-                right={{ base: -800, lg: -700, xl: -600, '2xl': -400 }}
-                top="40px"
-                width={1000}
-              />
-              <RadialPattern
-                circleCount={8}
-                height={600}
-                innerHeight={150}
-                innerWidth={500}
-                left={{ base: -800, lg: -700, xl: -600, '2xl': -400 }}
-                padding="15px"
-                position="absolute"
-                top="40px"
-                width={1000}
-              />
-            </Box>
-            <RadialPattern
-              circleCount={8}
-              height={600}
-              innerHeight={150}
-              innerWidth={150}
-              left="calc(50% - 300px)"
-              position="absolute"
-              top="-300px"
-              width={600}
-            />
-            <RadialPattern
-              circleCount={8}
-              height={600}
-              innerHeight={150}
-              innerWidth={150}
-              left="calc(50% - 300px)"
-              position="absolute"
-              top="300px"
-              width={600}
-            />
-            <FadeInOnView animateOnce={false}>
-              <VStack align="start" pt="72px" w="full">
-                <AssetBreadcrumbs />
-                <AssetHeader asset={asset} />
-              </VStack>
-            </FadeInOnView>
-          </DefaultPageContainer>
-        </Noise>
+    <Box bg="background.level0" pt="72px" w="full">
+      {/* Top: Market info bar — sticky right below the nav bar */}
+      <Box
+        bg="background.level0"
+        borderBottom="1px solid"
+        borderColor="border.base"
+        position="sticky"
+        top="72px"
+        zIndex={10}
+      >
+        <MarketInfoBar asset={asset} />
       </Box>
 
-      {/* Main Content Section */}
-      <DefaultPageContainer noVerticalPadding pb="xl" pt={['lg', '40px']}>
-        <HStack align="start" spacing={6} w="full">
-          {/* Left Column - Chart and Tabbed Content */}
-          <VStack align="stretch" flex={2} minW="700px" spacing={6}>
-            <AssetChart asset={asset} />
+      {/* Primary area: Chart + Trading Panel side by side */}
+      <Box
+        borderBottom="1px solid"
+        borderColor="border.base"
+        display={{ base: 'block', lg: 'grid' }}
+        gridTemplateColumns={{ lg: 'minmax(0, 1fr) 380px' }}
+        minH={{ base: 'auto', lg: 'calc(100vh - 72px - 48px - 80px)' }}
+      >
+        {/* Chart — takes most of the viewport */}
+        <Box
+          borderColor="border.base"
+          borderRight={{ base: 'none', lg: '1px solid' }}
+          h={{ base: '400px', lg: 'full' }}
+          minH="400px"
+          overflow="hidden"
+        >
+          <AssetChart asset={asset} />
+        </Box>
 
-            {/* Tab Navigation */}
-            <Box w="25%">
-              <ButtonGroup
-                currentOption={activeTab}
-                groupId="asset-detail-tabs"
-                isFullWidth
-                onChange={setActiveTab}
-                options={contentTabs}
-                size="md"
-              />
+        {/* Trading Panel — prominent, full-height on desktop */}
+        <Box h={{ base: 'auto', lg: 'full' }} overflow="hidden">
+          <AssetTradingPanel asset={asset} />
+        </Box>
+      </Box>
+
+      {/* Secondary area: Collapsible accordion sections
+          Default: Order Book and My Orders open, Market Info closed */}
+      <Accordion allowMultiple defaultIndex={[0, 1]}>
+        <AccordionItem border="none" borderBottom="1px solid" borderColor="border.base">
+          <h3>
+            <AccordionButton
+              _hover={{ bg: 'background.level1' }}
+              bg="background.level0"
+              px={4}
+              py={3}
+            >
+              <HStack flex={1} spacing={3} textAlign="left">
+                <Text fontSize="sm" fontWeight="semibold">
+                  Order Book
+                </Text>
+                <Text color="font.secondary" fontSize="xs">
+                  Bids and asks for this market
+                </Text>
+              </HStack>
+              <AccordionIcon />
+            </AccordionButton>
+          </h3>
+          <AccordionPanel maxH="500px" overflow="hidden" p={0}>
+            <Box h="500px">
+              <SpotOrderBook />
             </Box>
+          </AccordionPanel>
+        </AccordionItem>
 
-            {/* Tab Content */}
-            <Box>
-              {activeTab.value === ContentTab.DETAILS ? (
-                <AssetInfo asset={asset} />
-              ) : (
-                <MarketOrders />
-              )}
+        <AccordionItem border="none" borderBottom="1px solid" borderColor="border.base">
+          <h3>
+            <AccordionButton
+              _hover={{ bg: 'background.level1' }}
+              bg="background.level0"
+              px={4}
+              py={3}
+            >
+              <HStack flex={1} spacing={3} textAlign="left">
+                <Text fontSize="sm" fontWeight="semibold">
+                  My Orders
+                </Text>
+                <Text color="font.secondary" fontSize="xs">
+                  Your open and closed orders for this market
+                </Text>
+              </HStack>
+              <AccordionIcon />
+            </AccordionButton>
+          </h3>
+          <AccordionPanel maxH="500px" overflow="hidden" p={0}>
+            <Box h="500px">
+              <MarketOrders />
             </Box>
-          </VStack>
+          </AccordionPanel>
+        </AccordionItem>
 
-          {/* Right Column - Trading Panel */}
-          <Box flex={1} maxW="500px" minW="400px">
-            <AssetTradingPanel asset={asset} />
-          </Box>
-        </HStack>
-      </DefaultPageContainer>
-    </>
+        <AccordionItem border="none">
+          <h3>
+            <AccordionButton
+              _hover={{ bg: 'background.level1' }}
+              bg="background.level0"
+              px={4}
+              py={3}
+            >
+              <HStack flex={1} spacing={3} textAlign="left">
+                <Text fontSize="sm" fontWeight="semibold">
+                  About {asset.name}
+                </Text>
+                <Text color="font.secondary" fontSize="xs">
+                  Market details and asset information
+                </Text>
+              </HStack>
+              <AccordionIcon />
+            </AccordionButton>
+          </h3>
+          <AccordionPanel p={4}>
+            <AssetInfo asset={asset} />
+          </AccordionPanel>
+        </AccordionItem>
+      </Accordion>
+    </Box>
   )
 }
 
 function AssetDetailSkeleton() {
   return (
-    <>
-      {/* Header Section Skeleton */}
-      <Box borderBottom="1px solid" borderColor="border.base">
-        <Noise
-          backgroundColor="background.level0WithOpacity"
-          overflow="hidden"
-          position="relative"
-          shadow="innerBase"
-        >
-          <DefaultPageContainer
-            noVerticalPadding
-            pb={['xl', 'xl', '10']}
-            pr={{ base: '0 !important', md: 'md !important' }}
-          >
-            <VStack align="start" pt="72px" spacing={6} w="full">
-              {/* Breadcrumbs skeleton */}
-              <HStack spacing={2}>
-                <Skeleton h="20px" w="60px" />
-                <Box color="font.tertiary">/</Box>
-                <Skeleton h="20px" w="80px" />
-                <Box color="font.tertiary">/</Box>
-                <Skeleton h="20px" w="100px" />
-              </HStack>
+    <Box bg="background.level0" pt="72px" w="full">
+      <HStack
+        borderBottom="1px solid"
+        borderColor="border.base"
+        h="48px"
+        px={4}
+        spacing={6}
+      >
+        <Skeleton h="24px" w="120px" />
+        <Skeleton h="24px" w="100px" />
+        <Skeleton h="16px" w="80px" />
+        <Skeleton h="16px" w="80px" />
+      </HStack>
 
-              {/* Asset header skeleton */}
-              <HStack align="center" spacing={4} w="full">
-                <Skeleton borderRadius="full" h="16" w="16" />
-                <VStack align="start" spacing={2}>
-                  <Skeleton h="32px" w="200px" />
-                  <HStack spacing={4}>
-                    <Skeleton h="24px" w="120px" />
-                    <Skeleton h="20px" w="80px" />
-                  </HStack>
-                </VStack>
-              </HStack>
-            </VStack>
-          </DefaultPageContainer>
-        </Noise>
+      <Box
+        borderBottom="1px solid"
+        borderColor="border.base"
+        display="grid"
+        gridTemplateColumns={{ base: '1fr', lg: 'minmax(0, 1fr) 380px' }}
+        h="calc(100vh - 72px - 48px - 200px)"
+        minH="500px"
+      >
+        <Box borderRight="1px solid" borderColor="border.base" p={4}>
+          <Skeleton h="full" w="full" />
+        </Box>
+        <Box p={4}>
+          <VStack align="stretch" spacing={4}>
+            <Skeleton h="40px" w="full" />
+            <Skeleton h="80px" w="full" />
+            <Skeleton h="80px" w="full" />
+            <Skeleton h="50px" w="full" />
+          </VStack>
+        </Box>
       </Box>
-
-      {/* Main Content Section Skeleton */}
-      <DefaultPageContainer noVerticalPadding pb="xl" pt={['lg', '40px']}>
-        <HStack align="start" spacing={6} w="full">
-          {/* Left Column - Chart and Content */}
-          <VStack align="stretch" flex={2} minW="700px" spacing={6}>
-            {/* Chart skeleton with shimmer effect */}
-            <Box
-              bg="background.level1"
-              borderRadius="lg"
-              h="400px"
-              overflow="hidden"
-              position="relative"
-            >
-              <Skeleton h="full" w="full" />
-              {/* Overlay to simulate chart elements */}
-              <VStack
-                align="start"
-                h="full"
-                justify="end"
-                left={0}
-                p={6}
-                position="absolute"
-                spacing={4}
-                top={0}
-                w="full"
-              >
-                <HStack justify="space-between" spacing={4} w="full">
-                  <Skeleton h="24px" w="150px" />
-                  <Skeleton h="24px" w="100px" />
-                </HStack>
-                <HStack spacing={2}>
-                  <Skeleton h="32px" w="60px" />
-                  <Skeleton h="32px" w="60px" />
-                  <Skeleton h="32px" w="60px" />
-                  <Skeleton h="32px" w="60px" />
-                  <Skeleton h="32px" w="60px" />
-                </HStack>
-              </VStack>
-            </Box>
-
-            {/* Tab Navigation skeleton */}
-            <Box w="25%">
-              <HStack spacing={2}>
-                <Skeleton borderRadius="md" h="40px" w="120px" />
-                <Skeleton borderRadius="md" h="40px" w="120px" />
-              </HStack>
-            </Box>
-
-            {/* Tab Content skeleton */}
-            <VStack align="stretch" spacing={4}>
-              <Skeleton h="32px" w="200px" />
-              <VStack spacing={3}>
-                <Skeleton borderRadius="md" h="60px" w="full" />
-                <Skeleton borderRadius="md" h="60px" w="full" />
-                <Skeleton borderRadius="md" h="60px" w="full" />
-              </VStack>
-            </VStack>
-          </VStack>
-
-          {/* Right Column - Trading Panel skeleton */}
-          <VStack align="stretch" flex={1} maxW="500px" minW="400px" spacing={4}>
-            <Box bg="background.level1" borderRadius="lg" p={6}>
-              <VStack align="stretch" spacing={6}>
-                {/* Trading tabs */}
-                <HStack spacing={2}>
-                  <Skeleton borderRadius="md" h="40px" w="80px" />
-                  <Skeleton borderRadius="md" h="40px" w="80px" />
-                </HStack>
-
-                {/* Form elements */}
-                <VStack align="stretch" spacing={4}>
-                  <VStack align="start" spacing={2}>
-                    <Skeleton h="20px" w="60px" />
-                    <Skeleton borderRadius="md" h="48px" w="full" />
-                  </VStack>
-                  <VStack align="start" spacing={2}>
-                    <Skeleton h="20px" w="80px" />
-                    <Skeleton borderRadius="md" h="48px" w="full" />
-                  </VStack>
-                  <VStack align="start" spacing={2}>
-                    <Skeleton h="20px" w="70px" />
-                    <Skeleton borderRadius="md" h="48px" w="full" />
-                  </VStack>
-
-                  {/* Action buttons */}
-                  <VStack pt={4} spacing={3}>
-                    <Skeleton borderRadius="md" h="48px" w="full" />
-                    <Skeleton borderRadius="md" h="48px" w="full" />
-                  </VStack>
-                </VStack>
-              </VStack>
-            </Box>
-
-            {/* Additional info panel */}
-            <Box bg="background.level1" borderRadius="lg" p={6}>
-              <VStack align="stretch" spacing={4}>
-                <Skeleton h="24px" w="120px" />
-                <VStack spacing={3}>
-                  <HStack justify="space-between" w="full">
-                    <Skeleton h="16px" w="100px" />
-                    <Skeleton h="16px" w="80px" />
-                  </HStack>
-                  <HStack justify="space-between" w="full">
-                    <Skeleton h="16px" w="120px" />
-                    <Skeleton h="16px" w="60px" />
-                  </HStack>
-                  <HStack justify="space-between" w="full">
-                    <Skeleton h="16px" w="90px" />
-                    <Skeleton h="16px" w="70px" />
-                  </HStack>
-                </VStack>
-              </VStack>
-            </Box>
-          </VStack>
-        </HStack>
-      </DefaultPageContainer>
-    </>
+    </Box>
   )
 }
 
 function AssetDetailError({ error }: { error: string | null }) {
   return (
-    <VStack py={8} spacing={4}>
+    <VStack h="calc(100vh - 72px)" justify="center" pt="72px" spacing={4}>
       <Box color="red.500" fontSize="lg" fontWeight="semibold">
         Error loading asset
       </Box>
@@ -332,9 +215,7 @@ function AssetDetailError({ error }: { error: string | null }) {
 export function AssetDetailPage({ marketId }: AssetDetailPageProps) {
   return (
     <AssetDetailProvider marketId={marketId}>
-      <FadeInOnView animateOnce={false}>
-        <AssetDetailContent />
-      </FadeInOnView>
+      <AssetDetailContent />
     </AssetDetailProvider>
   )
 }

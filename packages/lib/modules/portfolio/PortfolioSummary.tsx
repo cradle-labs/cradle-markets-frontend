@@ -183,12 +183,12 @@ const PortfolioSummary = ({
 
   // Group assets by type (excluding shadow assets)
   const nativeAssets =
-    assets?.filter(asset => asset.asset_type === 'native' && isNotShadowAsset(asset)) || []
+    assets?.filter(asset => asset.asset_type?.toLowerCase() === 'native' && isNotShadowAsset(asset)) || []
   // Filter for yield_bearing assets
   const yieldAssets =
     assets?.filter(asset => asset.asset_type === 'yield_bearing' && isNotShadowAsset(asset)) || []
   const bridgedAssets =
-    assets?.filter(asset => asset.asset_type === 'bridged' && isNotShadowAsset(asset)) || []
+    assets?.filter(asset => asset.asset_type?.toLowerCase() === 'bridged' && isNotShadowAsset(asset)) || []
   const stableAssets =
     assets?.filter(asset => asset.asset_type === 'stablecoin' && isNotShadowAsset(asset)) || []
 

@@ -24,7 +24,7 @@ import { getSelectStyles } from '@repo/lib/shared/services/chakra/custom/chakra-
 import { useIsMounted } from '@repo/lib/shared/hooks/useIsMounted'
 
 export type ViewMode = 'grid' | 'list'
-export type ListingCategory = 'all' | 'open' | 'pending' | 'closed' | 'paused'
+export type ListingCategory = 'all' | 'Open' | 'Pending' | 'Closed' | 'Paused' | 'open' | 'pending' | 'closed' | 'paused'
 export type SortOption =
   | 'most-popular'
   | 'price-asc'
@@ -47,10 +47,10 @@ interface ListingSearchFiltersProps {
 
 const listingCategories: Array<{ value: ListingCategory; label: string }> = [
   { value: 'all', label: 'All Listings' },
-  { value: 'open', label: 'Open' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'paused', label: 'Paused' },
-  { value: 'closed', label: 'Closed' },
+  { value: 'Open', label: 'Open' },
+  { value: 'Pending', label: 'Pending' },
+  { value: 'Paused', label: 'Paused' },
+  { value: 'Closed', label: 'Closed' },
 ]
 
 interface SortSelectOption extends OptionBase {

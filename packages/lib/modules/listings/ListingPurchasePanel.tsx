@@ -106,7 +106,7 @@ export function ListingPurchasePanel({
 
   const refetchPurchaseAssetBalance = purchaseAssetBalanceQuery?.refetch
 
-  const isDisabled = status !== 'open' || !walletId
+  const isDisabled = status?.toLowerCase() !== 'open' || !walletId
 
   // Format price for display (already normalized)
   const formatPrice = (price: number) => {
@@ -234,7 +234,7 @@ export function ListingPurchasePanel({
           w="full"
         >
           <VStack spacing={4} w="full">
-            {status !== 'open' && (
+            {status?.toLowerCase() !== 'open' && (
               <Alert borderRadius="md" status="info">
                 <AlertIcon />
                 <AlertDescription fontSize="sm">
@@ -330,7 +330,7 @@ export function ListingPurchasePanel({
               variant="primary"
               w="full"
             >
-              {status !== 'open'
+              {status?.toLowerCase() !== 'open'
                 ? 'Offering Not Available'
                 : insufficientFunds
                   ? 'Insufficient Balance'

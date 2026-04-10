@@ -3,7 +3,6 @@
 import { useState, useMemo } from 'react'
 import {
   Box,
-  Card,
   Text,
   VStack,
   HStack,
@@ -20,9 +19,9 @@ import {
   IconButton,
   Tabs,
   TabList,
-  TabPanels,
   Tab,
   TabPanel,
+  TabPanels,
 } from '@chakra-ui/react'
 import { ChevronLeftIcon, ChevronRightIcon } from '@chakra-ui/icons'
 import { useUser } from '@clerk/nextjs'
@@ -36,32 +35,23 @@ export function MarketOrders() {
   const { user } = useUser()
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
-  const [activeTab, setActiveTab] = useState(0) // 0 = Open, 1 = Closed
+  const [activeTab, setActiveTab] = useState(0)
 
-  // First get the account ID using the Clerk user ID
   const { data: linkedAccount } = useAccountByLinkedId({
     enabled: !!user?.id,
     linkedAccountId: user?.id || '',
   })
 
-  // Fetch wallet for the account
   const { data: wallet, isLoading: isLoadingWallet } = useWalletByAccountId({
     accountId: linkedAccount?.id || '',
     enabled: !!linkedAccount?.id,
   })
 
-  console.log('User wallet:', wallet)
-  console.log('All orders:', orders)
-
-  // Filter orders by user's wallet
   const userOrders = useMemo(() => {
     if (!wallet?.id) return []
     return orders.filter(order => order.wallet === wallet.id)
   }, [orders, wallet?.id])
 
-  console.log('User orders:', userOrders)
-
-  // Split orders by status
   const openOrders = useMemo(() => {
     return userOrders.filter(order => order.status === 'open')
   }, [userOrders])
@@ -70,104 +60,44 @@ export function MarketOrders() {
     return userOrders.filter(order => order.status === 'closed' || order.status === 'cancelled')
   }, [userOrders])
 
-  // Get current orders based on active tab
   const currentOrders = activeTab === 0 ? openOrders : closedOrders
 
-  // Pagination calculations
   const totalPages = Math.ceil(currentOrders.length / pageSize)
   const startIndex = (currentPage - 1) * pageSize
   const endIndex = startIndex + pageSize
   const paginatedOrders = currentOrders.slice(startIndex, endIndex)
 
-  // Reset to page 1 if current page exceeds total pages
   if (currentPage > totalPages && totalPages > 0) {
     setCurrentPage(1)
   }
 
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage)
-  }
-
-  const handlePageSizeChange = (newPageSize: number) => {
-    setPageSize(newPageSize)
-    setCurrentPage(1) // Reset to first page when changing page size
-  }
-
   const handleTabChange = (index: number) => {
     setActiveTab(index)
-    setCurrentPage(1) // Reset to first page when changing tabs
+    setCurrentPage(1)
   }
 
-  // Helper function to format date in UTC
   const formatDateUTC = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleString('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-      hour12: true,
+      hour12: false,
       timeZone: 'UTC',
-      timeZoneName: 'short',
     })
   }
 
   if (loading || isLoadingWallet) {
     return (
-      <Card>
-        <Box p={6}>
-          <Text color="font.secondary">Loading orders...</Text>
-        </Box>
-      </Card>
+      <Box p={4}>
+        <Text color="font.secondary" fontSize="sm">
+          Loading orders...
+        </Text>
+      </Box>
     )
   }
 
-  if (!market) {
-    return (
-      <Card>
-        <Box p={6}>
-          <Text color="font.secondary">Market not found</Text>
-        </Box>
-      </Card>
-    )
-  }
-
-  if (!wallet) {
-    return (
-      <Card>
-        <Box p={6}>
-          <VStack align="center" py={8} spacing={3}>
-            <Text fontSize="lg" fontWeight="semibold">
-              Wallet not found
-            </Text>
-            <Text color="font.secondary" fontSize="sm" textAlign="center">
-              Account not found.
-            </Text>
-          </VStack>
-        </Box>
-      </Card>
-    )
-  }
-
-  if (userOrders.length === 0) {
-    return (
-      <Card>
-        <Box p={6}>
-          <VStack align="center" py={8} spacing={3}>
-            <Text fontSize="lg" fontWeight="semibold">
-              No orders found
-            </Text>
-            <Text color="font.secondary" fontSize="sm" textAlign="center">
-              You don't have any orders for this market yet.
-            </Text>
-          </VStack>
-        </Box>
-      </Card>
-    )
-  }
-
-  // Helper function to format status
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'open':
@@ -181,7 +111,6 @@ export function MarketOrders() {
     }
   }
 
-  // Helper function to format order type
   const getOrderTypeColor = (type: string) => {
     switch (type) {
       case 'limit':
@@ -194,294 +123,166 @@ export function MarketOrders() {
   }
 
   const quoteSymbol = assetTwo?.symbol ?? '$'
-  const baseSymbol = assetOne?.symbol
   const quoteDecimals = assetTwo?.decimals != null ? Number(assetTwo.decimals) : 6
-  const baseDecimals = assetOne?.decimals != null ? Number(assetOne.decimals) : 6
 
   const formatQuoteAmount = (amount: string | number) => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount
     const normalized = fromTokenDecimals(num, quoteDecimals)
-    const formatted = normalized.toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })
-    const separator = quoteSymbol === '$' ? '' : ' '
-    return `${quoteSymbol}${separator}${formatted}`
-  }
-
-  const formatQuotePrice = (price: string | number) => {
-    const num = typeof price === 'string' ? parseFloat(price) : price
-    const formatted = num.toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })
-    const separator = quoteSymbol === '$' ? '' : ' '
-    return `${quoteSymbol}${separator}${formatted}`
-  }
-
-  const formatBaseAmount = (amount: string | number) => {
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount
-    const normalized = fromTokenDecimals(num, baseDecimals)
     return normalized.toLocaleString(undefined, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })
   }
 
-  // Render order table
-  const renderOrderTable = (orders: typeof paginatedOrders) => (
-    <>
-      <TableContainer w="full">
-        <Table size="sm" variant="simple">
-          <Thead>
-            <Tr>
-              <Th>Type</Th>
-              <Th>Mode</Th>
-              <Th isNumeric>Amount</Th>
-              <Th isNumeric>Price</Th>
-              <Th>Status</Th>
-              <Th>Date (UTC)</Th>
+  const formatQuotePrice = (price: string | number) => {
+    const num = typeof price === 'string' ? parseFloat(price) : price
+    return num.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4,
+    })
+  }
+
+  const renderOrderTable = (ordersToRender: typeof paginatedOrders) => (
+    <TableContainer w="full">
+      <Table size="sm" variant="simple">
+        <Thead>
+          <Tr>
+            <Th fontSize="10px">Type</Th>
+            <Th fontSize="10px">Mode</Th>
+            <Th fontSize="10px" isNumeric>
+              Amount ({quoteSymbol})
+            </Th>
+            <Th fontSize="10px" isNumeric>
+              Price
+            </Th>
+            <Th fontSize="10px">Status</Th>
+            <Th fontSize="10px">Date</Th>
+          </Tr>
+        </Thead>
+        <Tbody>
+          {ordersToRender.map(order => (
+            <Tr key={order.id}>
+              <Td py={1}>
+                <Badge colorScheme={getOrderTypeColor(order.order_type)} fontSize="10px">
+                  {order.order_type}
+                </Badge>
+              </Td>
+              <Td py={1}>
+                <Text fontSize="xs">{order.mode}</Text>
+              </Td>
+              <Td isNumeric py={1}>
+                <Text fontFamily="mono" fontSize="xs">
+                  {formatQuoteAmount(order.ask_amount)}
+                </Text>
+              </Td>
+              <Td isNumeric py={1}>
+                <Text fontFamily="mono" fontSize="xs" fontWeight="medium">
+                  {formatQuotePrice(order.price)}
+                </Text>
+              </Td>
+              <Td py={1}>
+                <Badge colorScheme={getStatusColor(order.status)} fontSize="10px">
+                  {order.status}
+                </Badge>
+              </Td>
+              <Td py={1}>
+                <Text fontSize="xs">{formatDateUTC(order.created_at)}</Text>
+              </Td>
             </Tr>
-          </Thead>
-          <Tbody>
-            {orders.map(order => (
-              <Tr key={order.id}>
-                <Td>
-                  <Badge colorScheme={getOrderTypeColor(order.order_type)} size="sm">
-                    {order.order_type}
-                  </Badge>
-                </Td>
-                <Td>
-                  <Text fontSize="xs">{order.mode}</Text>
-                </Td>
-                <Td isNumeric>
-                  <Text fontSize="sm">{formatQuoteAmount(order.ask_amount)}</Text>
-                </Td>
-                <Td isNumeric>
-                  <Text fontSize="sm" fontWeight="medium">
-                    {formatQuotePrice(order.price)}
-                  </Text>
-                </Td>
-                <Td>
-                  <Badge colorScheme={getStatusColor(order.status)} size="sm">
-                    {order.status}
-                  </Badge>
-                </Td>
-                <Td>
-                  <Text fontSize="xs">{formatDateUTC(order.created_at)}</Text>
-                </Td>
-              </Tr>
-            ))}
-          </Tbody>
-        </Table>
-      </TableContainer>
-
-      {/* Pagination Controls */}
-      {currentOrders.length > 0 && (
-        <HStack justify="space-between" pt={2} w="full">
-          <HStack spacing={2}>
-            <Text color="font.secondary" fontSize="sm">
-              Rows per page:
-            </Text>
-            <Select
-              onChange={e => handlePageSizeChange(Number(e.target.value))}
-              size="sm"
-              value={pageSize}
-              w="80px"
-            >
-              <option value={5}>5</option>
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-            </Select>
-            <Text color="font.secondary" fontSize="sm">
-              {startIndex + 1}-{Math.min(endIndex, currentOrders.length)} of {currentOrders.length}
-            </Text>
-          </HStack>
-
-          <HStack spacing={1}>
-            <IconButton
-              aria-label="Previous page"
-              icon={<ChevronLeftIcon />}
-              isDisabled={currentPage === 1}
-              onClick={() => handlePageChange(currentPage - 1)}
-              size="sm"
-              variant="ghost"
-            />
-
-            {/* Page numbers */}
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter(page => {
-                // Show first page, last page, current page, and pages around current
-                if (page === 1 || page === totalPages) return true
-                if (Math.abs(page - currentPage) <= 1) return true
-                return false
-              })
-              .map((page, idx, arr) => {
-                // Add ellipsis between non-consecutive pages
-                const prevPage = arr[idx - 1]
-                const showEllipsis = prevPage && page - prevPage > 1
-
-                return (
-                  <HStack key={page} spacing={1}>
-                    {showEllipsis && (
-                      <Text color="font.secondary" px={1}>
-                        ...
-                      </Text>
-                    )}
-                    <Button
-                      minW="32px"
-                      onClick={() => handlePageChange(page)}
-                      size="sm"
-                      variant={currentPage === page ? 'solid' : 'ghost'}
-                    >
-                      {page}
-                    </Button>
-                  </HStack>
-                )
-              })}
-
-            <IconButton
-              aria-label="Next page"
-              icon={<ChevronRightIcon />}
-              isDisabled={currentPage === totalPages}
-              onClick={() => handlePageChange(currentPage + 1)}
-              size="sm"
-              variant="ghost"
-            />
-          </HStack>
-        </HStack>
-      )}
-    </>
+          ))}
+        </Tbody>
+      </Table>
+    </TableContainer>
   )
 
   return (
-    <Card>
-      <Box p={6}>
-        <VStack align="start" spacing={4}>
-          <HStack justify="space-between" w="full">
-            <VStack align="start" spacing={1}>
-              <Text fontSize="lg" fontWeight="semibold">
-                My Orders
-              </Text>
-              <Text color="font.secondary" fontSize="sm">
-                {market.name} - {userOrders.length} order{userOrders.length !== 1 ? 's' : ''}
-              </Text>
-            </VStack>
+    <Box bg="background.level0" display="flex" flexDirection="column" h="full" overflow="hidden" w="full">
+      {/* Header */}
+      <HStack borderBottom="1px solid" borderColor="border.base" flexShrink={0} px={4} py={2}>
+        <Text fontSize="sm" fontWeight="semibold">
+          My Orders
+        </Text>
+        <Badge colorScheme="green" fontSize="10px" variant="subtle">
+          {openOrders.length} Open
+        </Badge>
+        <Badge colorScheme="gray" fontSize="10px" variant="subtle">
+          {closedOrders.length} Closed
+        </Badge>
+      </HStack>
 
-            <HStack spacing={2}>
-              <Badge colorScheme="green" variant="subtle">
-                {openOrders.length} Open
-              </Badge>
-              <Badge colorScheme="gray" variant="subtle">
-                {closedOrders.length} Closed
-              </Badge>
-            </HStack>
-          </HStack>
-
-          {/* Summary Statistics */}
-          <Box bg="background.level1" borderRadius="md" p={4} w="full">
-            <VStack align="start" spacing={3}>
-              <Text fontSize="sm" fontWeight="semibold">
-                Order Summary
-              </Text>
-              <Box
-                display="grid"
-                gap={4}
-                gridTemplateColumns="repeat(auto-fit, minmax(150px, 1fr))"
-                w="full"
-              >
-                <VStack align="start" spacing={1}>
-                  <Text color="font.secondary" fontSize="xs" textTransform="uppercase">
-                    Total Volume
-                  </Text>
-                  <Text fontSize="sm" fontWeight="medium">
-                    {formatQuoteAmount(
-                      userOrders.reduce((sum, order) => sum + parseFloat(order.ask_amount), 0)
-                    )}
-                  </Text>
-                </VStack>
-
-                <VStack align="start" spacing={1}>
-                  <Text color="font.secondary" fontSize="xs" textTransform="uppercase">
-                    Avg. Price
-                  </Text>
-                  <Text fontSize="sm" fontWeight="medium">
-                    {userOrders.length > 0
-                      ? formatQuotePrice(
-                          userOrders.reduce((sum, order) => sum + parseFloat(order.price), 0) /
-                            userOrders.length
-                        )
-                      : formatQuotePrice(0)}
-                  </Text>
-                </VStack>
-
-                <VStack align="start" spacing={1}>
-                  <Text color="font.secondary" fontSize="xs" textTransform="uppercase">
-                    Total Shares
-                  </Text>
-                  <Text fontSize="sm" fontWeight="medium">
-                    {formatBaseAmount(
-                      userOrders.reduce((sum, order) => sum + parseFloat(order.bid_amount), 0)
-                    )}{' '}
-                    {baseSymbol}
-                  </Text>
-                </VStack>
-              </Box>
-            </VStack>
-          </Box>
-
-          {/* Tabs for Open and Closed Orders */}
-          <Tabs index={activeTab} onChange={handleTabChange} w="full">
-            <TabList>
-              <Tab>
-                Open Orders
-                <Badge colorScheme="green" ml={2} variant="subtle">
-                  {openOrders.length}
-                </Badge>
+      {!wallet || !market ? (
+        <VStack align="center" py={6} spacing={2}>
+          <Text color="font.secondary" fontSize="sm">
+            {!wallet ? 'Connect wallet to view orders' : 'Market not found'}
+          </Text>
+        </VStack>
+      ) : userOrders.length === 0 ? (
+        <VStack align="center" py={6} spacing={2}>
+          <Text color="font.secondary" fontSize="sm">
+            No orders for this market yet
+          </Text>
+        </VStack>
+      ) : (
+        <Box display="flex" flex={1} flexDirection="column" minH={0} overflow="hidden" px={2}>
+          <Tabs display="flex" flex={1} flexDirection="column" index={activeTab} minH={0} onChange={handleTabChange} overflow="hidden" size="sm">
+            <TabList borderBottom="1px solid" borderColor="border.base">
+              <Tab fontSize="xs" py={2}>
+                Open ({openOrders.length})
               </Tab>
-              <Tab>
-                Closed Orders
-                <Badge colorScheme="gray" ml={2} variant="subtle">
-                  {closedOrders.length}
-                </Badge>
+              <Tab fontSize="xs" py={2}>
+                History ({closedOrders.length})
               </Tab>
             </TabList>
 
-            <TabPanels>
-              <TabPanel px={0}>
+            <TabPanels flex={1} minH={0} overflowY="auto">
+              <TabPanel p={0} pt={1}>
                 {openOrders.length === 0 ? (
-                  <VStack align="center" py={8} spacing={3}>
-                    <Text fontSize="md" fontWeight="semibold">
-                      No open orders
-                    </Text>
-                    <Text color="font.secondary" fontSize="sm" textAlign="center">
-                      You don't have any open orders for this market.
-                    </Text>
-                  </VStack>
+                  <Text color="font.secondary" fontSize="xs" py={4} textAlign="center">
+                    No open orders
+                  </Text>
                 ) : (
                   renderOrderTable(paginatedOrders)
                 )}
               </TabPanel>
-
-              <TabPanel px={0}>
+              <TabPanel p={0} pt={1}>
                 {closedOrders.length === 0 ? (
-                  <VStack align="center" py={8} spacing={3}>
-                    <Text fontSize="md" fontWeight="semibold">
-                      No closed orders
-                    </Text>
-                    <Text color="font.secondary" fontSize="sm" textAlign="center">
-                      You don't have any closed orders for this market.
-                    </Text>
-                  </VStack>
+                  <Text color="font.secondary" fontSize="xs" py={4} textAlign="center">
+                    No order history
+                  </Text>
                 ) : (
                   renderOrderTable(paginatedOrders)
                 )}
               </TabPanel>
             </TabPanels>
           </Tabs>
-        </VStack>
-      </Box>
-    </Card>
+
+          {/* Compact pagination */}
+          {totalPages > 1 && (
+            <HStack justify="end" pb={2} pr={2} spacing={1}>
+              <Text color="font.secondary" fontSize="xs">
+                {startIndex + 1}-{Math.min(endIndex, currentOrders.length)} of{' '}
+                {currentOrders.length}
+              </Text>
+              <IconButton
+                aria-label="Previous"
+                icon={<ChevronLeftIcon />}
+                isDisabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => p - 1)}
+                size="xs"
+                variant="ghost"
+              />
+              <IconButton
+                aria-label="Next"
+                icon={<ChevronRightIcon />}
+                isDisabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(p => p + 1)}
+                size="xs"
+                variant="ghost"
+              />
+            </HStack>
+          )}
+        </Box>
+      )}
+    </Box>
   )
 }

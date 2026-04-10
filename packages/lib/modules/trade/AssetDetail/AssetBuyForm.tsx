@@ -522,7 +522,7 @@ export function AssetBuyForm() {
               onClick={() => {
                 if (!payAssetBalanceData) return
                 const balance = fromTokenDecimals(
-                  BigInt(payAssetBalanceData.balance),
+                  Number(payAssetBalanceData.balance),
                   payAssetBalanceData.decimals
                 )
                 const newPay = (balance * pct / 100).toFixed(4)

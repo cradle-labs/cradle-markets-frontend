@@ -523,7 +523,7 @@ export function AssetSellForm() {
               onClick={() => {
                 if (!sellAssetBalanceData) return
                 const balance = fromTokenDecimals(
-                  BigInt(sellAssetBalanceData.balance),
+                  Number(sellAssetBalanceData.balance),
                   sellAssetBalanceData.decimals
                 )
                 const newSell = (balance * pct / 100).toFixed(4)

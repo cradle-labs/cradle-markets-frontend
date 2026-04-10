@@ -36,8 +36,8 @@ function AssetDetailContent() {
   }
 
   return (
-    <Box bg="background.level0" w="full">
-      {/* Top: Market info bar — sticky at top of viewport */}
+    <Box bg="background.level0" pt="72px" w="full">
+      {/* Top: Market info bar — sticky right below the nav bar */}
       <Box
         bg="background.level0"
         borderBottom="1px solid"
@@ -49,15 +49,13 @@ function AssetDetailContent() {
         <MarketInfoBar asset={asset} />
       </Box>
 
-      {/* Primary area: Chart + Trading Panel side by side
-          Chart is large and prominent on the left (70%)
-          Trading panel is unmissable on the right (30%) with bold Buy/Sell toggle */}
+      {/* Primary area: Chart + Trading Panel side by side */}
       <Box
         borderBottom="1px solid"
         borderColor="border.base"
         display={{ base: 'block', lg: 'grid' }}
         gridTemplateColumns={{ lg: 'minmax(0, 1fr) 380px' }}
-        minH={{ base: 'auto', lg: 'calc(100vh - 72px - 48px - 200px)' }}
+        minH={{ base: 'auto', lg: 'calc(100vh - 72px - 48px - 80px)' }}
       >
         {/* Chart — takes most of the viewport */}
         <Box
@@ -161,7 +159,7 @@ function AssetDetailContent() {
 
 function AssetDetailSkeleton() {
   return (
-    <Box bg="background.level0" w="full">
+    <Box bg="background.level0" pt="72px" w="full">
       <HStack
         borderBottom="1px solid"
         borderColor="border.base"
@@ -201,7 +199,7 @@ function AssetDetailSkeleton() {
 
 function AssetDetailError({ error }: { error: string | null }) {
   return (
-    <VStack h="calc(100vh - 72px)" justify="center" spacing={4}>
+    <VStack h="calc(100vh - 72px)" justify="center" pt="72px" spacing={4}>
       <Box color="red.500" fontSize="lg" fontWeight="semibold">
         Error loading asset
       </Box>

@@ -90,7 +90,7 @@ interface AssetChartContextType {
 const AssetChartContext = createContext<AssetChartContextType | null>(null)
 
 export function useAssetChartLogic(asset: TokenizedAssetData): AssetChartContextType {
-  const [activeTimeFrame, setActiveTimeFrame] = useState('1M')
+  const [activeTimeFrame, setActiveTimeFrame] = useState('ALL')
 
   const onTimeFrameChange = useCallback((tf: string) => {
     setActiveTimeFrame(tf)

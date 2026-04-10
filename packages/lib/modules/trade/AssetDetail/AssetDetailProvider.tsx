@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, ReactNode, useMemo, useState, useCallback } from 'react'
-import { useQueries } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { TokenizedAssetData } from '../TokenizedAssets/TokenizedAssetCard'
 import { useMarket } from '@repo/lib/cradle-client-ts/hooks/markets/useMarket'
 import { useAsset } from '@repo/lib/cradle-client-ts/hooks/assets/useAsset'
@@ -10,7 +10,13 @@ import type { Market, Order } from '@repo/lib/cradle-client-ts/types'
 import type { TimeHistoryDataPoint } from '@repo/lib/actions/time-history'
 import { computePriceFromOrders } from '../shared/price-fallback'
 
-// Import the fetcher function
+// Fetch all-time data with a 1-day interval — gives us good coverage
+// without needing multiple queries. The chart filters client-side per timeframe.
+const TIME_HISTORY_CONFIG = {
+  duration_secs: '94608000', // ~3 years
+  interval: '1day' as const,
+}
+
 async function fetchTimeHistory(params: {
   market: string
   asset_id: string
@@ -19,22 +25,6 @@ async function fetchTimeHistory(params: {
 }): Promise<TimeHistoryDataPoint[]> {
   const { getTimeHistory } = await import('@repo/lib/actions/time-history')
   return getTimeHistory(params)
-}
-
-// Configuration for different time periods
-interface TimeConfig {
-  duration_secs: string
-  interval: '15secs' | '1min' | '5min' | '15min' | '30min' | '1hr' | '4hr' | '1day' | '1week'
-}
-
-const TIME_CONFIGS: Record<string, TimeConfig> = {
-  REALTIME: { duration_secs: '900', interval: '15secs' }, // 15 minutes: 15-second intervals for live chart
-  '1D': { duration_secs: '86400', interval: '15min' }, // 1 day: 15-minute intervals
-  '1W': { duration_secs: '604800', interval: '15min' }, // 1 week: 15-minute intervals
-  '1M': { duration_secs: '2592000', interval: '4hr' }, // 1 month: 4-hour intervals
-  '3M': { duration_secs: '7776000', interval: '1day' }, // 3 months: daily intervals
-  '1Y': { duration_secs: '31536000', interval: '1week' }, // 1 year: weekly intervals
-  ALL: { duration_secs: '94608000', interval: '1week' }, // 3 years: weekly intervals
 }
 
 interface AssetDetailContextType {
@@ -89,54 +79,38 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
     enabled: !!market?.asset_two,
   })
 
-  // Fetch time history data for all chart periods
-  const timeHistoryQueries = useQueries({
-    queries: Object.entries(TIME_CONFIGS).map(([period, config]) => ({
-      queryKey: [
-        'time-history',
-        marketId,
-        market?.asset_one,
-        config.duration_secs,
-        config.interval,
-      ],
-      queryFn: async () => {
-        const payload = {
-          market: marketId,
-          asset_id: market?.asset_one || '',
-          duration_secs: config.duration_secs,
-          interval: config.interval,
-        }
-        const result = await fetchTimeHistory(payload)
-        return result
-      },
-      enabled: !!market?.asset_one,
-      // For REALTIME data, refetch every 15 seconds
-      refetchInterval: (period === 'REALTIME' ? 15000 : false) as number | false,
-      // Historical data doesn't change, so cache it much longer
-      staleTime: period === 'REALTIME' ? 0 : 1000 * 60 * 30, // No stale time for realtime, 30 minutes for historical data
-      gcTime: period === 'REALTIME' ? 1000 * 60 * 5 : 1000 * 60 * 60, // 5 minutes for realtime, 1 hour for historical data
-      retry: false,
-    })),
+  // Single all-time query — chart filters client-side per timeframe
+  const {
+    data: timeHistoryData = [],
+    isLoading: timeHistoryLoading,
+    refetch: refetchTimeHistory,
+  } = useQuery({
+    queryKey: [
+      'time-history',
+      marketId,
+      market?.asset_one,
+      TIME_HISTORY_CONFIG.duration_secs,
+      TIME_HISTORY_CONFIG.interval,
+    ],
+    queryFn: async () => {
+      return fetchTimeHistory({
+        market: marketId,
+        asset_id: market?.asset_one || '',
+        duration_secs: TIME_HISTORY_CONFIG.duration_secs,
+        interval: TIME_HISTORY_CONFIG.interval,
+      })
+    },
+    enabled: !!market?.asset_one,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 60, // 1 hour
+    retry: false,
   })
 
-  // Combine all time history data and sort by timestamp
+  // Sort by timestamp ascending
   const allTimeHistoryData = useMemo(() => {
-    const allData: TimeHistoryDataPoint[] = []
-    const periodNames = Object.keys(TIME_CONFIGS)
-
-    timeHistoryQueries.forEach((query, index) => {
-      const period = periodNames[index]
-      if (query.data && Array.isArray(query.data)) {
-        allData.push(...query.data)
-      }
-    })
-
-    // Remove duplicates and sort by timestamp
-    const uniqueData = Array.from(
-      new Map(allData.map(item => [item.timestamp, item])).values()
-    ).sort((a, b) => a.timestamp - b.timestamp)
-    return uniqueData
-  }, [timeHistoryQueries])
+    if (!timeHistoryData || !Array.isArray(timeHistoryData)) return []
+    return [...timeHistoryData].sort((a, b) => a.timestamp - b.timestamp)
+  }, [timeHistoryData])
 
   // Fetch orders for this market
   const {
@@ -148,7 +122,6 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
   })
 
   // Aggregate loading states
-  const timeHistoryLoading = timeHistoryQueries.some(q => q.isLoading)
   const loading =
     marketLoading || assetOneLoading || assetTwoLoading || timeHistoryLoading || ordersLoading
 
@@ -234,7 +207,7 @@ export function AssetDetailProvider({ children, marketId }: AssetDetailProviderP
     refetchMarket()
     refetchAssetOne()
     refetchAssetTwo()
-    timeHistoryQueries.forEach(query => query.refetch())
+    refetchTimeHistory()
     refetchOrders()
   }
 
